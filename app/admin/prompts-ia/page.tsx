@@ -11,15 +11,15 @@ import { Button } from '@/components/ui/button'
 import { Edit, Trash2, Power, Sparkles, Copy } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
 
-export default async function PromptsIAPage({ searchParams }: { searchParams: Promise<{ terapeuta?: string }> }) {
+export default async function PromptsIAPage(props: { searchParams: Promise<{ terapeuta?: string }> }) {
+    const searchParams = await props.searchParams
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     const { data: userProfile } = await supabase.from('usuarios').select('tipo_perfil').eq('id', user?.id).single()
     const isAdmin = userProfile?.tipo_perfil !== 'terapeuta'
 
-    const resolvedSearchParams = await searchParams
-    const terapeutaId = resolvedSearchParams?.terapeuta
+    const terapeutaId = searchParams?.terapeuta
     const prompts = await getPrompts(terapeutaId)
 
     let terapeutas: any[] = []
