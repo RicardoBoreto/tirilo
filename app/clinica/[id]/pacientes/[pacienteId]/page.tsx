@@ -29,7 +29,7 @@ export default async function PacienteDetailsPage({
         getPaciente(pId),
         getResponsaveis(pId),
         getAnamnese(pId),
-        getTerapeutas(clinicaId),
+        getTerapeutas(),
         getPacientesTerapeutas(pId),
         getRelatoriosByPaciente(pId)
     ])
