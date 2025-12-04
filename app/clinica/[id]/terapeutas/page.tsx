@@ -5,9 +5,9 @@ export default async function TerapeutasPage({ params }: { params: Promise<{ id:
     const { id } = await params
     const clinicaId = parseInt(id)
 
-    const [terapeutas, limit] = await Promise.all([
-        getTerapeutas(clinicaId),
-        getClinicaLimit(clinicaId)
+    const [terapeutasData, limit] = await Promise.all([
+        getTerapeutas(),
+        getClinicaLimit()
     ])
 
     return (
@@ -20,7 +20,7 @@ export default async function TerapeutasPage({ params }: { params: Promise<{ id:
             </div>
 
             <TerapeutaList
-                terapeutas={terapeutas}
+                terapeutas={terapeutasData.terapeutas}
                 limit={limit}
                 clinicaId={clinicaId}
             />
