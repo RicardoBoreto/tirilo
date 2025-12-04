@@ -22,14 +22,14 @@ export default async function PacienteDetailsPage({
         paciente,
         responsaveis,
         anamnese,
-        allTerapeutas,
+        terapeutasData,
         linkedTerapeutaIds,
         relatorios
     ] = await Promise.all([
         getPaciente(pId),
         getResponsaveis(pId),
         getAnamnese(pId),
-        getTerapeutas(),
+        getTerapeutas(), // No args needed as it uses session user's clinic
         getPacientesTerapeutas(pId),
         getRelatoriosByPaciente(pId)
     ])
@@ -63,7 +63,7 @@ export default async function PacienteDetailsPage({
                 paciente={paciente}
                 responsaveis={responsaveis || []}
                 anamnese={anamnese}
-                allTerapeutas={allTerapeutas}
+                allTerapeutas={terapeutasData.terapeutas}
                 linkedTerapeutaIds={linkedTerapeutaIds}
                 relatorios={relatorios || []}
             />
