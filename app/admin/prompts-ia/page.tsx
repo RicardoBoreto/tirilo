@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Edit, Trash2, Power, Sparkles, Copy } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
 
-export default async function PromptsIAPage(props: { searchParams: Promise<{ terapeuta?: string }> }) {
+export default async function PromptsIAPage(props: { searchParams: any }) {
     const searchParams = await props.searchParams
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
