@@ -397,3 +397,26 @@ export type Terapeuta = {
     // Add other fields as needed
     nome: string // Alias for nome_completo if used in UI
 }
+
+export async function getClinicaLimit() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return null
+
+    const { data: userData } = await supabase
+        .from('usuarios')
+        .select('id_clinica')
+        .eq('id', user.id)
+        .single()
+
+    if (!userData?.id_clinica) return null
+
+    const { data: clinicData } = await supabase
+        .from('saas_clinicas')
+        .select('max_terapeutas')
+        .eq('id', userData.id_clinica)
+        .single()
+
+    return clinicData?.max_terapeutas || 0
+}
