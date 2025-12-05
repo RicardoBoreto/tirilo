@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { CuteRobot } from '@/components/icons/CuteIcons'
 import { LogOut } from 'lucide-react'
-import { signOut } from '@/lib/actions/auth' // We might need to create this or use client-side signout
+
 
 export default async function FamilyLayout({
     children,
