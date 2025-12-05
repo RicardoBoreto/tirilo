@@ -25,7 +25,7 @@ export default function TerapeutaList({
         const formData = new FormData(e.currentTarget)
 
         try {
-            await createTerapeuta(clinicaId, formData)
+            await createTerapeuta(formData)
             setIsDialogOpen(false)
             router.refresh()
         } catch (error: any) {
@@ -57,8 +57,8 @@ export default function TerapeutaList({
                             onClick={() => setIsDialogOpen(true)}
                             disabled={isLimitReached}
                             className={`px-4 py-2 rounded-lg font-medium transition-all ${isLimitReached
-                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
                                 }`}
                         >
                             + Novo Terapeuta
@@ -88,10 +88,10 @@ export default function TerapeutaList({
                                     {terapeuta.nome}
                                 </h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                    {terapeuta.curriculo?.registro_profissional || 'Sem registro'}
+                                    {terapeuta.terapeutas_curriculo?.[0]?.registro_profissional || 'Sem registro'}
                                 </p>
                                 <div className="mt-2 flex flex-wrap gap-1">
-                                    {terapeuta.curriculo?.especialidades?.slice(0, 3).map((esp, i) => (
+                                    {terapeuta.terapeutas_curriculo?.[0]?.especialidades?.slice(0, 3).map((esp: string, i: number) => (
                                         <span key={i} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full">
                                             {esp}
                                         </span>
