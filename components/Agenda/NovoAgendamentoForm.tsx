@@ -252,7 +252,7 @@ export default function NovoAgendamentoForm({ trigger, open, onOpenChange, selec
                                 {salas.map(s => (
                                     <SelectItem key={s.id} value={s.id.toString()}>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.cor_hex }} />
+                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.cor_identificacao }} />
                                             {s.nome}
                                         </div>
                                     </SelectItem>
