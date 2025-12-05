@@ -293,6 +293,23 @@ npm run dev
 
 ---
 
+## 🚀 DEPLOY E DOMÍNIO (Atualização 04/12/2025)
+
+### ✅ Deploy no Vercel
+- **Status**: 🟢 Sucesso (Build Passing)
+- **Correções Realizadas**:
+    - Tipagem estrita do TypeScript em `createTerapeuta`, `createSala`, `SalaCard` e `SalaForm`.
+    - Remoção de importações não utilizadas (`signOut`).
+    - Ajuste de argumentos em chamadas de Server Actions.
+    - Correção de nomes de propriedades (`cor_identificacao`, `terapeutas_curriculo`).
+
+### 🌐 Domínio Personalizado
+- **Domínio**: `tirilo.com.br`
+- **Status**: Configurado (Aguardando propagação DNS)
+- **Provedor**: Vercel (SSL Automático)
+
+---
+
 **Desenvolvido com ❤️ e velocidade ⚡**
 
 **SaaS Tirilo © 2025**
