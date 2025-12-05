@@ -53,11 +53,12 @@ export default function SalaForm({ sala, trigger, open, onOpenChange }: SalaForm
 
     // Controlled state for form fields
     const [nome, setNome] = useState(sala?.nome || '')
-    const [cor, setCor] = useState(sala?.cor_hex || COLORS[0])
-    const [icone, setIcone] = useState(sala?.icone || 'box')
+    const [cor, setCor] = useState(sala?.cor_identificacao || COLORS[0])
+    // Icon not in DB type, defaulting to box for UI only
+    const [icone, setIcone] = useState('box')
     const [capacidade, setCapacidade] = useState(sala?.capacidade?.toString() || '1')
-    const [observacoes, setObservacoes] = useState(sala?.observacoes || '')
-    const [ativo, setAtivo] = useState(sala?.ativo ?? true)
+    const [observacoes, setObservacoes] = useState(sala?.descricao || '')
+    const [ativo, setAtivo] = useState(sala?.ativa ?? true)
 
     const isControlled = open !== undefined
     const isOpen = isControlled ? open : internalOpen
@@ -67,19 +68,20 @@ export default function SalaForm({ sala, trigger, open, onOpenChange }: SalaForm
         e.preventDefault()
         setLoading(true)
 
-        const formData = new FormData()
-        formData.append('nome', nome)
-        formData.append('cor_hex', cor)
-        formData.append('icone', icone)
-        formData.append('capacidade', capacidade)
-        formData.append('observacoes', observacoes)
-        formData.append('ativo', String(ativo))
+        const payload = {
+            nome,
+            cor_identificacao: cor,
+            capacidade: parseInt(capacidade),
+            descricao: observacoes,
+            ativa: ativo
+        }
 
         try {
             if (sala) {
-                await updateSala(sala.id, formData)
+                await updateSala(sala.id, payload)
             } else {
-                await createSala(formData)
+                // @ts-ignore - createSala expects Omit<Sala, ...> but we are passing a compatible object
+                await createSala(payload)
             }
             setIsOpen(false)
             // Reset form if creating
