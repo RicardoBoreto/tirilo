@@ -29,7 +29,8 @@ interface SalaCardProps {
 }
 
 export default function SalaCard({ sala }: SalaCardProps) {
-    const Icon = ICONS[sala.icone] || Box
+    // Icon field doesn't exist in type, defaulting to Box or mapping from name/description if needed
+    const Icon = Box
     const [showEdit, setShowEdit] = useState(false)
 
     async function handleDelete() {
@@ -48,24 +49,24 @@ export default function SalaCard({ sala }: SalaCardProps) {
                 {/* Color Stripe */}
                 <div
                     className="absolute top-0 left-0 w-2 h-full"
-                    style={{ backgroundColor: sala.cor_hex }}
+                    style={{ backgroundColor: sala.cor_identificacao }}
                 />
 
                 <div className="pl-4">
                     <div className="flex justify-between items-start mb-4">
                         <div
                             className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg"
-                            style={{ backgroundColor: sala.cor_hex }}
+                            style={{ backgroundColor: sala.cor_identificacao }}
                         >
                             <Icon className="w-6 h-6" />
                         </div>
                         <div className={cn(
                             "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
-                            sala.ativo
+                            sala.ativa
                                 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                                 : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
                         )}>
-                            {sala.ativo ? 'Disponível' : 'Inativo'}
+                            {sala.ativa ? 'Disponível' : 'Inativo'}
                         </div>
                     </div>
 
@@ -78,9 +79,9 @@ export default function SalaCard({ sala }: SalaCardProps) {
                         <span>Capacidade: {sala.capacidade}</span>
                     </div>
 
-                    {sala.observacoes && (
+                    {sala.descricao && (
                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 line-clamp-2 min-h-[40px]">
-                            {sala.observacoes}
+                            {sala.descricao}
                         </p>
                     )}
 
