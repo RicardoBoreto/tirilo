@@ -1,3 +1,4 @@
+// BUILD CHECK: 2025-12-04 21:05
 import {
     getPaciente,
     getResponsaveis,
