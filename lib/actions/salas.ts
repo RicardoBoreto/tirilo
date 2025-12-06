@@ -10,6 +10,7 @@ export type Sala = {
     descricao: string | null
     capacidade: number
     cor_identificacao: string
+    foto_url: string | null
     ativa: boolean
 }
 
@@ -76,6 +77,7 @@ export async function updateSala(id: number, data: Partial<Sala>) {
     return { success: true }
 }
 
+
 export async function deleteSala(id: number) {
     const supabase = await createClient()
 
@@ -91,4 +93,48 @@ export async function deleteSala(id: number) {
 
     revalidatePath('/admin/salas')
     return { success: true }
+}
+
+export async function uploadFotoSala(salaId: number, file: File) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: 'Não autorizado' }
+
+    // Gerar nome único para o arquivo
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${salaId}-${Date.now()}.${fileExt}`
+    const filePath = `salas/${fileName}`
+
+    // Upload do arquivo
+    const { error: uploadError } = await supabase.storage
+        .from('fotos')
+        .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: true
+        })
+
+    if (uploadError) {
+        console.error('Erro ao fazer upload:', uploadError)
+        return { error: 'Erro ao fazer upload da foto' }
+    }
+
+    // Obter URL pública
+    const { data: { publicUrl } } = supabase.storage
+        .from('fotos')
+        .getPublicUrl(filePath)
+
+    // Atualizar sala com a URL da foto
+    const { error: updateError } = await supabase
+        .from('salas_recursos')
+        .update({ foto_url: publicUrl })
+        .eq('id', salaId)
+
+    if (updateError) {
+        console.error('Erro ao atualizar sala:', updateError)
+        return { error: 'Erro ao atualizar sala com a foto' }
+    }
+
+    revalidatePath('/admin/salas')
+    return { success: true, url: publicUrl }
 }

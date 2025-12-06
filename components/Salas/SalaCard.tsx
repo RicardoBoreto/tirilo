@@ -52,7 +52,18 @@ export default function SalaCard({ sala }: SalaCardProps) {
                     style={{ backgroundColor: sala.cor_identificacao }}
                 />
 
-                <div className="pl-4">
+                {/* Photo Background */}
+                {sala.foto_url && (
+                    <div className="absolute inset-0 opacity-10">
+                        <img
+                            src={sala.foto_url}
+                            alt={sala.nome}
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
+                )}
+
+                <div className="pl-4 relative z-10">
                     <div className="flex justify-between items-start mb-4">
                         <div
                             className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg"

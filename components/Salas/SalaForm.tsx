@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createSala, updateSala, Sala } from '@/lib/actions/salas'
+import { createSala, updateSala, uploadFotoSala, Sala } from '@/lib/actions/salas'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,10 +59,32 @@ export default function SalaForm({ sala, trigger, open, onOpenChange }: SalaForm
     const [capacidade, setCapacidade] = useState(sala?.capacidade?.toString() || '1')
     const [observacoes, setObservacoes] = useState(sala?.descricao || '')
     const [ativo, setAtivo] = useState(sala?.ativa ?? true)
+    const [fotoUrl, setFotoUrl] = useState(sala?.foto_url || '')
+    const [uploadingFoto, setUploadingFoto] = useState(false)
 
     const isControlled = open !== undefined
     const isOpen = isControlled ? open : internalOpen
     const setIsOpen = isControlled ? onOpenChange! : setInternalOpen
+
+    async function handleFotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0]
+        if (!file || !sala) return
+
+        setUploadingFoto(true)
+        try {
+            const result = await uploadFotoSala(sala.id, file)
+            if (result.error) {
+                alert(result.error)
+            } else if (result.url) {
+                setFotoUrl(result.url)
+            }
+        } catch (error) {
+            console.error(error)
+            alert('Erro ao fazer upload da foto')
+        } finally {
+            setUploadingFoto(false)
+        }
+    }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
@@ -186,6 +208,35 @@ export default function SalaForm({ sala, trigger, open, onOpenChange }: SalaForm
                             className="rounded-xl resize-none h-24"
                         />
                     </div>
+
+                    {sala && (
+                        <div className="space-y-2">
+                            <Label htmlFor="foto">Foto da Sala</Label>
+                            {fotoUrl && (
+                                <div className="mb-2">
+                                    <img
+                                        src={fotoUrl}
+                                        alt="Foto da sala"
+                                        className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
+                                    />
+                                </div>
+                            )}
+                            <Input
+                                id="foto"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFotoUpload}
+                                disabled={uploadingFoto}
+                                className="rounded-xl"
+                            />
+                            {uploadingFoto && (
+                                <p className="text-sm text-gray-500">Fazendo upload...</p>
+                            )}
+                            {!sala && (
+                                <p className="text-sm text-gray-500">Salve a sala primeiro para adicionar uma foto</p>
+                            )}
+                        </div>
+                    )}
 
                     <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
                         <Label htmlFor="ativo" className="cursor-pointer">Situação: {ativo ? 'Ativo' : 'Inativo'}</Label>
