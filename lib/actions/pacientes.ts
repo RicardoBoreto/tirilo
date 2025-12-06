@@ -55,6 +55,34 @@ export type Anamnese = {
 export async function getPacientes(clinicaId?: number) {
     const supabase = await createClient()
 
+    // 1. Get current user
+    const { data: { user } } = await supabase.auth.getUser()
+
+    let filterIds: number[] | null = null
+
+    if (user) {
+        // 2. Check user profile
+        const { data: usuario } = await supabase
+            .from('usuarios')
+            .select('tipo_perfil')
+            .eq('id', user.id)
+            .single()
+
+        if (usuario?.tipo_perfil === 'terapeuta') {
+            // 3. Get linked patients for therapist
+            const { data: links } = await supabase
+                .from('pacientes_terapeutas')
+                .select('paciente_id')
+                .eq('terapeuta_id', user.id)
+
+            if (links) {
+                filterIds = links.map(link => link.paciente_id)
+            } else {
+                filterIds = [] // No patients linked
+            }
+        }
+    }
+
     let query = supabase
         .from('pacientes')
         .select('*')
@@ -63,6 +91,11 @@ export async function getPacientes(clinicaId?: number) {
 
     if (clinicaId) {
         query = query.eq('id_clinica', clinicaId)
+    }
+
+    // 4. Apply filter if it's a therapist
+    if (filterIds !== null) {
+        query = query.in('id', filterIds)
     }
 
     const { data, error } = await query
