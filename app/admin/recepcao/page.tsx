@@ -11,7 +11,7 @@ export default async function RecepcaoPage() {
             {/* Seção de Salas (Topo) */}
             <div className="flex-none">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Status das Salas</h2>
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Situação das Salas</h2>
                     <span className="text-sm text-gray-500">Atualizado em tempo real</span>
                 </div>
                 <StatusSalas salas={statusSalas} />
