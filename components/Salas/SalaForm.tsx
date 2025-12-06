@@ -188,7 +188,7 @@ export default function SalaForm({ sala, trigger, open, onOpenChange }: SalaForm
                     </div>
 
                     <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                        <Label htmlFor="ativo" className="cursor-pointer">Status: {ativo ? 'Ativo' : 'Inativo'}</Label>
+                        <Label htmlFor="ativo" className="cursor-pointer">Situação: {ativo ? 'Ativo' : 'Inativo'}</Label>
                         <div
                             onClick={() => setAtivo(!ativo)}
                             className={cn(
