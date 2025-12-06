@@ -310,6 +310,50 @@ npm run dev
 
 ---
 
+## 📸 UPLOAD DE FOTOS NAS SALAS (Atualização 06/12/2025)
+
+### ✨ Nova Funcionalidade
+- **Feature**: Upload de fotos para salas de atendimento
+- **Storage**: Supabase Storage (bucket `fotos`)
+- **Implementação**: Completa e funcional
+
+### 🔧 Alterações Realizadas
+
+#### 1. Banco de Dados
+```sql
+ALTER TABLE salas_recursos ADD COLUMN foto_url TEXT;
+```
+- Nova coluna `foto_url` para armazenar URL da foto
+- Documentação atualizada em `TABELAS.md`
+
+#### 2. Backend (`lib/actions/salas.ts`)
+- Adicionado tipo `foto_url: string | null` em `Sala`
+- Nova função `uploadFotoSala(salaId, file)` para upload
+- Upload para `fotos/salas/{id}-{timestamp}.{ext}`
+- Retorna URL pública após upload bem-sucedido
+
+#### 3. Frontend (`components/Salas/SalaForm.tsx`)
+- Campo de upload de foto (apenas ao editar sala existente)
+- Preview da foto antes do upload
+- Estado de loading durante upload
+- Mensagem informativa para salas novas
+
+#### 4. Visualização (`components/Salas/SalaCard.tsx`)
+- Foto exibida como fundo sutil (opacity 10%)
+- Efeito visual elegante sem comprometer legibilidade
+- Fallback gracioso quando não há foto
+
+### 📋 Como Usar
+1. Criar uma sala nova (sem foto ainda)
+2. Editar a sala criada
+3. No formulário de edição, aparece o campo "Foto da Sala"
+4. Selecionar uma imagem do computador
+5. Upload automático ao selecionar o arquivo
+6. Preview imediato da foto
+7. Foto aparece no card da sala com efeito sutil
+
+---
+
 **Desenvolvido com ❤️ e velocidade ⚡**
 
 **SaaS Tirilo © 2025**
