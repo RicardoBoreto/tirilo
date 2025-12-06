@@ -266,6 +266,7 @@ CREATE TABLE IF NOT EXISTS salas (
     descricao TEXT,                                  -- Descrição da sala
     capacidade INT DEFAULT 1,                        -- Capacidade de pessoas
     cor_identificacao TEXT DEFAULT '#3b82f6',        -- Cor para identificação visual
+    foto_url TEXT,                                   -- URL da foto da sala (Supabase Storage)
     ativa BOOLEAN DEFAULT TRUE,                      -- Status da sala
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
