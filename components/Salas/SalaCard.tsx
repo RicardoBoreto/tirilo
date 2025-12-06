@@ -54,22 +54,31 @@ export default function SalaCard({ sala }: SalaCardProps) {
 
                 {/* Photo Background */}
                 {sala.foto_url && (
-                    <div className="absolute inset-0 opacity-10">
+                    <div className="absolute inset-0 opacity-60 pointer-events-none">
                         <img
                             src={sala.foto_url}
                             alt={sala.nome}
                             className="w-full h-full object-cover"
                         />
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/70 to-transparent dark:from-gray-800/95 dark:via-gray-800/70" />
                     </div>
                 )}
 
                 <div className="pl-4 relative z-10">
                     <div className="flex justify-between items-start mb-4">
                         <div
-                            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg"
+                            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg overflow-hidden relative"
                             style={{ backgroundColor: sala.cor_identificacao }}
                         >
-                            <Icon className="w-6 h-6" />
+                            {sala.foto_url ? (
+                                <img
+                                    src={sala.foto_url}
+                                    alt={sala.nome}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <Icon className="w-6 h-6" />
+                            )}
                         </div>
                         <div className={cn(
                             "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",

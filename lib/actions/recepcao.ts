@@ -7,6 +7,7 @@ export type SalaStatus = {
     id: number
     nome: string
     cor_identificacao: string
+    foto_url: string | null
     status: 'livre' | 'ocupada'
     ocupante_atual?: {
         terapeuta: string
@@ -76,6 +77,7 @@ export async function getStatusSalas() {
             id: sala.id,
             nome: sala.nome,
             cor_identificacao: sala.cor_identificacao || '#3b82f6',
+            foto_url: sala.foto_url,
             status: activeApp ? 'ocupada' : 'livre',
             ocupante_atual: activeApp ? {
                 terapeuta: activeApp.terapeuta?.nome_completo || 'Terapeuta',

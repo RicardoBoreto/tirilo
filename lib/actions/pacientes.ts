@@ -7,7 +7,7 @@ export type Paciente = {
     id: number
     created_at: string
     updated_at: string
-    clinica_id: number
+    id_clinica: number
     nome: string
     data_nascimento: string
     foto_url: string | null
@@ -62,7 +62,7 @@ export async function getPacientes(clinicaId?: number) {
         .order('nome', { ascending: true })
 
     if (clinicaId) {
-        query = query.eq('clinica_id', clinicaId)
+        query = query.eq('id_clinica', clinicaId)
     }
 
     const { data, error } = await query
@@ -96,7 +96,7 @@ export async function createPaciente(formData: FormData) {
     const supabase = await createClient()
 
     const pacienteData = {
-        clinica_id: Number(formData.get('clinica_id')),
+        id_clinica: Number(formData.get('clinica_id')),
         nome: formData.get('nome') as string,
         data_nascimento: formData.get('data_nascimento') as string,
         foto_url: formData.get('foto_url') as string || null,
@@ -426,4 +426,48 @@ export async function getPacientesTerapeutas(pacienteId: number) {
     }
 
     return data.map(item => item.terapeuta_id)
+}
+
+export async function uploadFotoPaciente(pacienteId: number, file: File) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { error: 'Não autorizado' }
+
+    // Gerar nome único para o arquivo
+    const fileExt = file.name.split('.').pop()
+    const fileName = `pacientes/${pacienteId}-${Date.now()}.${fileExt}`
+
+    // Upload do arquivo
+    const { error: uploadError } = await supabase.storage
+        .from('fotos')
+        .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: true
+        })
+
+    if (uploadError) {
+        console.error('Erro ao fazer upload:', uploadError)
+        return { error: 'Erro ao fazer upload da foto' }
+    }
+
+    // Obter URL pública
+    const { data: { publicUrl } } = supabase.storage
+        .from('fotos')
+        .getPublicUrl(fileName)
+
+    // Atualizar paciente com a URL da foto
+    const { error: updateError } = await supabase
+        .from('pacientes')
+        .update({ foto_url: publicUrl })
+        .eq('id', pacienteId)
+
+    if (updateError) {
+        console.error('Erro ao atualizar paciente:', updateError)
+        return { error: 'Erro ao atualizar paciente com a foto' }
+    }
+
+    revalidatePath('/admin/pacientes')
+    revalidatePath(`/admin/pacientes/${pacienteId}`)
+    return { success: true, url: publicUrl }
 }
