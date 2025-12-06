@@ -221,8 +221,8 @@ CREATE TABLE usuarios (
 
 ## 🎯 Próximos Passos
 
-- [ ] Implementar edição de membros da equipe ✅
-- [ ] Adicionar filtro de pacientes por terapeuta
+- [x] Implementar edição de membros da equipe ✅
+- [x] Adicionar filtro de pacientes por terapeuta ✅
 - [ ] Implementar sistema de notificações
 - [ ] Criar relatórios por perfil
 - [ ] Adicionar logs de auditoria
@@ -230,5 +230,5 @@ CREATE TABLE usuarios (
 
 ---
 
-**Última atualização:** 04/12/2024  
-**Versão:** 1.0
+**Última atualização:** 06/12/2024  
+**Versão:** 1.1

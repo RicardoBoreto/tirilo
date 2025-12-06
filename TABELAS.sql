@@ -90,8 +90,9 @@ ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view users from their clinic" ON usuarios
 FOR SELECT USING (
-    id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid())
-    OR id = auth.uid()
+    id = auth.uid() 
+    OR 
+    id_clinica = get_current_user_clinic_id()
 );
 
 CREATE POLICY "Admins can insert users" ON usuarios
@@ -197,22 +198,22 @@ ALTER TABLE pacientes ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view pacientes from their clinic" ON pacientes
 FOR SELECT USING (
-    id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid())
+    id_clinica = get_current_user_clinic_id()
 );
 
 CREATE POLICY "Users can insert pacientes for their clinic" ON pacientes
 FOR INSERT WITH CHECK (
-    id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid())
+    id_clinica = get_current_user_clinic_id()
 );
 
 CREATE POLICY "Users can update pacientes from their clinic" ON pacientes
 FOR UPDATE USING (
-    id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid())
+    id_clinica = get_current_user_clinic_id()
 );
 
 CREATE POLICY "Users can delete pacientes from their clinic" ON pacientes
 FOR DELETE USING (
-    id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid())
+    id_clinica = get_current_user_clinic_id()
 );
 
 -- ----------------------------------------------------------------------------
@@ -232,9 +233,24 @@ CREATE TABLE IF NOT EXISTS pacientes_terapeutas (
 
 ALTER TABLE pacientes_terapeutas ENABLE ROW LEVEL SECURITY;
 
+-- Função auxiliar para obter o ID da clínica do usuário atual sem disparar RLS (SECURITY DEFINER)
+-- Necessária para evitar recursão infinita nas políticas
+-- OBS: Alterar owner para postgres se necessário
+CREATE OR REPLACE FUNCTION get_current_user_clinic_id()
+RETURNS BIGINT
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+    SELECT id_clinica FROM usuarios WHERE id = auth.uid();
+$$;
+
 CREATE POLICY "Users can view their clinic's patient-therapist relationships" ON pacientes_terapeutas
 FOR SELECT USING (
-    id_paciente IN (SELECT id FROM pacientes WHERE id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid()))
+    paciente_id IN (
+        SELECT id FROM pacientes WHERE id_clinica = get_current_user_clinic_id()
+    )
 );
 
 -- ----------------------------------------------------------------------------
