@@ -34,11 +34,15 @@ Armazena informações sobre as salas de atendimento da clínica.
 - Política baseada em `id_clinica` do usuário
 
 ### Storage
-
 As fotos das salas são armazenadas no bucket `fotos` do Supabase Storage:
-- Caminho: `salas/{sala_id}-{timestamp}.{ext}`
-- Acesso: Público (public bucket)
-- Formatos aceitos: Imagens (jpg, png, webp, etc.)
+- **Bucket**: `fotos` (Público)
+- **Caminho**: `salas/{sala_id}-{timestamp}.{ext}`
+- **Formatos aceitos**: Imagens (jpg, png, webp, etc.)
+- **Políticas de Acesso**:
+  - `Anyone can view fotos`: Qualquer pessoa pode visualizar (SELECT).
+  - `Users can upload fotos`: Usuários autenticados podem fazer upload (INSERT).
+  - `Users can update fotos`: Usuários autenticados podem atualizar (UPDATE).
+  - `Users can delete fotos`: Usuários autenticados podem excluir (DELETE).
 
 ### Exemplo de Registro
 

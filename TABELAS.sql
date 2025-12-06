@@ -530,6 +530,38 @@ FOR INSERT WITH CHECK (
     AND auth.uid() IS NOT NULL
 );
 
+
+-- Bucket: fotos (público)
+-- Descrição: Fotos de salas e materiais
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('fotos', 'fotos', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Permitir visualização pública
+CREATE POLICY "Anyone can view fotos" ON storage.objects
+FOR SELECT USING (bucket_id = 'fotos');
+
+-- Permitir upload para usuários autenticados
+CREATE POLICY "Users can upload fotos" ON storage.objects
+FOR INSERT WITH CHECK (
+    bucket_id = 'fotos'
+    AND auth.role() = 'authenticated'
+);
+
+-- Permitir atualização para usuários autenticados
+CREATE POLICY "Users can update fotos" ON storage.objects
+FOR UPDATE USING (
+    bucket_id = 'fotos'
+    AND auth.role() = 'authenticated'
+);
+
+-- Permitir exclusão para usuários autenticados
+CREATE POLICY "Users can delete fotos" ON storage.objects
+FOR DELETE USING (
+    bucket_id = 'fotos'
+    AND auth.role() = 'authenticated'
+);
+
 -- ============================================================================
 -- 10. ÍNDICES PARA PERFORMANCE
 -- ============================================================================

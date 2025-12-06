@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createSala, updateSala, uploadFotoSala, Sala } from '@/lib/actions/salas'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Box, Music, Gamepad2, Puzzle, BookOpen, Smile, Star, Heart, Sun, Cloud, Moon, Flower, Zap, Anchor, Coffee } from 'lucide-react'
+import { Loader2, Box, Music, Gamepad2, Puzzle, BookOpen, Smile, Star, Heart, Sun, Cloud, Moon, Flower, Zap, Anchor, Coffee, Camera } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Image from 'next/image'
 
 const ICONS = [
     { value: 'box', label: 'Caixa', icon: Box },
@@ -50,6 +51,7 @@ interface SalaFormProps {
 export default function SalaForm({ sala, trigger, open, onOpenChange }: SalaFormProps) {
     const [loading, setLoading] = useState(false)
     const [internalOpen, setInternalOpen] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Controlled state for form fields
     const [nome, setNome] = useState(sala?.nome || '')
@@ -134,6 +136,47 @@ export default function SalaForm({ sala, trigger, open, onOpenChange }: SalaForm
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+                    {/* Photo Upload */}
+                    <div className="flex justify-center">
+                        <div
+                            onClick={() => sala ? fileInputRef.current?.click() : null}
+                            className={cn(
+                                "relative w-32 h-32 rounded-2xl bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center transition-colors overflow-hidden group",
+                                sala ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700" : "cursor-not-allowed opacity-70"
+                            )}
+                        >
+                            {fotoUrl ? (
+                                <>
+                                    <Image src={fotoUrl} alt="Preview" fill className="object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Camera className="w-8 h-8 text-white" />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    {uploadingFoto ? (
+                                        <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Camera className="w-8 h-8 text-gray-400 mb-2" />
+                                            <span className="text-xs text-gray-500 font-medium text-center px-2">
+                                                {sala ? 'Adicionar Foto' : 'Salve para adicionar'}
+                                            </span>
+                                        </>
+                                    )}
+                                </>
+                            )}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleFotoUpload}
+                                disabled={!sala || uploadingFoto}
+                            />
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         <Label htmlFor="nome">Nome da Sala *</Label>
                         <Input
@@ -209,34 +252,6 @@ export default function SalaForm({ sala, trigger, open, onOpenChange }: SalaForm
                         />
                     </div>
 
-                    {sala && (
-                        <div className="space-y-2">
-                            <Label htmlFor="foto">Foto da Sala</Label>
-                            {fotoUrl && (
-                                <div className="mb-2">
-                                    <img
-                                        src={fotoUrl}
-                                        alt="Foto da sala"
-                                        className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
-                                    />
-                                </div>
-                            )}
-                            <Input
-                                id="foto"
-                                type="file"
-                                accept="image/*"
-                                onChange={handleFotoUpload}
-                                disabled={uploadingFoto}
-                                className="rounded-xl"
-                            />
-                            {uploadingFoto && (
-                                <p className="text-sm text-gray-500">Fazendo upload...</p>
-                            )}
-                            {!sala && (
-                                <p className="text-sm text-gray-500">Salve a sala primeiro para adicionar uma foto</p>
-                            )}
-                        </div>
-                    )}
 
                     <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
                         <Label htmlFor="ativo" className="cursor-pointer">Situação: {ativo ? 'Ativo' : 'Inativo'}</Label>
