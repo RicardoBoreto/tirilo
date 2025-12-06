@@ -31,7 +31,7 @@ export default function Sidebar({ clinic, userRole, userId, className, onLinkCli
         {
             href: '/admin/help-desk',
             label: 'Suporte',
-            icon: <LifeBuoy className="w-6 h-6" />,
+            icon: <LifeBuoy className="w-6 h-6" color="#4F46E5" />,
         },
     ]
 
@@ -39,7 +39,7 @@ export default function Sidebar({ clinic, userRole, userId, className, onLinkCli
         {
             href: '/admin/recepcao',
             label: 'Recepção',
-            icon: <LayoutDashboard className="w-6 h-6" />,
+            icon: <LayoutDashboard className="w-6 h-6" color="#4F46E5" />,
         },
         {
             href: '/admin/pacientes',
@@ -49,32 +49,32 @@ export default function Sidebar({ clinic, userRole, userId, className, onLinkCli
         {
             href: '/admin/agenda',
             label: 'Agenda',
-            icon: <Calendar className="w-6 h-6" />,
+            icon: <Calendar className="w-6 h-6" color="#4F46E5" />,
         },
         {
             href: '/admin/equipe',
             label: 'Equipe',
-            icon: <Users className="w-6 h-6" />,
+            icon: <Users className="w-6 h-6" color="#4F46E5" />,
         },
         {
             href: '/admin/salas',
             label: 'Salas',
-            icon: <Box className="w-6 h-6" />,
+            icon: <Box className="w-6 h-6" color="#4F46E5" />,
         },
         {
             href: '/admin/recursos',
             label: 'Materiais',
-            icon: <Package className="w-6 h-6" />,
+            icon: <Package className="w-6 h-6" color="#4F46E5" />,
         },
         {
             href: '/admin/prompts-ia',
             label: 'Assistente IA',
-            icon: <Sparkles className="w-6 h-6" />,
+            icon: <Sparkles className="w-6 h-6" color="#4F46E5" />,
         },
         {
             href: '/admin/help-desk',
             label: 'Suporte',
-            icon: <LifeBuoy className="w-6 h-6" />,
+            icon: <LifeBuoy className="w-6 h-6" color="#4F46E5" />,
         },
         {
             href: '/admin/configuracoes',

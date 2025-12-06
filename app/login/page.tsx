@@ -83,8 +83,8 @@ export default function LoginPage() {
             <Card className="w-full max-w-md border-none shadow-2xl bg-white/90 backdrop-blur-sm">
                 <CardContent className="p-8">
                     <div className="text-center mb-8 flex flex-col items-center">
-                        <div className="bg-primary/10 p-4 rounded-full mb-4 animate-bounce">
-                            <CuteRobot className="w-12 h-12 text-primary" />
+                        <div className="mb-4 animate-bounce">
+                            <CuteRobot className="w-16 h-16" color="#4F46E5" />
                         </div>
                         <h1 className="text-3xl font-heading font-bold text-gray-900 dark:text-white mb-2">
                             SaaS Tirilo
@@ -131,7 +131,11 @@ export default function LoginPage() {
                             type="submit"
                             disabled={loading}
                             size="lg"
-                            className="w-full h-12 text-lg rounded-2xl shadow-lg shadow-primary/20"
+                            className="w-full h-12 text-lg rounded-2xl shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
+                            style={{
+                                background: 'linear-gradient(to right, #6366F1, rgba(99, 102, 241, 0.9))',
+                                color: 'white'
+                            }}
                         >
                             {loading ? (
                                 <>

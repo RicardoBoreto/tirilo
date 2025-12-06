@@ -10,6 +10,7 @@ export const CuteRobot = ({ className, ...props }: LucideProps) => (
         strokeLinecap="round"
         strokeLinejoin="round"
         className={cn("text-primary", className)}
+        style={{ color: '#4F46E5' }}
         {...props}
     >
         <rect width="18" height="10" x="3" y="11" rx="5" />
@@ -57,6 +58,7 @@ export const CuteUsers = ({ className, ...props }: LucideProps) => (
     <Users
         className={cn("text-primary", className)}
         strokeWidth={2.5}
+        color="#4F46E5"
         {...props}
     />
 )
@@ -71,8 +73,9 @@ export const CuteStethoscope = ({ className, ...props }: LucideProps) => (
 
 export const CuteSettings = ({ className, ...props }: LucideProps) => (
     <Settings
-        className={cn("text-gray-400", className)}
+        className={cn("text-primary", className)}
         strokeWidth={2.5}
+        color="#4F46E5"
         {...props}
     />
 )
@@ -81,6 +84,7 @@ export const CuteBuilding = ({ className, ...props }: LucideProps) => (
     <Building2
         className={cn("text-primary", className)}
         strokeWidth={2.5}
+        color="#4F46E5"
         {...props}
     />
 )
