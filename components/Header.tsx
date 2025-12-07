@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { User } from '@supabase/supabase-js'
 import { Menu, LogOut, Lock } from 'lucide-react'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
 import Sidebar from '@/components/Sidebar'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -46,6 +46,7 @@ export default function Header({ user, clinic }: HeaderProps) {
                                 </Button>
                             </SheetTrigger>
                             <SheetContent side="left" className="p-0 w-72 border-r border-gray-100 dark:border-gray-700 rounded-r-3xl">
+                                <SheetTitle className="hidden">Menu de Navegação</SheetTitle>
                                 <Sidebar
                                     clinic={clinic}
                                     userRole={(user as any).tipo_perfil}
