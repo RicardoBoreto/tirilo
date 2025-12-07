@@ -333,7 +333,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                         </div>
                     ))}
                 </div>
-                <div className="flex-1 grid grid-cols-7 auto-rows-fr overflow-y-auto bg-gray-200 dark:bg-gray-700 gap-px border border-gray-200 dark:border-gray-700">
+                <div className="flex-1 grid grid-cols-7 auto-rows-fr overflow-y-auto bg-gray-200 dark:bg-gray-700 gap-0.5 border border-gray-200 dark:border-gray-700">
                     {days.map((day, index) => {
                         const dayAgendamentos = getAgendamentosForDay(day)
                         const isCurrentMonth = isSameMonth(day, monthStart)
