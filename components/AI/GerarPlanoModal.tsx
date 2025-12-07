@@ -84,9 +84,9 @@ export default function GerarPlanoModal({ pacienteId, trigger }: GerarPlanoModal
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 {trigger || (
-                    <Button className="bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg hover:shadow-xl transition-all w-full sm:w-auto">
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Gerar Plano com IA
+                    <Button className="h-14 rounded-2xl text-lg font-bold shadow-lg shadow-purple-500/20 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white w-full sm:w-auto">
+                        <Sparkles className="w-6 h-6 mr-2 fill-current" />
+                        Gerar Plano (IA)
                     </Button>
                 )}
             </DialogTrigger>
