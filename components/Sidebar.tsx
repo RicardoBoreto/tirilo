@@ -1,10 +1,7 @@
-'use client'
-
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { CuteBuilding, CuteUsers, CuteStethoscope, CuteSettings } from '@/components/icons/CuteIcons'
-import { Box, Package, Calendar, Sparkles, LifeBuoy, Users, LayoutDashboard } from 'lucide-react'
+import { getSidebarLinks } from '@/lib/nav-config'
 
 interface SidebarProps {
     clinic?: {
@@ -21,86 +18,7 @@ interface SidebarProps {
 
 export default function Sidebar({ clinic, userRole, userId, className, onLinkClick }: SidebarProps) {
     const pathname = usePathname()
-
-    const masterLinks = [
-        {
-            href: '/admin/clinicas',
-            label: 'Clínicas',
-            icon: <CuteBuilding className="w-6 h-6" />,
-        },
-        {
-            href: '/admin/help-desk',
-            label: 'Suporte',
-            icon: <LifeBuoy className="w-6 h-6" color="#4F46E5" />,
-        },
-    ]
-
-    const clinicLinks = [
-        {
-            href: '/admin/recepcao',
-            label: 'Recepção',
-            icon: <LayoutDashboard className="w-6 h-6" color="#4F46E5" />,
-        },
-        {
-            href: '/admin/pacientes',
-            label: 'Pacientes',
-            icon: <CuteUsers className="w-6 h-6" />,
-        },
-        {
-            href: '/admin/agenda',
-            label: 'Agenda',
-            icon: <Calendar className="w-6 h-6" color="#4F46E5" />,
-        },
-        {
-            href: '/admin/equipe',
-            label: 'Equipe',
-            icon: <Users className="w-6 h-6" color="#4F46E5" />,
-        },
-        {
-            href: '/admin/salas',
-            label: 'Salas',
-            icon: <Box className="w-6 h-6" color="#4F46E5" />,
-        },
-        {
-            href: '/admin/recursos',
-            label: 'Materiais',
-            icon: <Package className="w-6 h-6" color="#4F46E5" />,
-        },
-        {
-            href: '/admin/prompts-ia',
-            label: 'Assistente IA',
-            icon: <Sparkles className="w-6 h-6" color="#4F46E5" />,
-        },
-        {
-            href: '/admin/help-desk',
-            label: 'Suporte',
-            icon: <LifeBuoy className="w-6 h-6" color="#4F46E5" />,
-        },
-        {
-            href: '/admin/configuracoes',
-            label: 'Configurações',
-            icon: <CuteSettings className="w-6 h-6" />,
-        },
-    ]
-
-    const links = clinic
-        ? [
-            ...clinicLinks.filter(link => {
-                if (userRole === 'terapeuta' && link.href === '/admin/configuracoes') return false
-                if (userRole === 'terapeuta' && link.href === '/admin/equipe') return false // Terapeutas don't manage team
-                if (userRole === 'terapeuta' && link.href === '/admin/salas') return false // Terapeutas don't manage rooms
-                if (userRole === 'terapeuta' && link.href === '/admin/recepcao') return false // Terapeutas don't see reception dash
-                if (userRole === 'recepcao' && link.href === '/admin/prompts-ia') return false // Recepcao doesn't manage IA prompts
-                if (userRole === 'recepcao' && link.href === '/admin/configuracoes') return false // Recepcao doesn't manage clinic settings
-                return true
-            }),
-            ...(userRole === 'terapeuta' && userId ? [{
-                href: `/admin/terapeutas/${userId}/editar`,
-                label: 'Meu Perfil',
-                icon: <CuteUsers className="w-6 h-6" />,
-            }] : [])
-        ]
-        : masterLinks
+    const links = getSidebarLinks(clinic, userRole, userId)
 
     return (
         <aside className={`w-64 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 ${className || ''}`}>
