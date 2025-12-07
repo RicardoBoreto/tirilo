@@ -7,6 +7,7 @@ import {
 } from '@/lib/actions/pacientes'
 import { getTerapeutas } from '@/lib/actions/terapeutas'
 import { getRelatoriosByPaciente } from '@/lib/actions/relatorios'
+import { getPlanosIAByPaciente } from '@/lib/actions/ai_generation'
 import PacienteDetailsTabs from '@/components/PacienteDetailsTabs'
 import Link from 'next/link'
 
@@ -25,14 +26,16 @@ export default async function PacienteDetailsPage({
         anamnese,
         terapeutasData,
         linkedTerapeutaIds,
-        relatorios
+        relatorios,
+        planosIA
     ] = await Promise.all([
         getPaciente(pId),
         getResponsaveis(pId),
         getAnamnese(pId),
         getTerapeutas(), // No args needed as it uses session user's clinic
         getPacientesTerapeutas(pId),
-        getRelatoriosByPaciente(pId)
+        getRelatoriosByPaciente(pId),
+        getPlanosIAByPaciente(pId)
     ])
 
     if (!paciente) {
@@ -67,7 +70,9 @@ export default async function PacienteDetailsPage({
                 allTerapeutas={terapeutasData.terapeutas}
                 linkedTerapeutaIds={linkedTerapeutaIds}
                 relatorios={relatorios || []}
+                planosIA={planosIA || []}
             />
         </div>
     )
 }
+
