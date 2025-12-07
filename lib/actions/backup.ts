@@ -43,29 +43,58 @@ export async function generateBackup() {
     const [
         { data: clinicas },
         { data: usuarios },
+        { data: terapeutas_curriculo },
+        { data: responsaveis },
         { data: pacientes },
+        { data: pacientes_terapeutas },
+        { data: anamnese },
+        { data: salas },
         { data: agendamentos },
         { data: relatorios },
-        { data: prompts }
+        { data: promts_ia },
+        { data: planos_ia },
+        { data: help_desk_tickets },
+        { data: help_desk_mensagens },
+        { data: materiais }
     ] = await Promise.all([
         supabase.from('saas_clinicas').select('*'),
         supabase.from('usuarios').select('*'),
+        supabase.from('terapeutas_curriculo').select('*'),
+        supabase.from('responsaveis').select('*'),
         supabase.from('pacientes').select('*'),
+        supabase.from('pacientes_terapeutas').select('*'),
+        supabase.from('anamnese').select('*'),
+        supabase.from('salas').select('*'),
         supabase.from('agendamentos').select('*'),
-        supabase.from('relatorios_atendimento').select('*'),
-        supabase.from('prompts_ia').select('*')
+        supabase.from('relatorios').select('*'),
+        supabase.from('prompts_ia').select('*'),
+        supabase.from('planos_ia').select('*'),
+        supabase.from('help_desk_tickets').select('*'),
+        supabase.from('help_desk_mensagens').select('*'),
+        supabase.from('materiais').select('*')
     ])
 
     const backupData = {
         timestamp: new Date().toISOString(),
         type: 'FULL_SYSTEM_BACKUP',
         schema_migrations: migrations,
-        clinicas,
-        usuarios,
-        pacientes,
-        agendamentos,
-        relatorios,
-        prompts
+        datos: {
+            saas_clinicas: clinicas,
+            usuarios,
+            terapeutas_curriculo,
+            responsaveis,
+            pacientes,
+            pacientes_terapeutas,
+            anamnese,
+            salas,
+            agendamentos,
+            relatorios,
+            promts_ia,
+            planos_ia,
+            help_desk_tickets,
+            help_desk_mensagens,
+            materiais
+        }
     }
 
     return { data: backupData }
