@@ -333,7 +333,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                         </div>
                     ))}
                 </div>
-                <div className="flex-1 grid grid-cols-7 auto-rows-fr overflow-y-auto">
+                <div className="flex-1 grid grid-cols-7 auto-rows-fr overflow-y-auto bg-gray-200 dark:bg-gray-700 gap-px border border-gray-200 dark:border-gray-700">
                     {days.map((day, index) => {
                         const dayAgendamentos = getAgendamentosForDay(day)
                         const isCurrentMonth = isSameMonth(day, monthStart)
@@ -342,9 +342,9 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                             <div
                                 key={day.toString()}
                                 className={cn(
-                                    "border-r border-b border-gray-300 p-2 min-h-[100px] relative group transition-colors",
-                                    !isCurrentMonth ? "bg-gray-50/30 text-gray-400" : (index % 2 === 0 ? "bg-white" : "bg-gray-50/10"),
-                                    isSameDay(day, new Date()) ? "bg-primary/[0.05]" : ""
+                                    "p-2 min-h-[100px] relative group transition-colors",
+                                    !isCurrentMonth ? "bg-gray-50 text-gray-400" : "bg-white dark:bg-gray-800",
+                                    isSameDay(day, new Date()) ? "bg-blue-50/50 dark:bg-blue-900/20" : ""
                                 )}
                                 onClick={() => {
                                     setCurrentDate(day)
