@@ -148,9 +148,10 @@ O sistema Tirilo possui **4 perfis de usuário** com diferentes níveis de acess
 
 ### Autenticação e Sessão
 1. Todos os usuários devem fazer login com email e senha
-2. Senha padrão para novos usuários: `Tirilo2025!`
-3. Usuários devem trocar a senha no primeiro acesso (flag `precisa_trocar_senha`)
-4. Sessão expira após inatividade (configurável)
+2. **Cadastro Público Desativado:** Novos usuários só podem ser cadastrados internamente por administradores.
+3. Senha padrão para novos usuários: `Tirilo2025!`
+4. Usuários devem trocar a senha no primeiro acesso (flag `precisa_trocar_senha`)
+5. Sessão expira após inatividade (configurável)
 
 ### Hierarquia de Acesso
 1. **Super Admin** → Todas as clínicas

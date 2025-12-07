@@ -148,6 +148,7 @@ export default function LoginPage() {
                         </Button>
                     </form>
 
+                    {/* 
                     <div className="mt-8 text-center">
                         <p className="text-sm text-muted-foreground">
                             Não tem uma conta?{' '}
@@ -156,6 +157,7 @@ export default function LoginPage() {
                             </a>
                         </p>
                     </div>
+                    */}
                 </CardContent>
             </Card>
         </div>
