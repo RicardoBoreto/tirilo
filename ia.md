@@ -86,3 +86,10 @@ Este próprio arquivo, que detalha o funcionamento funcional e arquitetural do m
 - **Funcionamento:** Explica como os prompts são gerenciados e como os planos são gerados.
 - **Estrutura de Dados:** Detalha as tabelas `prompts_ia` e `planos_intervencao_ia`.
 - **Funcionalidades:** Cobre a geração de planos (modal) e a visualização do histórico (aba Planos IA) com TTS.
+
+### 🎨 Padrões de Interface (UI)
+Detalha o padrão visual adotado para as ferramentas de IA:
+- **Botões:** Grandes (`h-14`), arredondados (`rounded-2xl`) e com sufixo `(IA)`.
+- **Código de Cores:**
+  - 🟣 **Roxo (Criação):** Usado para "Gerar Plano (IA)". Representa a "magia" da criação criativa.
+  - 🟢 **Verde (Registro):** Usado para "Registrar Atendimento (IA)". Representa a "conclusão" e "sucesso" da tarefa.

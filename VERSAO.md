@@ -15,6 +15,52 @@ Cada versão segue o formato:
 
 ---
 
+## [1.2.3] - 07/12/2024
+
+### 🎨 Interface e Experiência (UI/UX)
+
+#### Padronização de Botões IA
+- **Descrição:** Padronização visual completa dos botões de ação da IA.
+- **Mudanças:**
+  - **Formato:** Ambos botões agora são grandes (`h-14`), arredondados (`rounded-2xl`) e com texto destacado.
+  - **Nomenclatura:** Sufixo `(IA)` padronizado em ambos: "Gerar Plano (IA)" e "Registrar Atendimento (IA)".
+  - **Cores Distintas:**
+    - 🟣 **Roxo/Azul:** Ações de Criação ("Gerar Plano").
+    - 🟢 **Verde/Teal:** Ações de Registro/Relatório ("Registrar Atendimento").
+- **Arquivos modificados:**
+  - `components/Agenda/DetalhesAgendamento.tsx`
+  - `components/AI/GerarPlanoModal.tsx`
+  - `components/Relatorios/RelatorioModal.tsx`
+
+#### Fix: Grade da Agenda
+- **Problema:** Linhas da grade sumiam em certas resoluções/zoom.
+- **Solução:** Substituição de `border` por `gap` (espaçamento) no grid CSS.
+- **Melhoria:** Aumento da espessura da linha para 2px (`gap-0.5`) para melhor visibilidade.
+- **Arquivo:** `components/Agenda/AgendaCalendar.tsx`
+
+### 🔧 Melhorias Técnicas
+
+#### Centralização de Navegação
+- **Descrição:** Lógica do menu lateral unificada em um único arquivo de configuração.
+- **Benefício:** Garante que o menu Desktop e Mobile mostrem exatamente as mesmas opções para todos os perfis.
+- **Arquivos:**
+  - `lib/nav-config.tsx` (Novo)
+  - `components/Sidebar.tsx` (Refatorado)
+
+### 🐛 Correções de Bugs
+
+#### Fix: Menu Mobile "Meu Perfil"
+- **Problema:** Opção "Meu Perfil" não aparecia no menu mobile para terapeutas.
+- **Solução:** Envio correto das props de usuário para o componente Sidebar no Header.
+- **Arquivo:** `components/Header.tsx`
+
+#### Fix: Acessibilidade (A11y)
+- **Problema:** Erro de console `DialogContent requires DialogTitle`.
+- **Solução:** Adicionado título invisível (`SheetTitle`) no menu mobile para leitores de tela.
+- **Arquivo:** `components/Header.tsx`
+
+---
+
 ## [1.2.2] - 07/12/2024
 
 ### ✨ Novos Recursos
