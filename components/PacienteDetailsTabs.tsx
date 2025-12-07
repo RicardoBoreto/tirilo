@@ -7,6 +7,7 @@ import ResponsaveisTab from './ResponsaveisTab'
 import AnamneseTab from './AnamneseTab'
 import TerapeutasTab from './TerapeutasTab'
 import RelatoriosTab from './RelatoriosTab'
+import PlanosIATab from './AI/PlanosIATab'
 import { Camera, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -17,6 +18,7 @@ type Props = {
     allTerapeutas: Terapeuta[]
     linkedTerapeutaIds: string[]
     relatorios: any[]
+    planosIA: any[]
     clinicLogo?: string | null
     clinicName?: string | null
 }
@@ -28,10 +30,11 @@ export default function PacienteDetailsTabs({
     allTerapeutas,
     linkedTerapeutaIds,
     relatorios,
+    planosIA,
     clinicLogo,
     clinicName
 }: Props) {
-    const [activeTab, setActiveTab] = useState<'dados' | 'responsaveis' | 'terapeutas' | 'anamnese' | 'relatorios'>('dados')
+    const [activeTab, setActiveTab] = useState<'dados' | 'responsaveis' | 'terapeutas' | 'anamnese' | 'relatorios' | 'planos_ia'>('dados')
     const [fotoUrl, setFotoUrl] = useState(paciente.foto_url || '')
     const [uploadingFoto, setUploadingFoto] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -62,6 +65,7 @@ export default function PacienteDetailsTabs({
         { id: 'terapeutas' as const, label: 'Terapeutas', icon: '🩺' },
         { id: 'anamnese' as const, label: 'Anamnese', icon: '📋' },
         { id: 'relatorios' as const, label: 'Relatórios', icon: '📝' },
+        { id: 'planos_ia' as const, label: 'Planos IA', icon: '🤖' },
     ]
 
     return (
@@ -179,6 +183,10 @@ export default function PacienteDetailsTabs({
 
                 {activeTab === 'relatorios' && (
                     <RelatoriosTab relatorios={relatorios} pacienteNome={paciente.nome} />
+                )}
+
+                {activeTab === 'planos_ia' && (
+                    <PlanosIATab planos={planosIA} />
                 )}
             </div>
         </div>

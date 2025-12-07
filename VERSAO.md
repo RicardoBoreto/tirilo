@@ -15,6 +15,37 @@ Cada versão segue o formato:
 
 ---
 
+## [1.2.2] - 07/12/2024
+
+### ✨ Novos Recursos
+
+#### Assistente IA - Visualização e TTS
+- **Descrição:** Nova aba "Planos IA" no perfil do paciente e funcionalidade de leitura em voz alta.
+- **Funcionalidades:**
+  - **Aba "Planos IA":** Histórico completo de planos gerados para o paciente.
+  - **Leitura em Voz Alta (TTS):** Botão "Ouvir Plano" com leitura natural.
+  - **Configurações de Voz:** Controle de velocidade (0.5x a 2.0x) e seleção de vozes do sistema.
+  - **Formatação:** Exibição do plano com Markdown renderizado visualmente.
+- **Arquivos modificados:**
+  - `components/AI/PlanosIATab.tsx`
+  - `components/PacienteDetailsTabs.tsx`
+  - `lib/actions/ai_generation.ts`
+
+### 🔧 Melhorias
+
+#### Assistente IA - Geração e Listagem
+- **Correção de Colunas:** Ajustada query de busca para usar `nome_prompt` corretamente.
+- **Limpeza de Texto:** Filtro inteligente que remove caracteres Markdown (`#`, `*`) antes da leitura por voz.
+- **Scroll Infinito:** Correção no modal de visualização para permitir rolagem de textos longos.
+
+### 🗄️ Banco de Dados
+
+#### Correção de Permissões (RLS)
+- **Descrição:** Adicionada política que permite aos usuários visualizarem os planos de intervenção que eles mesmos geraram.
+- **Migration:** `supabase/migrations/20251207120000_fix_planos_ia_rls.sql`
+
+---
+
 ## [1.2.1] - 07/12/2024
 
 ### ✨ Novos Recursos

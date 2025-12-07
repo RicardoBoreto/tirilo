@@ -59,6 +59,17 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
         .eq('id_usuario', user.id)
         .maybeSingle()
 
+    // 6. Fetch Previous Plan (for objective continuity)
+    const { data: ultimoPlano } = await supabase
+        .from('planos_intervencao_ia')
+        .select('plano_final')
+        .eq('id_paciente', pacienteId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    const objetivoPlano = ultimoPlano ? 'Conforme último plano de intervenção gerado.' : 'Não especificado (Primeiro plano).'
+
     // 6. Prepare Data for Replacement
     const idade = differenceInYears(new Date(), parseISO(paciente.data_nascimento))
 
@@ -90,12 +101,14 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
     let promptFinal = promptData.prompt_texto
         .replace(/{{NOME}}/g, paciente.nome)
         .replace(/{{IDADE}}/g, idade.toString())
+        .replace(/{{DIAGNOSTICO}}/g, diagnostico)
         .replace(/{{DIAGNOSTICO_E_ANAMNESE}}/g, diagnostico)
         .replace(/{{PREFERENCIAS}}/g, preferencias)
         .replace(/{{SENSIBILIDADES}}/g, sensibilidades)
         .replace(/{{ULTIMAS_SESSOES}}/g, sessoesTexto)
         .replace(/{{RECURSOS_LISTA}}/g, recursosTexto)
         .replace(/{{SALAS_LISTA}}/g, salasTexto)
+        .replace(/{{OBJETIVO_PRINCIPAL_PLANO}}/g, objetivoPlano)
 
         // Therapist Placeholders
         .replace(/{{TERAPEUTA_NOME}}/g, terapeutaUser?.nome_completo || 'Terapeuta')
@@ -253,4 +266,31 @@ export async function generateSessionReport(promptId: number, pacienteId: number
         console.error('Erro na API Gemini:', error)
         return { success: false, error: 'Erro ao gerar relatório com IA: ' + error.message }
     }
+}
+
+export async function getPlanosIAByPaciente(pacienteId: number) {
+    const supabase = await createClient()
+
+    const { data: planos, error } = await supabase
+        .from('planos_intervencao_ia')
+        .select(`
+            id,
+            created_at,
+            plano_final,
+            prompt:prompts_ia(nome_prompt),
+            terapeuta:usuarios(nome_completo)
+        `)
+        .eq('id_paciente', pacienteId)
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        console.error('Erro ao buscar planos IA:', JSON.stringify(error, null, 2))
+        return []
+    }
+
+    return planos.map((p: any) => ({
+        ...p,
+        titulo: p.prompt?.nome_prompt || 'Plano Sem Título',
+        modelo_ia: 'IA' // Default since column is missing
+    }))
 }

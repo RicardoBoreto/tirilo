@@ -80,3 +80,9 @@ Guia completo para diagnósticos de falhas no upload de PDFs (laudos médicos). 
 
 ### `EXEMPLOS_PROMPTS.md`
 Catálogo de prompts pré-definidos para copiar e colar. Inclui modelos otimizados para "Plano de Intervenção" e "Relatório de Atendimento", prontos para uso no sistema.
+
+### `ia.md`
+Este próprio arquivo, que detalha o funcionamento funcional e arquitetural do módulo de IA.
+- **Funcionamento:** Explica como os prompts são gerenciados e como os planos são gerados.
+- **Estrutura de Dados:** Detalha as tabelas `prompts_ia` e `planos_intervencao_ia`.
+- **Funcionalidades:** Cobre a geração de planos (modal) e a visualização do histórico (aba Planos IA) com TTS.

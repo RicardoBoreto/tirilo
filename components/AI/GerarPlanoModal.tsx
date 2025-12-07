@@ -11,6 +11,8 @@ import { Loader2, Sparkles, Save, MessageSquare, RefreshCw } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { Textarea } from '@/components/ui/textarea'
 
+import { useRouter } from 'next/navigation'
+
 interface GerarPlanoModalProps {
     pacienteId: number
     trigger?: React.ReactNode
@@ -25,6 +27,7 @@ export default function GerarPlanoModal({ pacienteId, trigger }: GerarPlanoModal
     const [originalPlan, setOriginalPlan] = useState<string | null>(null)
     const [chatMode, setChatMode] = useState(false)
     const [chatInput, setChatInput] = useState('')
+    const router = useRouter()
 
     const [error, setError] = useState<string | null>(null)
 
@@ -71,6 +74,7 @@ export default function GerarPlanoModal({ pacienteId, trigger }: GerarPlanoModal
         if (result.success) {
             alert('Plano salvo com sucesso!')
             setOpen(false)
+            router.refresh()
         } else {
             alert('Erro ao salvar: ' + result.error)
         }
