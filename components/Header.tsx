@@ -48,6 +48,8 @@ export default function Header({ user, clinic }: HeaderProps) {
                             <SheetContent side="left" className="p-0 w-72 border-r border-gray-100 dark:border-gray-700 rounded-r-3xl">
                                 <Sidebar
                                     clinic={clinic}
+                                    userRole={(user as any).tipo_perfil}
+                                    userId={user.id}
                                     className="w-full h-full border-none rounded-r-3xl"
                                     onLinkClick={() => setSheetOpen(false)}
                                 />
