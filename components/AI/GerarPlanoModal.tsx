@@ -32,8 +32,10 @@ export default function GerarPlanoModal({ pacienteId, trigger }: GerarPlanoModal
     useEffect(() => {
         if (open) {
             getActivePrompts().then(data => {
-                setPrompts(data)
-                if (data.length > 0) setSelectedPromptId(data[0].id.toString())
+                // Filter: Only 'plano' or generic (null)
+                const planPrompts = data.filter(p => !p.categoria || p.categoria === 'plano')
+                setPrompts(planPrompts)
+                if (planPrompts.length > 0) setSelectedPromptId(planPrompts[0].id.toString())
             })
         }
     }, [open])

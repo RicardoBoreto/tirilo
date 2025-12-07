@@ -90,12 +90,12 @@ export default function AgendaGeral() {
                 {loading ? (
                     <div className="p-8 text-center text-gray-400">Carregando agenda...</div>
                 ) : (
-                    <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                    <div className="divide-y divide-gray-300 dark:divide-gray-800">
                         {hours.map(hour => {
                             const apps = getAppointmentsForHour(hour)
                             return (
                                 <div key={hour} className="flex group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                    <div className="w-20 py-4 px-4 text-right border-r border-gray-100 dark:border-gray-800">
+                                    <div className="w-20 py-4 px-4 text-right border-r border-gray-300 dark:border-gray-800">
                                         <span className="text-sm font-medium text-gray-500">
                                             {hour.toString().padStart(2, '0')}:00
                                         </span>
@@ -123,8 +123,8 @@ export default function AgendaGeral() {
                                                                 {app.sala?.nome || 'Sem sala'}
                                                             </Badge>
                                                             <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${app.status === 'realizado' ? 'bg-green-100 text-green-700' :
-                                                                    app.status === 'cancelado' ? 'bg-red-100 text-red-700' :
-                                                                        'bg-blue-50 text-blue-700'
+                                                                app.status === 'cancelado' ? 'bg-red-100 text-red-700' :
+                                                                    'bg-blue-50 text-blue-700'
                                                                 }`}>
                                                                 {app.status}
                                                             </span>
@@ -134,7 +134,7 @@ export default function AgendaGeral() {
                                             </div>
                                         ) : (
                                             <div className="h-full flex items-center">
-                                                <div className="w-full border-t border-dashed border-gray-200 dark:border-gray-700" />
+                                                <div className="w-full border-t border-dashed border-gray-300 dark:border-gray-700" />
                                             </div>
                                         )}
                                     </div>

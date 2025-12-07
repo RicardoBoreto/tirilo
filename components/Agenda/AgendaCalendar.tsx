@@ -158,8 +158,8 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                 {HOURS.map(hour => {
                     const slotAgendamentos = getAgendamentosForSlot(currentDate, hour)
                     return (
-                        <div key={hour} className="grid grid-cols-[80px_1fr] min-h-[100px] border-b border-gray-50 dark:border-gray-700">
-                            <div className="p-4 text-sm font-medium text-gray-400 text-right border-r border-gray-50 dark:border-gray-700 bg-gray-50/30">
+                        <div key={hour} className="grid grid-cols-[80px_1fr] min-h-[100px] border-b border-gray-300 dark:border-gray-700">
+                            <div className="p-4 text-sm font-medium text-gray-400 text-right border-r border-gray-300 dark:border-gray-700 bg-gray-50/30">
                                 {hour.toString().padStart(2, '0')}:00
                             </div>
                             <div className="relative p-2 group hover:bg-gray-50/50 transition-colors">
@@ -181,9 +181,9 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                                             onClick={(e) => { e.stopPropagation(); setSelectedAgendamento(agendamento) }}
                                             className={cn(
                                                 "p-3 rounded-xl text-sm font-medium cursor-pointer shadow-sm border transition-all hover:scale-[1.01] flex items-center gap-3",
-                                                agendamento.status === 'agendado' ? "bg-blue-50 border-blue-100 text-blue-700" :
-                                                    agendamento.status === 'realizado' ? "bg-green-50 border-green-100 text-green-700" :
-                                                        "bg-gray-100 border-gray-200 text-gray-500"
+                                                agendamento.status === 'agendado' ? "bg-blue-100 border-blue-200 text-blue-800 dark:bg-blue-900 dark:border-blue-800 dark:text-blue-100" :
+                                                    agendamento.status === 'realizado' ? "bg-green-100 border-green-200 text-green-800 dark:bg-green-900 dark:border-green-800 dark:text-green-100" :
+                                                        "bg-gray-200 border-gray-300 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
                                             )}
                                         >
                                             <div className="w-1 h-8 rounded-full" style={{ backgroundColor: agendamento.sala?.cor_hex || '#ccc' }} />
@@ -212,7 +212,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
 
         return (
             <div className="flex-1 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col">
-                <div className="grid grid-cols-[60px_1fr_1fr_1fr_1fr_1fr_1fr] border-b border-gray-100 dark:border-gray-700">
+                <div className="grid grid-cols-[60px_repeat(6,minmax(0,1fr))] border-b border-gray-100 dark:border-gray-700">
                     <div className="p-4 border-r border-gray-50 bg-gray-50/50"></div>
                     {weekDays.map((day, index) => {
                         const isToday = isSameDay(day, new Date())
@@ -224,13 +224,13 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                                 className={cn(
                                     "p-4 text-center border-r border-gray-100 dark:border-gray-700 last:border-r-0",
                                     isToday
-                                        ? "bg-blue-50/80 dark:bg-blue-900/30"
+                                        ? "bg-blue-100 dark:bg-blue-900/40"
                                         : isEvenColumn
-                                            ? "bg-gray-100/80 dark:bg-gray-800/80"
+                                            ? "bg-gray-200 dark:bg-gray-800"
                                             : "bg-white dark:bg-gray-900"
                                 )}
                             >
-                                <p className="text-xs font-bold text-gray-400 uppercase mb-1">
+                                <p className="text-xs font-bold text-gray-500 uppercase mb-1">
                                     {format(day, 'EEE', { locale: ptBR })}
                                 </p>
                                 <div className={cn(
@@ -245,7 +245,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                 </div>
                 <div className="flex-1 overflow-y-auto">
                     {HOURS.map(hour => (
-                        <div key={hour} className="grid grid-cols-[60px_1fr_1fr_1fr_1fr_1fr_1fr] min-h-[100px]">
+                        <div key={hour} className="grid grid-cols-[60px_repeat(6,minmax(0,1fr))] min-h-[100px]">
                             <div className="p-2 text-xs font-medium text-gray-400 text-right border-r border-b border-gray-50 bg-gray-50/30 sticky left-0">
                                 {hour.toString().padStart(2, '0')}:00
                             </div>
@@ -261,9 +261,9 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                                             "border-r border-b border-gray-100 dark:border-gray-700 p-1 relative group transition-colors",
                                             // Stronger colors for visibility
                                             isToday
-                                                ? "bg-blue-50/50 dark:bg-blue-900/20"
+                                                ? "bg-blue-50 dark:bg-blue-900/20"
                                                 : isEvenColumn
-                                                    ? "bg-gray-100/50 dark:bg-gray-800/50"
+                                                    ? "bg-gray-100 dark:bg-gray-800/60"
                                                     : "bg-white dark:bg-gray-900"
                                         )}
                                     >
@@ -285,12 +285,12 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                                                     onClick={(e) => { e.stopPropagation(); setSelectedAgendamento(agendamento) }}
                                                     className={cn(
                                                         "p-2 rounded-xl text-xs font-medium cursor-pointer shadow-sm border transition-all hover:scale-[1.02]",
-                                                        agendamento.status === 'agendado' ? "bg-blue-50 border-blue-100 text-blue-700" :
-                                                            agendamento.status === 'realizado' ? "bg-green-50 border-green-100 text-green-700" :
-                                                                "bg-gray-100 border-gray-200 text-gray-500"
+                                                        agendamento.status === 'agendado' ? "bg-blue-100 border-blue-200 text-blue-800 dark:bg-blue-900 dark:border-blue-800 dark:text-blue-100" :
+                                                            agendamento.status === 'realizado' ? "bg-green-100 border-green-200 text-green-800 dark:bg-green-900 dark:border-green-800 dark:text-green-100" :
+                                                                "bg-gray-200 border-gray-300 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
                                                     )}
                                                 >
-                                                    <div className="font-bold truncate">{agendamento.paciente?.nome}</div>
+                                                    <div className="font-bold break-words leading-tight">{agendamento.paciente?.nome}</div>
                                                     <div className="flex items-center justify-between mt-1 opacity-80">
                                                         <span>{format(parseISO(agendamento.data_hora_inicio), 'HH:mm')}</span>
                                                         {agendamento.sala && (
@@ -342,7 +342,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                             <div
                                 key={day.toString()}
                                 className={cn(
-                                    "border-r border-b border-gray-50 p-2 min-h-[100px] relative group transition-colors",
+                                    "border-r border-b border-gray-300 p-2 min-h-[100px] relative group transition-colors",
                                     !isCurrentMonth ? "bg-gray-50/30 text-gray-400" : (index % 2 === 0 ? "bg-white" : "bg-gray-50/10"),
                                     isSameDay(day, new Date()) ? "bg-primary/[0.05]" : ""
                                 )}

@@ -93,17 +93,30 @@ export default function PromptForm({ trigger, promptToEdit, onSuccess, terapeuta
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Modelo Gemini</Label>
-                            <Select name="modelo_gemini" defaultValue={promptToEdit?.modelo_gemini || 'gemini-2.5-flash'}>
+                            <Label>Categoria</Label>
+                            <Select name="categoria" defaultValue={promptToEdit?.categoria || 'plano'}>
                                 <SelectTrigger className="rounded-xl">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash (Novo)</SelectItem>
-                                    <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (Legado)</SelectItem>
+                                    <SelectItem value="plano">Plano de Intervenção</SelectItem>
+                                    <SelectItem value="relatorio">Relatório de Atendimento</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Modelo Gemini</Label>
+                        <Select name="modelo_gemini" defaultValue={promptToEdit?.modelo_gemini || 'gemini-2.5-flash'}>
+                            <SelectTrigger className="rounded-xl">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash (Novo)</SelectItem>
+                                <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (Legado)</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="space-y-2">
@@ -128,6 +141,56 @@ export default function PromptForm({ trigger, promptToEdit, onSuccess, terapeuta
                             required
                             className="min-h-[300px] font-mono text-sm rounded-xl resize-y"
                         />
+                    </div>
+
+                    <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900 rounded-xl p-4">
+                        <details className="group">
+                            <summary className="flex items-center justify-between cursor-pointer font-medium text-sm text-blue-700 dark:text-blue-300">
+                                <span>📚 Ver lista de variáveis disponíveis (Chaves)</span>
+                                <span className="transition-transform group-open:rotate-180">▼</span>
+                            </summary>
+                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-600 dark:text-gray-400 max-h-[300px] overflow-y-auto pr-2">
+                                <div>
+                                    <h4 className="font-bold text-gray-800 dark:text-gray-200 mb-2">🧑‍⚕️ Terapeuta</h4>
+                                    <ul className="space-y-2 list-none">
+                                        <li><code className="bg-white px-1 rounded border font-bold text-blue-600">{"{{TERAPEUTA_NOME}}"}</code>: Nome completo do usuario logado.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-blue-600">{"{{TERAPEUTA_FORMACAO}}"}</code>: Formação acadêmica.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-blue-600">{"{{TERAPEUTA_TECNICAS_PREFERIDAS}}"}</code>: Técnicas preferidas.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-blue-600">{"{{TERAPEUTA_RECURSOS_PREFERIDOS}}"}</code>: Recursos preferidos.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-blue-600">{"{{TERAPEUTA_ESTILO_CONDUCAO}}"}</code>: Estilo de condução.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-blue-600">{"{{TERAPEUTA_OBSERVACOES}}"}</code>: Observações clínicas.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-blue-600">{"{{TERAPEUTA_CREDENCIAL_COM_REGISTRO}}"}</code>: Nome + Registro Profissional.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-gray-800 dark:text-gray-200 mb-2">👶 Paciente</h4>
+                                    <ul className="space-y-2 list-none">
+                                        <li><code className="bg-white px-1 rounded border font-bold text-green-600">{"{{NOME}}"}</code>: Nome do paciente.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-green-600">{"{{IDADE}}"}</code>: Idade calculada.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-green-600">{"{{DIAGNOSTICO}}"}</code>: Diagnóstico principal e histórico.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-green-600">{"{{PREFERENCIAS}}"}</code>: Preferências (musicoterapia).</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-green-600">{"{{SENSIBILIDADES}}"}</code>: Sensibilidades motoras/sensoriais.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-gray-800 dark:text-gray-200 mb-2">📝 Histórico/Contexto</h4>
+                                    <ul className="space-y-2 list-none">
+                                        <li><code className="bg-white px-1 rounded border font-bold text-purple-600">{"{{ULTIMAS_SESSOES}}"}</code>: Resumo das 3 últimas sessões.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-purple-600">{"{{HISTORICO_RELATORIOS}}"}</code>: Últimos 3 relatórios gerados.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-purple-600">{"{{OBJETIVO_PRINCIPAL_PLANO}}"}</code>: Último plano terapêutico.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-purple-600">{"{{DATA_SESSAO}}"}</code>: Data de hoje.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-gray-800 dark:text-gray-200 mb-2">🏥 Outros</h4>
+                                    <ul className="space-y-2 list-none">
+                                        <li><code className="bg-white px-1 rounded border font-bold text-gray-600">{"{{RECURSOS_LISTA}}"}</code>: Todos recursos cadastrados.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-gray-600">{"{{SALAS_LISTA}}"}</code>: Todas salas cadastradas.</li>
+                                        <li><code className="bg-white px-1 rounded border font-bold text-gray-600">{"{{RELATO_SESSAO}}"}</code>: Texto digitado pelo terapeuta.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </details>
                     </div>
 
                     <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl">

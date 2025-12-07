@@ -34,8 +34,10 @@ export default function RelatorioModal({ agendamento, open, onOpenChange, onSucc
         if (open) {
             // Fetch prompts
             getActivePrompts().then(data => {
-                setPrompts(data)
-                if (data.length > 0) setSelectedPromptId(data[0].id.toString())
+                // Filter: Only 'relatorio'
+                const reportPrompts = data.filter(p => p.categoria === 'relatorio')
+                setPrompts(reportPrompts)
+                if (reportPrompts.length > 0) setSelectedPromptId(reportPrompts[0].id.toString())
             })
 
             // Fetch existing report

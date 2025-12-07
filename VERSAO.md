@@ -15,6 +15,40 @@ Cada versão segue o formato:
 
 ---
 
+## [1.2.1] - 07/12/2024
+
+### ✨ Novos Recursos
+
+#### Assistente IA - Categorização de Prompts
+- **Descrição:** Prompts agora são divididos em "Plano de Intervenção" e "Relatório de Atendimento"
+- **Funcionalidades:**
+  - Campo de categoria na criação/edição de prompts
+  - Filtro automático nos modais de geração (Plano vs Relatório)
+  - Badges visuais na lista de prompts para fácil identificação
+- **Arquivos modificados:**
+  - `lib/actions/ai_prompts.ts`
+  - `components/AI/PromptForm.tsx`
+  - `components/AI/GerarPlanoModal.tsx`
+  - `components/Relatorios/RelatorioModal.tsx`
+
+### 🔧 Melhorias
+
+#### Agenda - Visual e Usabilidade
+- **Descrição:** Refinamentos visuais nas visualizações de Dia e Semana
+- **Mudanças:**
+  - Correção de alinhamento nas colunas da semana
+  - Aumento de contraste (modo zebra e grid)
+  - Cartões de agendamento com cores mais nítidas (status)
+- **Arquivo:** `components/Agenda/AgendaCalendar.tsx`
+
+### 🔒 Segurança
+
+#### Correção de Vazamento de Chave API
+- **Descrição:** Remoção de chave hardcoded em script de teste e reforço no uso de `.env.local`
+- **Ação:** Script `manual-test-gemini.js` removido e chave regenerada
+
+---
+
 ## [1.2.0] - 04/12/2024
 
 ### ✨ Novos Recursos

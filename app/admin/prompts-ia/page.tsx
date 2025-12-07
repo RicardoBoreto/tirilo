@@ -57,9 +57,14 @@ export default async function PromptsIAPageV2(props: { searchParams: any }) {
                                 <Badge variant={prompt.ativo ? 'default' : 'secondary'} className={prompt.ativo ? "bg-green-500 hover:bg-green-600" : ""}>
                                     {prompt.ativo ? 'Ativo' : 'Inativo'}
                                 </Badge>
-                                <Badge variant="outline" className="font-mono text-xs">
-                                    {prompt.modelo_gemini}
-                                </Badge>
+                                <div className="flex gap-2">
+                                    <Badge variant="outline" className={`font-mono text-xs ${prompt.categoria === 'plano' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-purple-50 text-purple-700 border-purple-200'}`}>
+                                        {prompt.categoria === 'plano' ? 'Plano' : 'Relatório'}
+                                    </Badge>
+                                    <Badge variant="outline" className="font-mono text-xs">
+                                        {prompt.modelo_gemini}
+                                    </Badge>
+                                </div>
                             </div>
                             <CardTitle className="mt-2 text-xl">{prompt.nome_prompt}</CardTitle>
                             <CardDescription className="line-clamp-2">{prompt.descricao}</CardDescription>

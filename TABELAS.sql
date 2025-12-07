@@ -88,24 +88,20 @@ CREATE TABLE IF NOT EXISTS usuarios (
 -- RLS: Usuários veem apenas da sua clínica
 ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view users from their clinic" ON usuarios
-FOR SELECT USING (
-    id = auth.uid() 
-    OR 
-    id_clinica = get_current_user_clinic_id()
-);
+CREATE POLICY "allow_read_authenticated" ON usuarios
+FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "Admins can insert users" ON usuarios
-FOR INSERT WITH CHECK (
-    id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid() AND tipo_perfil = 'admin')
-);
-
-CREATE POLICY "Users can update their own profile" ON usuarios
+CREATE POLICY "allow_update_own_profile" ON usuarios
 FOR UPDATE USING (id = auth.uid());
 
-CREATE POLICY "Admins can update users from their clinic" ON usuarios
-FOR UPDATE USING (
-    id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid() AND tipo_perfil = 'admin')
+CREATE POLICY "allow_insert_admin" ON usuarios
+FOR INSERT WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM usuarios u 
+        WHERE u.id = auth.uid() 
+        AND u.tipo_perfil = 'admin' 
+        AND u.id_clinica = usuarios.id_clinica
+    )
 );
 
 -- ----------------------------------------------------------------------------
@@ -196,24 +192,24 @@ CREATE TABLE IF NOT EXISTS pacientes (
 
 ALTER TABLE pacientes ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view pacientes from their clinic" ON pacientes
+CREATE POLICY "isolate_by_clinic_select" ON pacientes
 FOR SELECT USING (
-    id_clinica = get_current_user_clinic_id()
+    id_clinica = get_my_clinic_id()
 );
 
-CREATE POLICY "Users can insert pacientes for their clinic" ON pacientes
+CREATE POLICY "isolate_by_clinic_insert" ON pacientes
 FOR INSERT WITH CHECK (
-    id_clinica = get_current_user_clinic_id()
+    id_clinica = get_my_clinic_id()
 );
 
-CREATE POLICY "Users can update pacientes from their clinic" ON pacientes
+CREATE POLICY "isolate_by_clinic_update" ON pacientes
 FOR UPDATE USING (
-    id_clinica = get_current_user_clinic_id()
+    id_clinica = get_my_clinic_id()
 );
 
-CREATE POLICY "Users can delete pacientes from their clinic" ON pacientes
+CREATE POLICY "isolate_by_clinic_delete" ON pacientes
 FOR DELETE USING (
-    id_clinica = get_current_user_clinic_id()
+    id_clinica = get_my_clinic_id()
 );
 
 -- ----------------------------------------------------------------------------
@@ -233,24 +229,29 @@ CREATE TABLE IF NOT EXISTS pacientes_terapeutas (
 
 ALTER TABLE pacientes_terapeutas ENABLE ROW LEVEL SECURITY;
 
--- Função auxiliar para obter o ID da clínica do usuário atual sem disparar RLS (SECURITY DEFINER)
--- Necessária para evitar recursão infinita nas políticas
--- OBS: Alterar owner para postgres se necessário
-CREATE OR REPLACE FUNCTION get_current_user_clinic_id()
+-- Função auxiliar para obter o ID da clínica do usuário atual
+CREATE OR REPLACE FUNCTION get_my_clinic_id()
 RETURNS BIGINT
 LANGUAGE sql
 SECURITY DEFINER
-SET search_path = public
 STABLE
 AS $$
     SELECT id_clinica FROM usuarios WHERE id = auth.uid();
 $$;
 
-CREATE POLICY "Users can view their clinic's patient-therapist relationships" ON pacientes_terapeutas
+CREATE POLICY "isolate_relationships_select" ON pacientes_terapeutas
 FOR SELECT USING (
-    paciente_id IN (
-        SELECT id FROM pacientes WHERE id_clinica = get_current_user_clinic_id()
-    )
+    paciente_id IN (SELECT id FROM pacientes)
+);
+
+CREATE POLICY "isolate_relationships_insert" ON pacientes_terapeutas
+FOR INSERT WITH CHECK (
+    paciente_id IN (SELECT id FROM pacientes)
+);
+
+CREATE POLICY "isolate_relationships_delete" ON pacientes_terapeutas
+FOR DELETE USING (
+    paciente_id IN (SELECT id FROM pacientes)
 );
 
 -- ----------------------------------------------------------------------------

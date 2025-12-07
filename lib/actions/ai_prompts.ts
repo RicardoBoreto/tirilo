@@ -13,6 +13,7 @@ export type PromptIA = {
     modelo_gemini: string
     temperatura: number
     ativo: boolean
+    categoria: string | null
     criado_por: string | null
     created_at: string
 }
@@ -48,7 +49,7 @@ export async function getPrompts(terapeutaIdFilter?: string) {
     const { data, error } = await query.order('created_at', { ascending: false })
 
     if (error) {
-        console.error('Erro ao buscar prompts:', error)
+        console.error('Erro ao buscar prompts:', JSON.stringify(error, null, 2))
         return []
     }
 
@@ -120,6 +121,7 @@ export async function createPrompt(formData: FormData) {
         prompt_texto: formData.get('prompt_texto') as string,
         modelo_gemini: formData.get('modelo_gemini') as string || 'gemini-2.5-flash',
         temperatura: Number(formData.get('temperatura')) || 0.7,
+        categoria: formData.get('categoria') as string || 'plano',
         ativo: true,
         criado_por: user.id
     }
@@ -159,6 +161,7 @@ export async function updatePrompt(id: number, formData: FormData) {
         prompt_texto: formData.get('prompt_texto') as string,
         modelo_gemini: formData.get('modelo_gemini') as string,
         temperatura: Number(formData.get('temperatura')),
+        categoria: formData.get('categoria') as string || 'plano',
         ativo: formData.get('ativo') === 'true'
     }
 
