@@ -41,37 +41,39 @@ export async function generateBackup() {
 
     // Master User - Fetch ALL data
     const [
-        { data: clinicas },
+        { data: saas_clinicas },
         { data: usuarios },
         { data: terapeutas_curriculo },
         { data: responsaveis },
         { data: pacientes },
+        { data: pacientes_responsaveis },
         { data: pacientes_terapeutas },
-        { data: anamnese },
-        { data: salas },
+        { data: pacientes_anamnese },
+        { data: salas_recursos },
         { data: agendamentos },
-        { data: relatorios },
-        { data: promts_ia },
-        { data: planos_ia },
+        { data: relatorios_atendimento },
+        { data: prompts_ia },
+        { data: planos_intervencao_ia },
         { data: help_desk_tickets },
         { data: help_desk_mensagens },
-        { data: materiais }
+        { data: recursos }
     ] = await Promise.all([
         supabase.from('saas_clinicas').select('*'),
         supabase.from('usuarios').select('*'),
         supabase.from('terapeutas_curriculo').select('*'),
         supabase.from('responsaveis').select('*'),
         supabase.from('pacientes').select('*'),
+        supabase.from('pacientes_responsaveis').select('*'),
         supabase.from('pacientes_terapeutas').select('*'),
-        supabase.from('anamnese').select('*'),
-        supabase.from('salas').select('*'),
+        supabase.from('pacientes_anamnese').select('*'),
+        supabase.from('salas_recursos').select('*'),
         supabase.from('agendamentos').select('*'),
-        supabase.from('relatorios').select('*'),
+        supabase.from('relatorios_atendimento').select('*'),
         supabase.from('prompts_ia').select('*'),
-        supabase.from('planos_ia').select('*'),
+        supabase.from('planos_intervencao_ia').select('*'),
         supabase.from('help_desk_tickets').select('*'),
         supabase.from('help_desk_mensagens').select('*'),
-        supabase.from('materiais').select('*')
+        supabase.from('recursos').select('*')
     ])
 
     const backupData = {
@@ -79,21 +81,22 @@ export async function generateBackup() {
         type: 'FULL_SYSTEM_BACKUP',
         schema_migrations: migrations,
         datos: {
-            saas_clinicas: clinicas,
+            saas_clinicas,
             usuarios,
             terapeutas_curriculo,
             responsaveis,
             pacientes,
+            pacientes_responsaveis,
             pacientes_terapeutas,
-            anamnese,
-            salas,
+            pacientes_anamnese,
+            salas_recursos,
             agendamentos,
-            relatorios,
-            promts_ia,
-            planos_ia,
+            relatorios_atendimento,
+            prompts_ia,
+            planos_intervencao_ia,
             help_desk_tickets,
             help_desk_mensagens,
-            materiais
+            recursos
         }
     }
 
