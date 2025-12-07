@@ -126,7 +126,7 @@ export default function RelatorioModal({ agendamento, open, onOpenChange, onSucc
             <DialogContent className="sm:max-w-[900px] h-[90vh] flex flex-col rounded-3xl p-0 overflow-hidden">
                 <DialogHeader className="px-6 py-4 border-b bg-gray-50 dark:bg-gray-800">
                     <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-purple-600" />
+                        <Sparkles className="w-5 h-5 text-emerald-600" />
                         Relatório de Atendimento com IA
                     </DialogTitle>
                 </DialogHeader>
@@ -156,14 +156,14 @@ export default function RelatorioModal({ agendamento, open, onOpenChange, onSucc
                                 value={textoBruto}
                                 onChange={e => setTextoBruto(e.target.value)}
                                 placeholder="Descreva os acontecimentos, comportamentos e intervenções..."
-                                className="flex-1 resize-none bg-white dark:bg-gray-800 p-4 text-base focus:ring-purple-500"
+                                className="flex-1 resize-none bg-white dark:bg-gray-800 p-4 text-base focus:ring-emerald-500"
                             />
                         </div>
 
                         <Button
                             onClick={handleGenerate}
                             disabled={generating || !textoBruto}
-                            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white h-12 text-lg shadow-lg shadow-purple-500/20"
+                            className="w-full bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white h-12 text-lg shadow-lg shadow-emerald-500/20"
                         >
                             {generating ? (
                                 <>
@@ -190,7 +190,7 @@ export default function RelatorioModal({ agendamento, open, onOpenChange, onSucc
                                 value={relatorioGerado}
                                 onChange={e => setRelatorioGerado(e.target.value)}
                                 placeholder="O relatório gerado pela IA aparecerá aqui..."
-                                className="flex-1 resize-none bg-white dark:bg-gray-800 p-4 text-base leading-relaxed border-purple-100 dark:border-purple-900 focus:ring-purple-500"
+                                className="flex-1 resize-none bg-white dark:bg-gray-800 p-4 text-base leading-relaxed border-emerald-100 dark:border-emerald-900 focus:ring-emerald-500"
                             />
                         </div>
 

@@ -142,7 +142,7 @@ export default function DetalhesAgendamento({ agendamento, open, onOpenChange, o
                         <GerarPlanoModal pacienteId={agendamento.id_paciente} />
 
                         <Button
-                            className="h-14 rounded-2xl text-lg font-bold shadow-lg shadow-purple-500/20 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                            className="h-14 rounded-2xl text-lg font-bold shadow-lg shadow-emerald-500/20 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
                             onClick={() => setShowRelatorioModal(true)}
                         >
                             <Sparkles className="w-6 h-6 mr-2 fill-current" />
