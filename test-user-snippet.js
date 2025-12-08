@@ -55,10 +55,10 @@ console.log(`Using API Key: ${apiKey.substring(0, 5)}...`);
 const genAI = new GoogleGenerativeAI(apiKey);
 
 async function runTest() {
-    // Test 1: gemini-1.5-flash (Stable)
-    console.log("\n--- Test 1: gemini-1.5-flash (Stable) ---");
+    // Test 1: gemini-2.5-flash (Stable)
+    console.log("\n--- Test 1: gemini-2.5-flash (Stable) ---");
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const result = await model.generateContent("Explain how AI works in a few words");
         const response = await result.response;
         console.log("SUCCESS:", response.text());
