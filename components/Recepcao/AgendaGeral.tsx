@@ -122,7 +122,7 @@ export default function AgendaGeral() {
                                                             <Badge variant="outline" className="text-[10px] px-1 py-0 h-5 mb-1 block w-fit ml-auto">
                                                                 {app.sala?.nome || 'Sem sala'}
                                                             </Badge>
-                                                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${app.status === 'realizado' ? 'bg-green-100 text-green-700' :
+                                                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${app.status === 'concluido' ? 'bg-green-100 text-green-700' :
                                                                 app.status === 'cancelado' ? 'bg-red-100 text-red-700' :
                                                                     'bg-blue-50 text-blue-700'
                                                                 }`}>
