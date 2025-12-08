@@ -84,6 +84,12 @@ Catálogo de prompts pré-definidos para copiar e colar. Inclui modelos otimizad
 ### `ia.md`
 Este próprio arquivo, que detalha o funcionamento funcional e arquitetural do módulo de IA.
 - **Funcionamento:** Explica como os prompts são gerenciados e como os planos são gerados.
+- **Categorização:**
+  - **Plano de Intervenção:** Prompts focados em criar estratégias futuras. Aparecem no modal "Gerar Plano (IA)".
+  - **Relatório de Atendimento:** Prompts focados em resumir o passado (sessão). Aparecem no modal "Registrar Atendimento (IA)".
+- **Visibilidade e Templates:**
+  - Terapeutas veem seus próprios prompts **E** prompts criados por Administradores (Templates da Clínica).
+  - Terapeutas podem ter prompts com o mesmo nome de outros colegas (Unicidade por Terapeuta).
 - **Estrutura de Dados:** Detalha as tabelas `prompts_ia` e `planos_intervencao_ia`.
 - **Funcionalidades:** Cobre a geração de planos (modal) e a visualização do histórico (aba Planos IA) com TTS.
 

@@ -77,7 +77,17 @@ export async function getActivePrompts() {
         .eq('ativo', true)
 
     if (userProfile.tipo_perfil === 'terapeuta') {
-        query = query.eq('terapeuta_id', user.id)
+        // Obter IDs de admins da clínica para mostrar os prompts deles também (templates)
+        const { data: adminUsers } = await supabase
+            .from('usuarios')
+            .select('id')
+            .eq('id_clinica', userProfile.id_clinica)
+            .in('tipo_perfil', ['admin', 'super_admin'])
+
+        const adminIds = adminUsers?.map(u => u.id) || []
+        const allowedIds = [user.id, ...adminIds]
+
+        query = query.in('terapeuta_id', allowedIds)
     }
 
     const { data, error } = await query.order('nome_prompt', { ascending: true })

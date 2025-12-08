@@ -33,6 +33,34 @@ export type MembroEquipe = {
     }
 }
 
+export async function getCurrentUserProfile() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return null
+
+    const { data } = await supabase
+        .from('usuarios')
+        .select('id, nome_completo, tipo_perfil, id_clinica')
+        .eq('id', user.id)
+        .single()
+
+    if (data && data.tipo_perfil === 'terapeuta') {
+        const { data: curriculo } = await supabase
+            .from('terapeutas_curriculo')
+            .select('*')
+            .eq('id_usuario', user.id)
+            .single()
+
+        return {
+            ...data,
+            terapeutas_curriculo: curriculo
+        }
+    }
+
+    return data
+}
+
 export async function getEquipe() {
     const supabase = await createClient()
 

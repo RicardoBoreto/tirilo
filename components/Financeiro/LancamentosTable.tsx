@@ -14,18 +14,35 @@ export default function LancamentosTable({ tipo }: { tipo: 'receita' | 'despesa'
     const [terapeutas, setTerapeutas] = useState<any[]>([])
     const [selectedTerapeuta, setSelectedTerapeuta] = useState('todos')
 
+    const [checkingProfile, setCheckingProfile] = useState(true)
+
     // States for Invoice Modal
     const [showInvoiceModal, setShowInvoiceModal] = useState(false)
     const [invoiceData, setInvoiceData] = useState<any>(null)
     const [loadingInvoice, setLoadingInvoice] = useState(false)
 
+    const [isLocked, setIsLocked] = useState(false)
+
     useEffect(() => {
-        getTerapeutas().then(setTerapeutas)
+        // Fetch User Profile first to check role
+        import('@/lib/actions/equipe').then(({ getCurrentUserProfile }) => {
+            getCurrentUserProfile().then(user => {
+                if (user?.tipo_perfil === 'terapeuta') {
+                    setSelectedTerapeuta(user.id)
+                    setIsLocked(true)
+                    setTerapeutas([user])
+                } else {
+                    getTerapeutas().then(setTerapeutas)
+                }
+            }).finally(() => {
+                setCheckingProfile(false)
+            })
+        })
     }, [])
 
     useEffect(() => {
-        loadData()
-    }, [tipo, selectedTerapeuta])
+        if (!checkingProfile) loadData()
+    }, [tipo, selectedTerapeuta, checkingProfile])
 
     async function loadData() {
         setLoading(true)
@@ -89,9 +106,10 @@ export default function LancamentosTable({ tipo }: { tipo: 'receita' | 'despesa'
                     <select
                         value={selectedTerapeuta}
                         onChange={(e) => setSelectedTerapeuta(e.target.value)}
-                        className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:border-gray-700 max-w-[200px]"
+                        disabled={isLocked}
+                        className={`border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:border-gray-700 max-w-[200px] ${isLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
-                        <option value="todos">Todos os Terapeutas</option>
+                        {!isLocked && <option value="todos">Todos os Terapeutas</option>}
                         {terapeutas.map(t => (
                             <option key={t.id} value={t.id}>{t.nome_completo}</option>
                         ))}

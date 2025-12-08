@@ -20,8 +20,18 @@ export default function ContratosManager() {
     async function loadTerapeutas() {
         setLoading(true)
         try {
-            const data = await getTerapeutas()
-            setTerapeutas(data)
+            // Check current user profile
+            const { getCurrentUserProfile } = await import('@/lib/actions/equipe')
+            const user = await getCurrentUserProfile()
+
+            if (user?.tipo_perfil === 'terapeuta') {
+                // Auto-select logged therapist
+                setTerapeutas([user])
+                handleSelectTerapeuta(user) // Trigger view switch
+            } else {
+                const data = await getTerapeutas()
+                setTerapeutas(data)
+            }
         } finally {
             setLoading(false)
         }
@@ -49,6 +59,15 @@ export default function ContratosManager() {
         setEditingContract(null)
         setIsModalOpen(true)
     }
+
+    const [statusFilter, setStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('ativos')
+
+    const filteredContratos = contratos.filter(c => {
+        if (statusFilter === 'todos') return true
+        if (statusFilter === 'ativos') return c.ativo
+        if (statusFilter === 'inativos') return !c.ativo
+        return true
+    })
 
     return (
         <div className="space-y-4 pt-6">
@@ -81,12 +100,14 @@ export default function ContratosManager() {
                 <div className="animate-in fade-in slide-in-from-right-4 duration-300">
                     <div className="flex justify-between items-center mb-6">
                         <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => { setView('therapists'); setSelectedTerapeuta(null); }}
-                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                            >
-                                <ArrowLeft size={20} className="text-gray-600 dark:text-gray-300" />
-                            </button>
+                            {terapeutas.length > 1 && (
+                                <button
+                                    onClick={() => { setView('therapists'); setSelectedTerapeuta(null); }}
+                                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                                >
+                                    <ArrowLeft size={20} className="text-gray-600 dark:text-gray-300" />
+                                </button>
+                            )}
                             <div>
                                 <h3 className="font-semibold text-lg text-gray-700 dark:text-white">
                                     Contratos: {selectedTerapeuta?.nome_completo}
@@ -94,18 +115,31 @@ export default function ContratosManager() {
                                 <p className="text-xs text-gray-500">Gerencie os contratos deste profissional</p>
                             </div>
                         </div>
-                        <button
-                            onClick={handleNew}
-                            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 text-sm font-medium"
-                        >
-                            <Plus size={18} /> Novo Contrato
-                        </button>
+
+                        <div className="flex items-center gap-3">
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value as any)}
+                                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="ativos">Ativos</option>
+                                <option value="inativos">Inativos</option>
+                                <option value="todos">Todos</option>
+                            </select>
+
+                            <button
+                                onClick={handleNew}
+                                className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 text-sm font-medium"
+                            >
+                                <Plus size={18} /> Novo Contrato
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {loading ? <p className="text-gray-500">Carregando...</p> :
-                            contratos.length === 0 ? <p className="text-gray-400 col-span-3 text-center py-8">Nenhum contrato ativo para este terapeuta.</p> :
-                                contratos.map(c => (
+                            filteredContratos.length === 0 ? <p className="text-gray-400 col-span-3 text-center py-8">Nenhum contrato encontrado para este filtro.</p> :
+                                filteredContratos.map(c => (
                                     <ContractCard
                                         key={c.id}
                                         contrato={c}
@@ -120,6 +154,7 @@ export default function ContratosManager() {
                 <ContractModal
                     preSelectedTerapeuta={selectedTerapeuta}
                     editingContract={editingContract}
+                    existingContracts={contratos}
                     onClose={() => setIsModalOpen(false)}
                     onSuccess={async () => {
                         setIsModalOpen(false);
@@ -227,7 +262,7 @@ function StatusDot({ active }: { active: boolean }) {
     )
 }
 
-function ContractModal({ onClose, onSuccess, preSelectedTerapeuta, editingContract }: { onClose: () => void, onSuccess: () => void, preSelectedTerapeuta: any, editingContract?: any }) {
+function ContractModal({ onClose, onSuccess, preSelectedTerapeuta, editingContract, existingContracts = [] }: { onClose: () => void, onSuccess: () => void, preSelectedTerapeuta: any, editingContract?: any, existingContracts?: any[] }) {
     const [pacientes, setPacientes] = useState<any[]>([])
     const [selectedPaciente, setSelectedPaciente] = useState<any>(null)
     const [formData, setFormData] = useState({
@@ -250,7 +285,7 @@ function ContractModal({ onClose, onSuccess, preSelectedTerapeuta, editingContra
                 : preSelectedTerapeuta.terapeutas_curriculo
 
             if (curriculo?.valor_hora_padrao) {
-                setFormData(prev => ({ ...prev, valor: curriculo.valor_hora_padrao }))
+                setFormData(prev => ({ ...prev, valor: String(curriculo.valor_hora_padrao) }))
             }
         }
 
@@ -258,54 +293,70 @@ function ContractModal({ onClose, onSuccess, preSelectedTerapeuta, editingContra
         setPacientes([])
         setSelectedPaciente(null)
 
-        getPacientesDoTerapeuta(preSelectedTerapeuta.id).then(async (data) => {
-            let loadedPacientes = []
-            if (data && data.length > 0) {
-                loadedPacientes = data
-            } else {
-                try {
-                    const { getPacientes } = await import('@/lib/actions/pacientes')
-                    loadedPacientes = await getPacientes()
-                } catch (e) {
-                    console.error('Erro ao carregar todos os pacientes', e)
+        if (preSelectedTerapeuta?.id) {
+            getPacientesDoTerapeuta(preSelectedTerapeuta.id).then(async (data) => {
+                let loadedPacientes = []
+                if (data && data.length > 0) {
+                    loadedPacientes = data
+                } else {
+                    // Fallback to all patients if none linked (or if admin wants to link new ones)
+                    // But usually for contracts we only want linked patients? 
+                    // Let's keep the fallback for now but log it.
+                    console.log('Nenhum paciente vinculado encontrado, buscando todos...')
+                    try {
+                        const { getPacientes } = await import('@/lib/actions/pacientes')
+                        loadedPacientes = await getPacientes()
+                    } catch (e) {
+                        console.error('Erro ao carregar todos os pacientes', e)
+                    }
                 }
-            }
-            setPacientes(loadedPacientes)
+                // Filter out patients who already have an ACTIVE contract with this therapist
+                // UNLESS we are editing that specific contract
+                if (!editingContract) {
+                    const patientIdsWithContracts = existingContracts
+                        .filter(c => c.status === 'ativo' || c.ativo) // Check active status
+                        .map(c => c.id_paciente)
 
-            // If editing, select the correct patient AFTER we have the list
-            if (editingContract && loadedPacientes.length > 0) {
-                // Populate form
-                setFormData({
-                    valor: String(editingContract.valor),
-                    dia_vencimento: String(editingContract.dia_vencimento),
-                    tipo_cobranca: editingContract.tipo_cobranca,
-                    data_inicio: editingContract.data_inicio ? editingContract.data_inicio.split('T')[0] : new Date().toISOString().split('T')[0],
-                    ativo: editingContract.ativo !== undefined ? editingContract.ativo : true
-                })
+                    loadedPacientes = loadedPacientes.filter(p => !patientIdsWithContracts.includes(p.id))
+                }
 
-                const p = loadedPacientes.find((p: any) => p.id === editingContract.id_paciente)
-                if (p) {
-                    setSelectedPaciente(p)
-                    // If patient found, set responsible
-                    if (p.pacientes_responsaveis && p.pacientes_responsaveis.length > 0) {
-                        const list = p.pacientes_responsaveis.map((pr: any) => pr.responsavel).filter(Boolean)
-                        setResponsaveis(list)
-                        // Select the one from contract, or default
-                        if (editingContract.id_responsavel) {
-                            setSelectedResponsibleId(String(editingContract.id_responsavel))
-                        } else if (list.length > 0) {
-                            setSelectedResponsibleId(String(list[0].id))
+                setPacientes(loadedPacientes)
+
+                // If editing, select the correct patient AFTER we have the list
+                if (editingContract && loadedPacientes.length > 0) {
+                    // Populate form
+                    setFormData({
+                        valor: String(editingContract.valor),
+                        dia_vencimento: String(editingContract.dia_vencimento),
+                        tipo_cobranca: editingContract.tipo_cobranca,
+                        data_inicio: editingContract.data_inicio ? editingContract.data_inicio.split('T')[0] : new Date().toISOString().split('T')[0],
+                        ativo: editingContract.ativo !== undefined ? editingContract.ativo : true
+                    })
+
+                    const p = loadedPacientes.find((p: any) => p.id === editingContract.id_paciente)
+                    if (p) {
+                        setSelectedPaciente(p)
+                        // If patient found, set responsible
+                        if (p.pacientes_responsaveis && p.pacientes_responsaveis.length > 0) {
+                            const list = p.pacientes_responsaveis.map((pr: any) => pr.responsavel).filter(Boolean)
+                            setResponsaveis(list)
+                            // Select the one from contract, or default
+                            if (editingContract.id_responsavel) {
+                                setSelectedResponsibleId(String(editingContract.id_responsavel))
+                            } else if (list.length > 0) {
+                                setSelectedResponsibleId(String(list[0].id))
+                            }
                         }
                     }
                 }
-            }
-        })
+            })
+        }
     }, [preSelectedTerapeuta, editingContract])
 
     useEffect(() => {
         // This runs when user CHANGES patient in dropdown manually
         if (selectedPaciente) {
-            // Logic to populate responsibles is same
+            // Logic to populate responsibles is same            // Logic to populate responsibles is same
             if (selectedPaciente.pacientes_responsaveis && selectedPaciente.pacientes_responsaveis.length > 0) {
                 const list = selectedPaciente.pacientes_responsaveis.map((pr: any) => pr.responsavel).filter(Boolean)
                 setResponsaveis(list)

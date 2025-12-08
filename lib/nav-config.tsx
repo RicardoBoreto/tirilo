@@ -107,10 +107,7 @@ export function getSidebarLinks(
             if (link.href === '/admin/financeiro') return false
         }
 
-        // Therapist restrictions (updated)
-        if (userRole === 'terapeuta') {
-            if (link.href === '/admin/financeiro') return false
-        }
+
 
         return true
     })

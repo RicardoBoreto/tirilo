@@ -15,6 +15,31 @@ Cada versão segue o formato:
 
 ---
 
+## [1.3.1] - 08/12/2024
+
+### 💰 Financeiro & Contratos
+
+#### Correção de Acesso para Terapeutas
+- **Problema:** Terapeutas não conseguiam criar contratos ou ver lançamentos (erro de política RLS).
+- **Solução:** 
+  - Adicionada coluna `id_terapeuta` na tabela `contratos` para vínculo correto.
+  - Atualizadas políticas de segurança (RLS) para permitir que terapeutas gerenciem seus próprios dados financeiros.
+  - Menu "Financeiro" desbloqueado para o perfil `terapeuta`.
+
+#### Usabilidade e Filtros
+- **Correção de "Flash" de Dados:** Corrigido problema onde a lista de contas ou faturamento exibia momentaneamente dados de todos os terapeutas antes de aplicar o filtro do usuário logado.
+- **Valor Padrão Inteligente:** Ao criar contrato, o valor da sessão é preenchido automaticamente com o valor padrão do currículo do terapeuta.
+- **Filtro de Pacientes:** Lista de pacientes no contrato filtra automaticamente aqueles que já possuem contrato ativo (evita duplicidade).
+- **Filtro de Status:** Lista de contratos agora possui filtro rápido: "Ativos", "Inativos" ou "Todos".
+
+### 🤖 Assistente IA
+
+#### Correção de Duplicidade de Nomes
+- **Problema:** Erro ao salvar prompts com mesmo nome para terapeutas diferentes.
+- **Solução:** Ajustada regra de unicidade do banco de dados para considerar o `terapeuta_id`. Agora múltiplos terapeutas podem ter prompts com o mesmo nome (ex: "Sessão Padrão") na mesma clínica.
+
+---
+
 ## [1.3.0] - 07/12/2024
 
 ### 💰 Financeiro (Novo Módulo Completo)

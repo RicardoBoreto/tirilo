@@ -17,18 +17,35 @@ export default function FaturamentoGenerator() {
     const [showGuideModal, setShowGuideModal] = useState(false)
     const [clinica, setClinica] = useState<any>(null)
 
+    const [checkingProfile, setCheckingProfile] = useState(true)
+
     // Therapist Filter
     const [terapeutas, setTerapeutas] = useState<any[]>([])
     const [selectedTerapeuta, setSelectedTerapeuta] = useState('todos')
 
+    const [isLocked, setIsLocked] = useState(false)
+
     useEffect(() => {
-        getTerapeutas().then(setTerapeutas)
+        // Fetch User Profile first to check role
+        import('@/lib/actions/equipe').then(({ getCurrentUserProfile }) => {
+            getCurrentUserProfile().then(user => {
+                if (user?.tipo_perfil === 'terapeuta') {
+                    setSelectedTerapeuta(user.id)
+                    setIsLocked(true)
+                    setTerapeutas([user])
+                } else {
+                    getTerapeutas().then(setTerapeutas)
+                }
+            }).finally(() => {
+                setCheckingProfile(false)
+            })
+        })
         getClinica().then(setClinica)
     }, [])
 
     useEffect(() => {
-        loadPendentes()
-    }, [selectedTerapeuta]) // Reload when filter changes
+        if (!checkingProfile) loadPendentes()
+    }, [selectedTerapeuta, checkingProfile]) // Reload when filter changes
 
     async function loadPendentes() {
         setLoading(true)
@@ -104,9 +121,10 @@ export default function FaturamentoGenerator() {
                     <select
                         value={selectedTerapeuta}
                         onChange={(e) => setSelectedTerapeuta(e.target.value)}
-                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:border-gray-700 min-w-[200px]"
+                        disabled={isLocked}
+                        className={`border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:border-gray-700 min-w-[200px] ${isLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
-                        <option value="todos">Todos os Terapeutas</option>
+                        {!isLocked && <option value="todos">Todos os Terapeutas</option>}
                         {terapeutas.map(t => (
                             <option key={t.id} value={t.id}>{t.nome_completo}</option>
                         ))}
@@ -127,8 +145,8 @@ export default function FaturamentoGenerator() {
                         <Wand2 size={18} />
                         {processing ? 'Gerando...' : `Gerar Fatura (${selected.length})`}
                     </button>
-                </div>
-            </div>
+                </div >
+            </div >
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
                 <table className="w-full">
@@ -182,6 +200,6 @@ export default function FaturamentoGenerator() {
                     </tbody>
                 </table>
             </div>
-        </div>
+        </div >
     )
 }

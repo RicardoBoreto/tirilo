@@ -10,14 +10,31 @@ export default function FinanceiroDashboard() {
     const [mes, setMes] = useState(new Date().getMonth() + 1)
     const [ano, setAno] = useState(new Date().getFullYear())
 
+    const [userProfile, setUserProfile] = useState<any>(null)
+
+    const [checkingProfile, setCheckingProfile] = useState(true)
+
     useEffect(() => {
-        loadStats()
-    }, [mes, ano])
+        // Check filtering
+        import('@/lib/actions/equipe').then(({ getCurrentUserProfile }) => {
+            getCurrentUserProfile().then(user => {
+                setUserProfile(user)
+            }).finally(() => {
+                setCheckingProfile(false)
+            })
+        })
+    }, [])
+
+    useEffect(() => {
+        if (!checkingProfile) loadStats()
+    }, [mes, ano, checkingProfile, userProfile])
 
     async function loadStats() {
         setLoading(true)
         try {
-            const data = await getResumoFinanceiro(mes, ano)
+            // If therapist, pass ID. Otherwise 'todos' (undefined)
+            const terapeutaId = userProfile?.tipo_perfil === 'terapeuta' ? userProfile.id : undefined
+            const data = await getResumoFinanceiro(mes, ano, terapeutaId)
             setStats(data)
         } catch (error) {
             console.error(error)
@@ -35,7 +52,7 @@ export default function FinanceiroDashboard() {
         <div className="space-y-6 pt-6 mb-8">
             <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">
-                    Visão Geral
+                    Visão Geral {userProfile?.tipo_perfil === 'terapeuta' ? '(Minha Produção)' : ''}
                 </h2>
                 <div className="flex gap-2">
                     <select

@@ -133,8 +133,8 @@ export async function saveContrato(contratoData: Partial<Contrato>) {
             .single()
 
         if (error) {
-            console.error('Erro ao criar contrato:', error)
-            throw new Error('Erro ao criar contrato')
+            console.error('Erro ao criar contrato (Supabase Error):', error)
+            throw new Error(`Erro ao criar contrato: ${error.message || error.details || 'Erro desconhecido'}`)
         }
         revalidatePath('/admin/financeiro')
         return data
@@ -364,7 +364,7 @@ export async function gerarFaturamentoSessoes(agendamentosIds: number[], contrat
     return { success: true, lancamentoId: lancamento.id }
 }
 
-export async function getResumoFinanceiro(mes?: number, ano?: number) {
+export async function getResumoFinanceiro(mes?: number, ano?: number, terapeutaId?: string) {
     const supabase = await createClient()
     const now = new Date()
     const currentMes = mes || now.getMonth() + 1
@@ -372,15 +372,45 @@ export async function getResumoFinanceiro(mes?: number, ano?: number) {
 
     // Início e Fim do mês selecionado
     const startDate = `${currentAno}-${String(currentMes).padStart(2, '0')}-01`
-    // Trick to get last day of month: day 0 of next month
     const endDate = new Date(currentAno, currentMes, 0).toISOString().split('T')[0]
 
-    // Query unificada ou separada? Separada é mais simples de manter
-    const { data: lancamentos } = await supabase
+    let query = supabase
         .from('financeiro_lancamentos')
-        .select('valor, tipo, status')
+        .select('id, valor, tipo, status')
         .gte('data_vencimento', startDate)
         .lte('data_vencimento', endDate)
+
+    if (terapeutaId && terapeutaId !== 'todos') {
+        // Filter launches where associated appointments belong to this therapist
+        const { data: agendamentos } = await supabase
+            .from('agendamentos')
+            .select('id_lancamento_financeiro')
+            .eq('id_terapeuta', terapeutaId)
+            .not('id_lancamento_financeiro', 'is', null)
+
+        const launchIds = agendamentos?.map(a => a.id_lancamento_financeiro) || []
+
+        // Also check manual launches created by this therapist? 
+        // Typically summaries are about "Productivity". 
+        // If the query list is empty, return empty stats?
+        if (launchIds.length > 0) {
+            query = query.in('id', launchIds)
+        } else {
+            // Return zero stats immediately if no related launches found
+            return {
+                mes: currentMes,
+                ano: currentAno,
+                receitaPrevista: 0,
+                receitaRealizada: 0,
+                despesaPrevista: 0,
+                despesaRealizada: 0,
+                saldoPrevisto: 0,
+                saldoRealizado: 0
+            }
+        }
+    }
+
+    const { data: lancamentos } = await query
 
     let receitaPrevista = 0
     let receitaRealizada = 0
