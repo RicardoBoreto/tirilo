@@ -1,5 +1,5 @@
 import { CuteBuilding, CuteUsers, CuteSettings } from '@/components/icons/CuteIcons'
-import { Box, Package, Calendar, Sparkles, LifeBuoy, Users, LayoutDashboard, Wallet } from 'lucide-react'
+import { Box, Package, Calendar, Sparkles, LifeBuoy, Users, LayoutDashboard, Wallet, Bot } from 'lucide-react'
 
 type UserRole = 'admin' | 'terapeuta' | 'recepcao' | 'financeiro' | 'super_admin' | string | undefined
 
@@ -31,6 +31,11 @@ export function getSidebarLinks(
             href: '/admin/help-desk',
             label: 'Suporte',
             icon: <LifeBuoy className="w-6 h-6" color="#4F46E5" />,
+        },
+        {
+            href: '/admin/robo',
+            label: 'Robôs',
+            icon: <Bot className="w-6 h-6" color="#4F46E5" />,
         },
     ]
 
@@ -79,6 +84,11 @@ export function getSidebarLinks(
             href: '/admin/help-desk',
             label: 'Suporte',
             icon: <LifeBuoy className="w-6 h-6" color="#4F46E5" />,
+        },
+        {
+            href: '/admin/robo',
+            label: 'Robôs',
+            icon: <Bot className="w-6 h-6" color="#4F46E5" />,
         },
         {
             href: '/admin/configuracoes',

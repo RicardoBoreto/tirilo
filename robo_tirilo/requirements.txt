@@ -1,0 +1,9 @@
+pygame
+supabase
+google-generativeai
+edge-tts
+SpeechRecognition
+pyaudio
+gpiozero
+python-dotenv
+aiofiles
