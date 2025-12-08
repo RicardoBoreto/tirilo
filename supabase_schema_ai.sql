@@ -5,7 +5,7 @@ create table if not exists prompts_ia (
   nome_prompt text not null,
   descricao text,
   prompt_texto text not null,
-  modelo_gemini text default 'gemini-2.5-flash', -- User asked for 2.5 but library might not support it yet or it might be a typo for 1.5 which is current flash. I'll stick to 1.5-flash as it is the standard stable flash model, or use the string provided if valid. Actually user said "modelo atual de dezembro 2025", assuming future context. I will use 'gemini-1.5-flash' as a safe default for now or 'gemini-pro' if needed, but let's use the text field to allow flexibility.
+  modelo_gemini text default 'gemini-2.5-flash',
   temperatura decimal default 0.7,
   ativo boolean default true,
   criado_por uuid references usuarios(id),

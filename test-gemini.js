@@ -90,7 +90,7 @@ async function testModel(modelName) {
 
 async function runTests() {
     const modelsToTest = [
-        "gemini-1.5-flash",
+        "gemini-2.5-flash",
         "gemini-2.0-flash-exp"
     ];
 

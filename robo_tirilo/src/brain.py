@@ -12,7 +12,7 @@ class BrainManager:
         else:
             genai.configure(api_key=self.api_key)
         
-        self.model_name = 'gemini-1.5-flash' # Fallback/Default
+        self.model_name = 'gemini-2.5-flash' # Updated per user request
         self.model = None
         self.chat_session = None
         self.system_instruction = "Você é o Tirilo, um robô amigo e terapêutico."
@@ -23,9 +23,7 @@ class BrainManager:
             self.system_instruction = config['prompt_personalidade_robo']
         
         # Try to use requested model or fallback
-        # The user asked for gemini-2.5-flash, but we'll stick to 1.5-flash for stability 
-        # unless we want to try to dynamically set it.
-        # self.model_name = config.get('modelo', 'gemini-1.5-flash') 
+        # self.model_name = config.get('modelo', 'gemini-2.5-flash') 
         
         try:
             self.model = genai.GenerativeModel(
