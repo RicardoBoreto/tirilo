@@ -16,6 +16,7 @@ const TerapeutaSchema = z.object({
     publico_alvo: z.string().optional(), // Will be split by comma
     bio: z.string().optional(),
     tecnicas_preferidas: z.string().optional(),
+    recursos_preferidos: z.string().optional(),
     estilo_conducao: z.string().optional(),
     observacoes_clinicas: z.string().optional(),
     valor_hora_padrao: z.string().optional(),
