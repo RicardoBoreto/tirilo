@@ -1,3 +1,6 @@
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
 
 export async function getDetalhesFatura(lancamentoId: number) {
     const supabase = await createClient()
