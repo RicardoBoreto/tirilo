@@ -13,7 +13,7 @@ export type Agendamento = {
     data_hora_inicio: string
     data_hora_fim: string
     tipo_sessao: 'individual' | 'dupla' | 'avaliacao'
-    status: 'agendado' | 'realizado' | 'cancelado' | 'falta'
+    status: 'agendado' | 'concluido' | 'cancelado' | 'falta'
     observacoes: string | null
     paciente?: {
         nome: string

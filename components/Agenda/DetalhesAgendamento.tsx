@@ -81,7 +81,7 @@ export default function DetalhesAgendamento({ agendamento, open, onOpenChange, o
                         <div className={cn(
                             "absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white",
                             agendamento.status === 'agendado' ? "bg-blue-500" :
-                                agendamento.status === 'realizado' ? "bg-green-500" :
+                                agendamento.status === 'concluido' ? "bg-green-500" :
                                     agendamento.status === 'cancelado' ? "bg-red-500" : "bg-gray-500"
                         )} />
                     </div>

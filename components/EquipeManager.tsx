@@ -166,6 +166,7 @@ export default function EquipeManager({ initialEquipe }: { initialEquipe: Membro
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="recepcao">Recepção / Secretaria</SelectItem>
+                                                <SelectItem value="financeiro">Financeiro / Admin</SelectItem>
                                                 <SelectItem value="terapeuta">Terapeuta</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -227,13 +228,23 @@ export default function EquipeManager({ initialEquipe }: { initialEquipe: Membro
                                     {editingMembro.tipo_perfil === 'terapeuta' && (
                                         <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
                                             <p className="text-xs font-medium text-primary uppercase">Dados do Terapeuta</p>
-                                            <div className="space-y-2">
-                                                <Label>Registro Profissional (CRP/CRM/Etc)</Label>
-                                                <Input name="registro_profissional" placeholder="Ex: 12345/SP" defaultValue={''} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Especialidade Principal</Label>
-                                                <Input name="especialidade" placeholder="Ex: Psicologia Infantil" defaultValue={''} />
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label>Registro (CRP/CRM)</Label>
+                                                    <Input name="registro_profissional" placeholder="Ex: 12345/SP" defaultValue={(editingMembro as any).terapeutas_curriculo?.registro_profissional || ''} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Especialidade</Label>
+                                                    <Input name="especialidade" placeholder="Ex: Psicologia" defaultValue={(editingMembro as any).terapeutas_curriculo?.especialidades?.[0] || ''} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Valor Hora (R$)</Label>
+                                                    <Input name="valor_hora_padrao" type="number" step="0.01" placeholder="0.00" defaultValue={(editingMembro as any).terapeutas_curriculo?.valor_hora_padrao || ''} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Repasse (%)</Label>
+                                                    <Input name="porcentagem_repasse" type="number" step="0.1" placeholder="50" defaultValue={(editingMembro as any).terapeutas_curriculo?.porcentagem_repasse || ''} />
+                                                </div>
                                             </div>
                                         </div>
                                     )}

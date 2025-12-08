@@ -182,7 +182,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                                             className={cn(
                                                 "p-3 rounded-xl text-sm font-medium cursor-pointer shadow-sm border transition-all hover:scale-[1.01] flex items-center gap-3",
                                                 agendamento.status === 'agendado' ? "bg-blue-100 border-blue-200 text-blue-800 dark:bg-blue-900 dark:border-blue-800 dark:text-blue-100" :
-                                                    agendamento.status === 'realizado' ? "bg-green-100 border-green-200 text-green-800 dark:bg-green-900 dark:border-green-800 dark:text-green-100" :
+                                                    agendamento.status === 'concluido' ? "bg-green-100 border-green-200 text-green-800 dark:bg-green-900 dark:border-green-800 dark:text-green-100" :
                                                         "bg-gray-200 border-gray-300 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
                                             )}
                                         >
@@ -286,7 +286,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                                                     className={cn(
                                                         "p-2 rounded-xl text-xs font-medium cursor-pointer shadow-sm border transition-all hover:scale-[1.02]",
                                                         agendamento.status === 'agendado' ? "bg-blue-100 border-blue-200 text-blue-800 dark:bg-blue-900 dark:border-blue-800 dark:text-blue-100" :
-                                                            agendamento.status === 'realizado' ? "bg-green-100 border-green-200 text-green-800 dark:bg-green-900 dark:border-green-800 dark:text-green-100" :
+                                                            agendamento.status === 'concluido' ? "bg-green-100 border-green-200 text-green-800 dark:bg-green-900 dark:border-green-800 dark:text-green-100" :
                                                                 "bg-gray-200 border-gray-300 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
                                                     )}
                                                 >

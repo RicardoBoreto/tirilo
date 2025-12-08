@@ -155,6 +155,72 @@ export default function PacienteDetailsTabs({
                                     {paciente.observacoes || 'Nenhuma observação registrada'}
                                 </p>
                             </div>
+
+                            {/* Seção Financeira */}
+                            <div className="col-span-2 border-t pt-4 mt-2">
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                                    Financeiro
+                                </h3>
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                                            Valor Sessão (Padrão)
+                                        </label>
+                                        <p className="text-gray-900 dark:text-white font-medium">
+                                            {paciente.valor_sessao_padrao
+                                                ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(paciente.valor_sessao_padrao)
+                                                : 'Não definido'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                                            Dia de Vencimento
+                                        </label>
+                                        <p className="text-gray-900 dark:text-white font-medium">
+                                            {paciente.dia_vencimento_padrao || 'Não definido'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Seção Convênio */}
+                            <div className="col-span-2 border-t pt-4 mt-2">
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                                    Convênio
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                                            Convênio
+                                        </label>
+                                        <p className="text-gray-900 dark:text-white font-medium">
+                                            {paciente.convenio_nome || 'Particular / Não informado'}
+                                        </p>
+                                    </div>
+                                    {paciente.convenio_nome && (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-500 mb-1">
+                                                    Nº Carteirinha
+                                                </label>
+                                                <p className="text-gray-900 dark:text-white font-mono">
+                                                    {paciente.convenio_numero_carteirinha || '-'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-500 mb-1">
+                                                    Validade
+                                                </label>
+                                                <p className="text-gray-900 dark:text-white">
+                                                    {paciente.convenio_validade
+                                                        ? new Date(paciente.convenio_validade).toLocaleDateString('pt-BR')
+                                                        : '-'}
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

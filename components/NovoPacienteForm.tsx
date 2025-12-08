@@ -53,6 +53,77 @@ export default function NovoPacienteForm({ clinicaId }: { clinicaId: number }) {
 
                 <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Configurações Financeiras (Padrão)
+                    </label>
+                    <div className="grid grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Valor da Sessão (R$)
+                            </label>
+                            <input
+                                name="valor_sessao_padrao"
+                                type="number"
+                                step="0.01"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                placeholder="0.00"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Dia de Vencimento
+                            </label>
+                            <input
+                                name="dia_vencimento_padrao"
+                                type="number"
+                                min="1"
+                                max="31"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                placeholder="Ex: 10"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Convênio / Plano de Saúde (Opcional)
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Nome do Convênio (ex: Unimed)
+                            </label>
+                            <input
+                                name="convenio_nome"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                placeholder="Nome do plano"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Nº da Carteirinha
+                            </label>
+                            <input
+                                name="convenio_numero_carteirinha"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                placeholder="Número identificador"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Validade
+                            </label>
+                            <input
+                                name="convenio_validade"
+                                type="date"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Observações Iniciais
                     </label>
                     <textarea

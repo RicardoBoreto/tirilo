@@ -15,6 +15,53 @@ Cada versão segue o formato:
 
 ---
 
+## [1.3.0] - 07/12/2024
+
+### 💰 Financeiro (Novo Módulo Completo)
+
+#### Fluxo Financeiro End-to-End
+- **Descrição:** Ciclo completo implementado: Agendamento -> Conclusão -> Fatura -> Pagamento.
+- **Funcionalidades:**
+  - **Geração de Cobrança:** Geração em lote via "Faturar" ou mensalidade fixa automática.
+  - **Contratos:** Gestão completa de contratos (Sessão ou Mensal), upload de PDF e controle de vigência.
+  - **Contas a Receber:** Visão clara dos lançamentos, com modal detalhado da fatura.
+  - **Baixa:** Registro de paagamento (Baixa/Quitação) com data e forma de pagamento.
+  - **Roteamento:** Agendamentos "concluídos" fluem automaticamente para a lista de faturamento pendente.
+
+#### Geração de Documentos
+- **Faturas:** Visualização detalhada (Sessões, Datas, Valores) pronta para impressão.
+- **Guia de Assinatura (Convênio):** Geração de guia personalizada com logo e dados da clínica (capturados dinamicamente).
+- **Upload de Contratos:** Armazenamento seguro de contratos assinados (PDF) em bucket privado.
+
+#### Dashboard Financeiro
+- **Visão Geral:** Cards de Receita, Despesa e Saldo (Previsto vs Realizado).
+- **Filtros Temporais:** Navegação completa por Mês e Ano para projeção de fluxo de caixa futuro.
+
+#### Filtros e Usabilidade
+- **Filtro por Terapeuta:** Adicionado filtro de profissional tanto em "Contas a Receber" quanto na geração de "Faturas".
+- **Integração:** Agenda visualmente reflete status de conclusão para facilitar o faturamento.
+
+---
+
+## [1.2.4] - 07/12/2024
+
+### 🗄️ Banco de Dados
+
+#### Limpeza e Consistência
+- **Descrição:** Remoção de 20 tabelas legadas/sem uso e correção de nomes de tabelas na documentação.
+- **Tabelas Removidas:** `saas_audit_logs`, `financeiro_cobrancas`, `avaliacao_protocolos`, entre outras.
+- **Correção de Nomes:** Ajuste na documentação (`TABELAS.sql`) e no backup para refletir nomes reais:
+  - `relatorios` → `relatorios_atendimento`
+  - `anamnese` → `pacientes_anamnese`
+  - `planos_ia` → `planos_intervencao_ia`
+
+### 🔧 Melhorias
+
+#### Backup Completo
+- **Ajuste:** Script de backup atualizado para incluir todas as tabelas corretas do sistema, incluindo `pacientes_anamnese` e `terapeutas_curriculo`.
+
+---
+
 ## [1.2.3] - 07/12/2024
 
 ### 🎨 Interface e Experiência (UI/UX)

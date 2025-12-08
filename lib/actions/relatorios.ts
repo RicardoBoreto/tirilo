@@ -61,11 +61,11 @@ export async function saveRelatorio(data: {
         return { success: false, error: error.message }
     }
 
-    // If finalized, update agendamento status to 'realizado'
+    // If finalized, update agendamento status to 'concluido'
     if (data.status === 'finalizado') {
         await supabase
             .from('agendamentos')
-            .update({ status: 'realizado' })
+            .update({ status: 'concluido' })
             .eq('id', data.id_agendamento)
     }
 

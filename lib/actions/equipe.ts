@@ -8,7 +8,7 @@ import { z } from 'zod'
 const EquipeSchema = z.object({
     nome: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
     email: z.string().email('Email inválido'),
-    tipo_perfil: z.enum(['terapeuta', 'recepcao']),
+    tipo_perfil: z.enum(['terapeuta', 'recepcao', 'admin', 'financeiro']),
     // Optional fields
     telefone: z.string().optional().nullable(),
     registro_profissional: z.string().optional().nullable(),
@@ -20,21 +20,27 @@ export type MembroEquipe = {
     nome_completo: string
     apelido?: string
     email: string
-    tipo_perfil: 'terapeuta' | 'recepcao' | 'admin'
+    tipo_perfil: 'terapeuta' | 'recepcao' | 'admin' | 'financeiro'
     celular_whatsapp?: string
     foto_url?: string
     created_at: string
     ativo: boolean
+    terapeutas_curriculo?: {
+        registro_profissional?: string
+        especialidades?: string[]
+        valor_hora_padrao?: number
+        porcentagem_repasse?: number
+    }
 }
 
 export async function getEquipe() {
     const supabase = await createClient()
 
-    // RLS ensures we only see users from our clinic
-    const { data, error } = await supabase
+    // 1. Fetch Users
+    const { data: users, error } = await supabase
         .from('usuarios')
         .select('*')
-        .in('tipo_perfil', ['terapeuta', 'recepcao', 'admin'])
+        .in('tipo_perfil', ['terapeuta', 'recepcao', 'admin', 'financeiro'])
         .order('nome_completo')
 
     if (error) {
@@ -42,7 +48,99 @@ export async function getEquipe() {
         return []
     }
 
-    return data as MembroEquipe[]
+    // 2. Fetch Curriculums for Therapists separately (avoids Join/RLS issues blocking the whole list)
+    const therapistIds = users
+        .filter((u: any) => u.tipo_perfil === 'terapeuta')
+        .map((u: any) => u.id)
+
+    let curriculosMap: Record<string, any> = {}
+
+    if (therapistIds.length > 0) {
+        const { data: curriculos } = await supabase
+            .from('terapeutas_curriculo')
+            .select('id_usuario, registro_profissional, especialidades, valor_hora_padrao, porcentagem_repasse')
+            .in('id_usuario', therapistIds)
+
+        if (curriculos) {
+            curriculos.forEach((c: any) => {
+                curriculosMap[c.id_usuario] = c
+            })
+        }
+    }
+
+    // 3. Merge data
+    const formattedData = users.map((user: any) => ({
+        ...user,
+        terapeutas_curriculo: curriculosMap[user.id] || null
+    }))
+
+    return formattedData as MembroEquipe[]
+}
+
+export async function getTerapeutas() {
+    const supabase = await createClient()
+
+    // 1. Get current user's clinic to ensure data isolation
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
+    // Get clinic ID if not present in metadata (it usually is for our setup, but let's be safe via query)
+    // Actually our RLS for usuarios 'select' returns everything if not bounded.
+    // Let's filter by clinic explicitly if possible.
+    // Fast path: check user metadata? Or just fetch user profile first.
+
+    const { data: currentUserProfile } = await supabase
+        .from('usuarios')
+        .select('id_clinica')
+        .eq('id', user.id)
+        .single()
+
+    if (!currentUserProfile?.id_clinica) {
+        console.error('Clinica não encontrada para o usuário atual')
+        return []
+    }
+
+    const start = performance.now()
+
+    // 2. Fetch Users (Therapists only)
+    const { data: users, error: userError } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('id_clinica', currentUserProfile.id_clinica)
+        .eq('tipo_perfil', 'terapeuta')
+        .order('nome_completo')
+
+    if (userError) {
+        console.error('Erro ao buscar terapeutas (users):', userError)
+        return []
+    }
+
+    if (!users || users.length === 0) return []
+
+    // 3. Fetch Curriculums separateley
+    const userIds = users.map((u: any) => u.id)
+    const { data: curriculos, error: currError } = await supabase
+        .from('terapeutas_curriculo')
+        .select('*')
+        .in('id_usuario', userIds)
+
+    if (currError) {
+        console.error('Erro ao buscar currículos:', currError)
+        // Ensure we still return users even if curriculum fails
+    }
+
+    // 4. Merge
+    const curriculoMap: Record<string, any> = {}
+    curriculos?.forEach((c: any) => {
+        curriculoMap[c.id_usuario] = c
+    })
+
+    const result = users.map((u: any) => ({
+        ...u,
+        terapeutas_curriculo: curriculoMap[u.id] || null
+    }))
+
+    return result
 }
 
 export async function toggleStatusMembro(id: string, novoStatus: boolean) {
@@ -104,11 +202,16 @@ export async function updateMembroEquipe(id: string, formData: FormData) {
         .single()
 
     if (userProfile?.tipo_perfil === 'terapeuta') {
+        const valorHora = formData.get('valor_hora_padrao')
+        const porcentagemRepasse = formData.get('porcentagem_repasse')
+
         const { error: curriculoError } = await supabase
             .from('terapeutas_curriculo')
             .update({
                 registro_profissional: rawData.registro_profissional,
-                especialidades: rawData.especialidade ? [rawData.especialidade] : null
+                especialidades: rawData.especialidade ? [rawData.especialidade] : null,
+                valor_hora_padrao: valorHora ? parseFloat(valorHora.toString()) : null,
+                porcentagem_repasse: porcentagemRepasse ? parseFloat(porcentagemRepasse.toString()) : null
             })
             .eq('id_usuario', id)
 

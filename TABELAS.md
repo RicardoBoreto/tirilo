@@ -84,11 +84,14 @@ Usuários do sistema (terapeutas, recepcionistas, admin)
 ### `pacientes`
 Pacientes atendidos pelas clínicas
 
+### `pacientes_responsaveis`
+Tabela de ligação N:N entre pacientes e responsáveis ( pais, tutores)
+
 ### `agendamentos`
 Agendamentos de sessões
 
-### `materiais_recursos`
-Materiais e recursos disponíveis (similar a salas_recursos, também tem `foto_url`)
+### `recursos`
+Materiais e recursos disponíveis (antigo materiais_recursos)
 
 ---
 

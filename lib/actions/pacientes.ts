@@ -13,6 +13,11 @@ export type Paciente = {
     foto_url: string | null
     observacoes: string | null
     ativo: boolean
+    valor_sessao_padrao: number | null
+    dia_vencimento_padrao: number | null
+    convenio_nome: string | null
+    convenio_numero_carteirinha: string | null
+    convenio_validade: string | null
 }
 
 export type Responsavel = {
@@ -85,7 +90,12 @@ export async function getPacientes(clinicaId?: number) {
 
     let query = supabase
         .from('pacientes')
-        .select('*')
+        .select(`
+            *,
+            pacientes_responsaveis!left (
+                responsavel:responsaveis (*)
+            )
+        `)
         .eq('ativo', true)
         .order('nome', { ascending: true })
 
@@ -134,6 +144,11 @@ export async function createPaciente(formData: FormData) {
         data_nascimento: formData.get('data_nascimento') as string,
         foto_url: formData.get('foto_url') as string || null,
         observacoes: formData.get('observacoes') as string || null,
+        valor_sessao_padrao: formData.get('valor_sessao_padrao') ? Number(formData.get('valor_sessao_padrao')) : null,
+        dia_vencimento_padrao: formData.get('dia_vencimento_padrao') ? Number(formData.get('dia_vencimento_padrao')) : null,
+        convenio_nome: formData.get('convenio_nome') as string || null,
+        convenio_numero_carteirinha: formData.get('convenio_numero_carteirinha') as string || null,
+        convenio_validade: formData.get('convenio_validade') as string || null,
     }
 
     const { data, error } = await supabase
@@ -159,6 +174,11 @@ export async function updatePaciente(id: number, formData: FormData) {
         data_nascimento: formData.get('data_nascimento') as string,
         foto_url: formData.get('foto_url') as string || null,
         observacoes: formData.get('observacoes') as string || null,
+        valor_sessao_padrao: formData.get('valor_sessao_padrao') ? Number(formData.get('valor_sessao_padrao')) : null,
+        dia_vencimento_padrao: formData.get('dia_vencimento_padrao') ? Number(formData.get('dia_vencimento_padrao')) : null,
+        convenio_nome: formData.get('convenio_nome') as string || null,
+        convenio_numero_carteirinha: formData.get('convenio_numero_carteirinha') as string || null,
+        convenio_validade: formData.get('convenio_validade') as string || null,
     }
 
     const { data, error } = await supabase
@@ -459,6 +479,35 @@ export async function getPacientesTerapeutas(pacienteId: number) {
     }
 
     return data.map(item => item.terapeuta_id)
+}
+
+export async function getPacientesDoTerapeuta(terapeutaId: string) {
+    const supabase = await createClient()
+
+    // Fetch patients linked to the therapist via pacientes_terapeutas table
+    const { data, error } = await supabase
+        .from('pacientes_terapeutas')
+        .select(`
+            paciente:pacientes (
+                *,
+                pacientes_responsaveis!left (
+                    responsavel:responsaveis (*)
+                )
+            )
+        `)
+        .eq('terapeuta_id', terapeutaId)
+        .eq('ativo', true)
+
+    if (error) {
+        console.error('Erro ao buscar pacientes do terapeuta:', error)
+        return []
+    }
+
+    // Flatten the result to return just the patient objects
+    // Filter out nulls just in case
+    return data
+        .map(item => item.paciente)
+        .filter(p => p !== null) as any[]
 }
 
 export async function uploadFotoPaciente(pacienteId: number, file: File) {

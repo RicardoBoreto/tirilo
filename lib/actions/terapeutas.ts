@@ -16,9 +16,10 @@ const TerapeutaSchema = z.object({
     publico_alvo: z.string().optional(), // Will be split by comma
     bio: z.string().optional(),
     tecnicas_preferidas: z.string().optional(),
-    recursos_preferidos: z.string().optional(),
     estilo_conducao: z.string().optional(),
     observacoes_clinicas: z.string().optional(),
+    valor_hora_padrao: z.string().optional(),
+    porcentagem_repasse: z.string().optional(),
 })
 
 
@@ -151,6 +152,8 @@ export async function createTerapeuta(formData: FormData) {
         recursos_preferidos: formData.get('recursos_preferidos'),
         estilo_conducao: formData.get('estilo_conducao'),
         observacoes_clinicas: formData.get('observacoes_clinicas'),
+        valor_hora_padrao: formData.get('valor_hora_padrao'),
+        porcentagem_repasse: formData.get('porcentagem_repasse'),
     }
 
     const validated = TerapeutaSchema.parse(rawData)
@@ -243,6 +246,8 @@ export async function createTerapeuta(formData: FormData) {
             recursos_preferidos: validated.recursos_preferidos || null,
             estilo_conducao: validated.estilo_conducao || null,
             observacoes_clinicas: validated.observacoes_clinicas || null,
+            valor_hora_padrao: validated.valor_hora_padrao ? Number(validated.valor_hora_padrao) : null,
+            porcentagem_repasse: validated.porcentagem_repasse ? Number(validated.porcentagem_repasse) : null,
         })
 
     if (curriculoError) {
@@ -279,6 +284,8 @@ export async function updateTerapeuta(formData: FormData) {
         recursos_preferidos: formData.get('recursos_preferidos'),
         estilo_conducao: formData.get('estilo_conducao'),
         observacoes_clinicas: formData.get('observacoes_clinicas'),
+        valor_hora_padrao: formData.get('valor_hora_padrao'),
+        porcentagem_repasse: formData.get('porcentagem_repasse'),
     }
 
     const validated = TerapeutaSchema.parse(rawData)
@@ -339,6 +346,8 @@ export async function updateTerapeuta(formData: FormData) {
         recursos_preferidos: validated.recursos_preferidos || null,
         estilo_conducao: validated.estilo_conducao || null,
         observacoes_clinicas: validated.observacoes_clinicas || null,
+        valor_hora_padrao: validated.valor_hora_padrao ? Number(validated.valor_hora_padrao) : null,
+        porcentagem_repasse: validated.porcentagem_repasse ? Number(validated.porcentagem_repasse) : null,
     }
 
     // Check if curriculum exists

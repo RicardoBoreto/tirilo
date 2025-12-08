@@ -274,6 +274,38 @@ export default function EditTerapeutaForm({ terapeuta, curriculo }: EditTerapeut
                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                     />
                 </div>
+
+                <div className="md:col-span-2 border-t border-gray-200 dark:border-gray-700 pt-6 mt-2">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Configurações Financeiras</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Valor Hora Padrão (R$)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                name="valor_hora_padrao"
+                                defaultValue={curriculo?.valor_hora_padrao || ''}
+                                placeholder="0.00"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Porcentagem de Repasse (%)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                name="porcentagem_repasse"
+                                defaultValue={curriculo?.porcentagem_repasse || ''}
+                                placeholder="Ex: 50"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                            />
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">

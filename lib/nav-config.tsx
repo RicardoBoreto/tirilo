@@ -1,7 +1,7 @@
 import { CuteBuilding, CuteUsers, CuteSettings } from '@/components/icons/CuteIcons'
-import { Box, Package, Calendar, Sparkles, LifeBuoy, Users, LayoutDashboard } from 'lucide-react'
+import { Box, Package, Calendar, Sparkles, LifeBuoy, Users, LayoutDashboard, Wallet } from 'lucide-react'
 
-type UserRole = 'admin' | 'terapeuta' | 'recepcao' | 'super_admin' | string | undefined
+type UserRole = 'admin' | 'terapeuta' | 'recepcao' | 'financeiro' | 'super_admin' | string | undefined
 
 interface ClinicData {
     logo_url: string | null
@@ -61,6 +61,11 @@ export function getSidebarLinks(
             icon: <Box className="w-6 h-6" color="#4F46E5" />,
         },
         {
+            href: '/admin/financeiro',
+            label: 'Financeiro',
+            icon: <Wallet className="w-6 h-6" color="#4F46E5" />,
+        },
+        {
             href: '/admin/recursos',
             label: 'Materiais',
             icon: <Package className="w-6 h-6" color="#4F46E5" />,
@@ -99,6 +104,12 @@ export function getSidebarLinks(
         if (userRole === 'recepcao') {
             if (link.href === '/admin/prompts-ia') return false
             if (link.href === '/admin/configuracoes') return false
+            if (link.href === '/admin/financeiro') return false
+        }
+
+        // Therapist restrictions (updated)
+        if (userRole === 'terapeuta') {
+            if (link.href === '/admin/financeiro') return false
         }
 
         return true
