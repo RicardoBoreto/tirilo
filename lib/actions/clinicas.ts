@@ -58,8 +58,25 @@ export async function uploadLogo(formData: FormData) {
         throw new Error('Erro ao atualizar URL do logo na clínica')
     }
 
+
     revalidatePath(`/admin/clinicas/${clinicaId}`)
     revalidatePath(`/clinica/${clinicaId}`)
 
     return publicUrl
+}
+
+export async function getAllClinics() {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+        .from('saas_clinicas')
+        .select('id, nome_fantasia')
+        .order('nome_fantasia')
+
+    if (error) {
+        console.error('Erro ao buscar clínicas:', error)
+        return []
+    }
+
+    return data
 }

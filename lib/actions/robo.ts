@@ -136,3 +136,15 @@ export async function registerRobot(macAddress: string, name: string, clinicaId?
     if (error) throw new Error(error.message);
     revalidatePath('/admin/robo');
 }
+
+export async function updateRobot(id: string, data: { nome_identificacao?: string, mac_address?: string, id_clinica?: string | null }) {
+    const supabase = await createAdminClient();
+    const { error } = await supabase
+        .from('saas_frota_robos')
+        .update(data)
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/admin/robo');
+}
+

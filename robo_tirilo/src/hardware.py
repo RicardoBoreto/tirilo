@@ -5,6 +5,7 @@ import subprocess
 import asyncio
 import random
 import pyaudio
+import re
 # from gpiozero import LED, AngularServo # Commented out for dev environment without GPIO
 # Mocking GPIO for development if libraries are missing or not on RPi
 try:
@@ -27,72 +28,129 @@ class VoiceManager:
     def set_config(self, config):
         self.engine = config.get('motor_voz_preferencial', 'edge_tts')
 
-    def speak(self, text):
+    def speak(self, text, wait_callback=None):
         if self.engine == 'edge_tts':
-            if not self._speak_edge(text):
+            if not self._speak_edge(text, wait_callback):
                 print("Edge TTS failed, falling back to eSpeak.")
-                self._speak_espeak(text)
+                self._speak_espeak(text, wait_callback)
         else:
-            self._speak_espeak(text)
+            self._speak_espeak(text, wait_callback)
 
-    def _speak_edge(self, text):
-        """Generates audio using Edge TTS and plays it."""
+    def stop(self):
+        """Stops any currently playing audio."""
         try:
-            output_file = "/tmp/tts_output.mp3"
-            # Using subprocess for edge-tts CLI might be safer for threading than asyncio in some contexts,
-            # but let's try the library with asyncio.run()
+            import pygame
+            if pygame.mixer.get_init():
+                pygame.mixer.music.stop()
+        except:
+            pass
             
-            async def _gen():
-                communicate = edge_tts.Communicate(text, self.voice, rate=self.rate, volume=self.volume)
-                await communicate.save(output_file)
+        # If we had a wrapper for espeak process, we should kill it here.
+        # But we didn't store the process in self.
+        # For now, pygame stop covers EdgeTTS. ESpeak is short usually.
 
-            asyncio.run(_gen())
+    def _speak_edge(self, text, wait_callback=None):
+        """Generates audio using Edge TTS and plays it (Cached logic like parearcor.py)."""
+        try:
+            # Use local cache directory to prevent file locking and network spam
+            temp_dir = os.path.join(os.getcwd(), "temp_audio")
+            os.makedirs(temp_dir, exist_ok=True)
             
-            # Play audio using pygame mixer (already initialized in main.py usually, 
-            # but we can re-init or check init here just in case).
-            # Pygame handles MP3 software decoding nicely, avoiding mpg123 segfaults.
+            # Hash text to create unique filename
+            filename = f"audio_{abs(hash(text))}.mp3"
+            output_file = os.path.join(temp_dir, filename)
+            
+            # Generate only if file doesn't exist
+            if not os.path.exists(output_file):
+                async def _gen():
+                    # Simplified call matching parearcor.py (no rate/volume params)
+                    communicate = edge_tts.Communicate(text, self.voice)
+                    await communicate.save(output_file)
+
+                asyncio.run(_gen())
+            
             import pygame
             if not pygame.mixer.get_init():
                 pygame.mixer.init()
-            
-            # Se tiver device index, pygame usa o default do sistema (ALSA default).
-            # Para forçar device no pygame é complexo, normalmente configura-se o ~/.asoundrc 
-            # ou a variável de ambiente SDL_AUDIODRIVER/AUDIODEV antes do init.
-            # Como a falha do mpg123 parece ser driver/codec, o pygame é uma boa tentativa.
             
             try:
                 pygame.mixer.music.load(output_file)
                 pygame.mixer.music.play()
                 while pygame.mixer.music.get_busy():
-                    pygame.time.Clock().tick(10)
+                    if wait_callback:
+                        wait_callback()
+                    time.sleep(0.05)
+                
                 return True
             except Exception as e:
                 print(f"Pygame playback error: {e}")
-                # Fallback to pure mpg123 without arguments if pygame fails
-                cmd = ["mpg123", output_file]
-                subprocess.run(cmd, check=True)
-                return True
+                return False
+                
         except Exception as e:
             print(f"Edge TTS error: {e}")
             return False
 
-    def _speak_espeak(self, text):
+    def _speak_espeak(self, text, wait_callback=None):
         """Fallback using eSpeak."""
         try:
-            # espeak-ng -v pt -w /tmp/out.wav "text" && aplay -D hw:X /tmp/out.wav
-            # Or direct pipe.
             cmd = ["espeak-ng", "-v", "pt", text]
-            # To route audio, it's easier to generate wav and play with aplay
-            subprocess.run(cmd, check=False) # Simple fallback
+            # Force UTF-8 environment for subprocess to ensure accents are handled
+            env = os.environ.copy()
+            env["LANG"] = "pt_BR.UTF-8"
+            env["LC_ALL"] = "pt_BR.UTF-8"
+            process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+            while process.poll() is None:
+                if wait_callback:
+                    wait_callback()
+                time.sleep(0.03)
             return True
         except Exception as e:
             print(f"eSpeak error: {e}")
             return False
 
+# ... HardwareController class ...
+
+    def stop_speaking(self):
+        """Stops current speech and animation."""
+        self.speaking = False # Signals mouth thread to stop
+        self.voice_manager.stop() # Stops audio
+        # We don't join threads here to avoid deadlocks, they will exit naturally
+
+    def speak_animated(self, text, ui_callback=None, blocking=False):
+        """Speaks text and moves mouth. Default is threaded (non-blocking)."""
+        self.stop_speaking() # Stop previous
+        
+        # Clean text
+        clean_text = str(text).replace('*', '').replace('#', '')
+        clean_text = re.sub(r'[\U00010000-\U0010ffff]', '', clean_text)
+        
+        if blocking:
+            self._run_speak_job(clean_text, ui_callback)
+        else:
+            t = threading.Thread(target=self._run_speak_job, args=(clean_text, ui_callback))
+            t.start()
+            
+    def _run_speak_job(self, text, ui_callback):
+        self.speaking = True
+        
+        # Start mouth animation in parallel to audio wait
+        self.mouth_thread = threading.Thread(target=self._animate_mouth)
+        self.mouth_thread.start()
+        
+        self.voice_manager.speak(text, wait_callback=ui_callback)
+        
+        self.speaking = False
+        if self.mouth_thread:
+            self.mouth_thread.join()
+
 class HardwareController:
     def __init__(self):
-        self.audio_index = self.detect_usb_device_index()
-        self.voice_manager = VoiceManager(self.audio_index)
+        self.device_indices = self.detect_usb_device_index()
+        self.output_index = self.device_indices.get('output')
+        self.input_index = self.device_indices.get('input')
+        
+        # Use output index for VoiceManager if needed (VoiceManager currently uses default/pygame logic but could be updated)
+        self.voice_manager = VoiceManager(self.output_index)
         
         # GPIO Setup
         self.left_eye = None
@@ -102,8 +160,9 @@ class HardwareController:
         if GPIO_AVAILABLE:
             try:
                 # Adjust pins as needed
-                self.left_eye = LED(17)
-                self.right_eye = LED(27)
+                # Pinos corrigidos conforme tiriloV324.py
+                self.left_eye = LED(24)
+                self.right_eye = LED(23)
                 self.mouth_servo = AngularServo(18, min_angle=-90, max_angle=90)
             except Exception as e:
                 print(f"GPIO Init Error: {e}")
@@ -112,24 +171,30 @@ class HardwareController:
         self.speaking = False
 
     def detect_usb_device_index(self):
-        """Detects the index of the USB audio device."""
+        """Detects the index of the USB audio device (both input and output)."""
         p = pyaudio.PyAudio()
-        usb_index = None
-        print("Scanning audio devices...")
+        usb_output = None
+        usb_input = None
+        
+        print("\n=== Audio Device Scan ===")
         for i in range(p.get_device_count()):
             info = p.get_device_info_by_index(i)
             name = info.get('name')
-            print(f"Device {i}: {name}")
+            in_ch = info.get('maxInputChannels')
+            out_ch = info.get('maxOutputChannels')
+            print(f"[{i}] {name} | In: {in_ch} | Out: {out_ch}")
+            
             if "USB" in name:
-                usb_index = i
-                # Keep searching? Usually the first one is fine.
-                # But we might want the one that has output capabilities.
-                if info.get('maxOutputChannels') > 0:
-                    print(f"Found USB Audio Device at index {i}")
-                    break
+                # Prefer devices with correct capabilities
+                if out_ch > 0 and usb_output is None:
+                    usb_output = i
+                
+                if in_ch > 0 and usb_input is None:
+                    usb_input = i
+        print(f"=== Selected USB Input: {usb_input}, Output: {usb_output} ===\n")
         
         p.terminate()
-        return usb_index
+        return {'output': usb_output, 'input': usb_input}
 
     def update_config(self, config):
         self.voice_manager.set_config(config)
@@ -138,21 +203,50 @@ class HardwareController:
         """Randomly moves the mouth servo while speaking."""
         while self.speaking:
             if self.mouth_servo:
-                angle = random.uniform(-45, 45)
-                self.mouth_servo.angle = angle
+                try:
+                    # Simpler Open/Close animation which is more visible
+                    target = random.choice([-45, 0, 45, 0]) 
+                    self.mouth_servo.angle = target
+                except Exception as e:
+                    print(f"Servo Error: {e}")
             time.sleep(0.15)
         
         # Reset
         if self.mouth_servo:
-            self.mouth_servo.angle = 0
+            try:
+                self.mouth_servo.angle = 0
+            except:
+                pass
 
-    def speak_animated(self, text):
-        """Speaks text and moves mouth."""
+    def stop_speaking(self):
+        """Stops current speech and animation."""
+        self.speaking = False # Signals mouth thread to stop
+        self.voice_manager.stop() # Stops audio
+        # We don't join threads here to avoid deadlocks, they will exit naturally
+
+    def speak_animated(self, text, ui_callback=None, blocking=False):
+        """Speaks text and moves mouth. Default is threaded (non-blocking)."""
+        self.stop_speaking() # Stop previous
+        
+        # Clean text
+        clean_text = str(text).replace('*', '').replace('#', '')
+        # clean_text = re.sub(r'[\U00010000-\U0010ffff]', '', clean_text) # Comentado por suspeita de remover acentos
+        print(f"DEBUG SENT TO TTS: '{clean_text}'")
+        
+        if blocking:
+            self._run_speak_job(clean_text, ui_callback)
+        else:
+            t = threading.Thread(target=self._run_speak_job, args=(clean_text, ui_callback))
+            t.start()
+            
+    def _run_speak_job(self, text, ui_callback):
         self.speaking = True
+        
+        # Start mouth animation in parallel to audio wait
         self.mouth_thread = threading.Thread(target=self._animate_mouth)
         self.mouth_thread.start()
         
-        self.voice_manager.speak(text)
+        self.voice_manager.speak(text, wait_callback=ui_callback)
         
         self.speaking = False
         if self.mouth_thread:
@@ -165,8 +259,64 @@ class HardwareController:
                 self.left_eye.on()
                 self.right_eye.on()
             else:
-                self.left_eye.off()
                 self.right_eye.off()
+            
+    def listen(self, timeout=None):
+        """Listens for audio input using arecord (ALSA) and returns recognized text."""
+        # Using arecord directly as requested/inspired by tiriloV324.py
+        # This bypasses PyAudio device enumeration issues on some Raspbian configs
+        
+        # Use a local file to avoid permission issues in /tmp if previously created by another user (e.g. root)
+        output_file = "voz_usuario.wav"
+        
+        # Determine device string. If we found a USB input at index X, 
+        # ALSA usually maps it to card X (plughw:X,0).
+        # Fallback to plughw:1,0 or plughw:0,0 if detection fails.
+        
+        device_str = "plughw:0,0" # Default fallback
+        if self.input_index is not None:
+             device_str = f"plughw:{self.input_index},0"
+        
+        print(f"Listening with arecord on {device_str}...")
+        
+        try:
+            # Capture 5 seconds of audio (timeout mimic) or until silence (hard with raw arecord)
+            # tiriloV324.py uses fixed duration "-d 4". Let's use that for stability.
+            recording_duration = "4" 
+            
+            cmd = ["arecord", "-D", device_str, "-d", recording_duration, "-f", "cd", "-q", "-r", "16000", output_file]
+            
+            # Run arecord
+            subprocess.run(cmd, check=True)
+            
+            if os.path.exists(output_file):
+                print("Processing audio...")
+                import speech_recognition as sr
+                r = sr.Recognizer()
+                
+                with sr.AudioFile(output_file) as source:
+                    audio = r.record(source)
+                
+                # Recognize
+                try:
+                    text = r.recognize_google(audio, language="pt-BR")
+                    print(f"Heard: {text}")
+                    return text
+                except sr.UnknownValueError:
+                    return None
+                except sr.RequestError as e:
+                    print(f"API Error: {e}")
+                    return None
+            else:
+                print("Audio file not generated.")
+                return None
+                
+        except subprocess.CalledProcessError as e:
+            print(f"arecord failed: {e}")
+            return None
+        except Exception as e:
+            print(f"Listen Error: {e}")
+            return None
 
 if __name__ == "__main__":
     hw = HardwareController()

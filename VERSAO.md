@@ -9,13 +9,8 @@ Cada versão segue o formato:
   - ✨ Novos Recursos
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
-  - 🔒 Segurança
-  - 📚 Documentação
-  - 🗄️ Banco de Dados
-
----
-
-## [1.3.1] - 08/12/2024
+- **Edição Completa:** Funcionalidade para editar dados do robô (Nome, MAC, Clínica) após o cadastro.
+- **Interface Melhorada:** Visualização clara da clínica vinculada e botão de edição acessível.
 
 ### 💰 Financeiro & Contratos
 
@@ -201,6 +196,20 @@ Cada versão segue o formato:
 ## [1.2.0] - 04/12/2024
 
 ### ✨ Novos Recursos
+
+
+### 🤖 Robôs Tirilo
+
+#### Gestão de Frota e Vínculo com Clínicas
+- **Melhoria no Cadastro:** Agora é possível selecionar a **clínica** a qual o robô pertence diretamente no momento do cadastro.
+  - Super Admins veem uma lista de todas as clínicas.
+  - Administradores de Clínica têm o campo preenchido automaticamente com sua própria clínica.
+- **Edição de Robôs:** Adicionada funcionalidade de **edição** nos detalhes do robô.
+  - Permite alterar: Nome de Identificação, Endereço MAC e Clínica vinculada.
+  - Visualização "Somente Leitura" melhorada com nome da clínica e botão "Editar Dados" em destaque.
+
+#### Correção de Configuração (Brain)
+- **Variável de Ambiente:** Atualizada a chave de API no módulo `brain.py` para usar `GOOGLE_GEMINI_API_KEY`, padronizando com o resto do sistema.
 
 #### Usuários - Campo Apelido
 - **Descrição:** Adicionado campo `apelido` na tabela `usuarios` para nome curto/amigável
@@ -476,4 +485,4 @@ Cada versão segue o formato:
 - **0.X.0** - Novos recursos, melhorias significativas
 - **0.0.X** - Correções de bugs, pequenas melhorias
 
-**Última atualização:** 04/12/2024
+**Última atualização:** 08/12/2024

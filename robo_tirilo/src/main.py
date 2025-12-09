@@ -5,6 +5,7 @@ from cloud import CloudManager
 from hardware import HardwareController
 from brain import BrainManager
 from gui import GuiManager
+from game_manager import GameManager
 
 def main():
     # 1. Initialize Modules
@@ -13,6 +14,10 @@ def main():
     hardware = HardwareController()
     brain = BrainManager()
     gui = GuiManager()
+    game_manager = GameManager(hardware, gui, brain)
+    
+    # Pre-load games
+    game_manager.load_games()
     
     command_queue = queue.Queue()
 
@@ -39,54 +44,93 @@ def main():
             cloud.start_listener()
             
             # Initial Greeting
-            hardware.speak_animated("Olá, eu sou o Tirilo. Vamos brincar?")
+            # Use unicode escape for reliability: Ol\u00e1
+            hardware.speak_animated("Ol\u00e1, eu sou o Tirilo. Vamos brincar?", ui_callback=None)
             
     except Exception as e:
         print(f"Initialization Error: {e}")
-        # Continue to GUI to show error or default state if possible
     
     # 3. Main Loop
     running = True
     while running:
-        # Handle GUI Events
-        action = gui.handle_events()
+        # Handle GUI Events (Global)
+        events = gui.get_events()
+        action = gui.process_events(events)
+        
         if action == "QUIT":
             running = False
-        elif action and action.startswith("GAME_"):
-            game_id = action.split("_")[1]
-            print(f"Starting Game: {game_id}")
-            gui.set_state("TALKING") # Or specific game state
-            hardware.speak_animated(f"Você escolheu o jogo de {game_id}")
-            # Logic to start game...
-            # For now, just simulate a session
-            cloud.send_telemetry(game_id, "INICIO", time.time())
-            gui.set_state("IDLE")
-
+        
+        # Pass raw events to active game (for drag & drop)
+        if game_manager.current_game:
+            for event in events:
+                game_manager.handle_pygame_event(event)
+            
         # Handle Cloud Commands
         try:
             while not command_queue.empty():
                 cmd = command_queue.get_nowait()
                 print(f"Processing command: {cmd}")
-                payload = cmd.get('comando', '') # Assuming 'comando' column
+                payload = cmd.get('comando', '')
                 
                 if payload == "PARAR":
+                    if game_manager.current_game:
+                        game_manager.stop_current_game()
+                    else:
+                        hardware.speak_animated("Já estou parado.", ui_callback=gui.draw)
                     gui.set_state("IDLE")
-                    hardware.speak_animated("Parando atividades.")
-                elif payload == "JOGO_CORES":
-                    gui.set_state("GAME_SELECTION") # Or direct to game
-                    hardware.speak_animated("Vamos jogar o jogo das cores!")
+                    
+                elif payload == "MODO_PAPAGAIO":
+                    game_manager.start_game("papagaio")
+                    
+                elif payload == "MODO_CONVERSA":
+                    game_manager.start_game("conversa")
+                    
+                elif payload == "JOGO_PAREAR":
+                    if game_manager.current_game and "Parear" in game_manager.current_game.nome:
+                        hardware.speak_animated("O jogo já está rodando.", ui_callback=gui.draw)
+                    elif not game_manager.start_game("parear_cor"):
+                        hardware.speak_animated("Jogo parear não encontrado.", ui_callback=gui.draw)
+                        
+                elif payload == "JOGO_CORES" or payload == "JOGAR_CORES":
+                    # Tenta carregar plugin, se não existir, fallback
+                    if not game_manager.start_game("cores"):
+                         hardware.speak_animated("Jogo das cores ainda não instalado.", ui_callback=gui.draw)
+                         
                 elif payload == "FALAR":
                     text = cmd.get('parametros', {}).get('texto', '')
                     if text:
-                        gui.set_state("TALKING")
-                        hardware.speak_animated(text)
-                        gui.set_state("IDLE")
-                        
+                        if game_manager.current_game:
+                             game_manager.stop_current_game()
+                        # State update handled in main loop now
+                        hardware.speak_animated(text, ui_callback=None)
+
         except queue.Empty:
             pass
 
+        # Game Loop / Logic
+        if game_manager.current_game:
+            if game_manager.current_game.running:
+                # O jogo roda sua lógica (pode ser bloqueante se mal feito, 
+                # mas nossos plugins usam hardware.listen com timeout curto ou controlados)
+                # O ideal seria on_voice controlado pelo main, mas para portar a logica antiga:
+                game_manager.handle_input('loop', None)
+            else:
+                # Jogo terminou sozinho (ex: falou "sair")
+                game_manager.stop_current_game()
+                gui.set_state("IDLE")
+        
         # Draw GUI
-        gui.draw()
+        # Se o jogo estiver rodando, ele pode ter desenhado algo no loop? 
+        # Nossos plugins atuais chamam gui.draw() explicitamente nas animações.
+        # Mas o estado IDLE precisa ser desenhado aqui.
+        if not game_manager.current_game:
+             # AUTO-SYNC: Update face state based on hardware status
+             if hardware.speaking:
+                 gui.set_state("TALKING")
+             elif gui.state == "TALKING":
+                 gui.set_state("IDLE")
+                 
+             gui.draw()
         
         # Check if GUI closed
         if not gui.running:

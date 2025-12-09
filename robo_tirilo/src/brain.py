@@ -6,9 +6,9 @@ load_dotenv()
 
 class BrainManager:
     def __init__(self):
-        self.api_key = os.environ.get("GEMINI_API_KEY")
+        self.api_key = os.environ.get("GOOGLE_GEMINI_API_KEY")
         if not self.api_key:
-            print("Warning: GEMINI_API_KEY not found.")
+            print("Warning: GOOGLE_GEMINI_API_KEY not found.")
         else:
             genai.configure(api_key=self.api_key)
         
