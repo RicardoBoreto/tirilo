@@ -89,7 +89,25 @@ Dentro da sua classe `Game`, você tem acesso a:
 *   **`self.brain`**:
     *   `process_input(texto)`: Envia texto para o Gemini (IA) e recebe resposta inteligente.
 
-## 4. Dicas de Design
+## 4. Textos e Acentos (Novo!)
+
+Você pode escrever textos em português normalmente (com acentos: `~`, `ç`, `é`), **sem precisar usar códigos** como `chr(227)` ou `\u00...`.
+
+### Solução de Encodings (Windows vs Linux)
+Devido a diferenças de codificação entre Windows (CP1252) e Linux (UTF-8), caracteres acentuados podem corromper durante a transferência.
+
+Para resolver, incluímos um script de **auto-correção no Raspberry Pi**:
+
+1.  Faça o deploy normalmente (`.\deploy_robo.ps1`).
+2.  O arquivo `src/prepare_environment.sh` é enviado junto.
+3.  Se notar problemas de acentuação ou cache, logue no Raspberry e rode:
+    ```bash
+    cd apps/tirilo_robo/src
+    ./prepare_environment.sh
+    ```
+    Isso limpará caches (`__pycache__`) e converterá forçadamente qualquer arquivo corrompido para UTF-8 limpo.
+
+## 5. Dicas de Design
 
 *   **Interatividade:** Sempre dê feedback visual e sonoro.
 *   **Simplicidade:** Crianças precisam de instruções claras e respostas curtas.

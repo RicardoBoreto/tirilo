@@ -92,9 +92,10 @@ def main():
                         hardware.speak_animated("Jogo parear não encontrado.", ui_callback=gui.draw)
                         
                 elif payload == "JOGO_CORES" or payload == "JOGAR_CORES":
-                    # Tenta carregar plugin, se não existir, fallback
-                    if not game_manager.start_game("cores"):
-                         hardware.speak_animated("Jogo das cores ainda não instalado.", ui_callback=gui.draw)
+                    # Mapeando explicitamente para o jogo de parear cores se solicitado
+                    # ou se o usuário confunde os nomes. O usuário sugeriu parear_cor.
+                    if not game_manager.start_game("parear_cor"):
+                         hardware.speak_animated("Jogo parear não encontrado.", ui_callback=gui.draw)
                          
                 elif payload == "FALAR":
                     text = cmd.get('parametros', {}).get('texto', '')

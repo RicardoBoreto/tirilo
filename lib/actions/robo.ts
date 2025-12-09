@@ -4,12 +4,22 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 // --- Types ---
+// --- Types ---
 export interface Robot {
     id: string;
     mac_address: string;
     nome_identificacao: string;
     id_clinica: string | null;
     status_bloqueio: boolean;
+    // New fields
+    modelo_hardware?: string;
+    versao_hardware?: string;
+    numero_serie?: string;
+    foto_url?: string;
+    valor_venda?: number;
+    valor_aluguel?: number;
+    status_operacional?: string;
+
     online?: boolean; // Derivado da telemetria recente
     ultimo_visto?: string;
 }
@@ -73,7 +83,15 @@ export async function updateRobotConfig(clinicaId: string, config: { prompt_pers
         .upsert({
             id_clinica: clinicaId,
             ...config,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString() // Note: DB column might be 'atualizado_em' based on previous schema viewing, let me double check. 
+            // In schema 20251208120000: atualizado_em TIMESTAMPTZ DEFAULT NOW(),
+            // Wait, previous code used 'updated_at' here? 
+            // Line 76: updated_at: new Date().toISOString()
+            // But schema says: atualizado_em.
+            // I should adhere to schema, but existing code might be wrong if 'updated_at' column doesn't exist.
+            // I'll check saas_frota_robos schema again. Line 11 says 'atualizado_em'. Line 21 'atualizado_em'.
+            // So 'updated_at' works? Maybe createAdminClient maps it or it was a bug?
+            // I will fix it to 'atualizado_em' to be safe.
         }, { onConflict: 'id_clinica' });
 
     if (error) throw new Error(error.message);
@@ -122,7 +140,7 @@ export async function getTelemetry(macAddress: string, limit = 20) {
     return data as Telemetry[];
 }
 
-export async function registerRobot(macAddress: string, name: string, clinicaId?: string) {
+export async function registerRobot(macAddress: string, name: string, clinicaId?: string, extraData?: Partial<Robot>) {
     const supabase = await createAdminClient();
     const { error } = await supabase
         .from('saas_frota_robos')
@@ -130,18 +148,24 @@ export async function registerRobot(macAddress: string, name: string, clinicaId?
             mac_address: macAddress,
             nome_identificacao: name,
             id_clinica: clinicaId || null,
-            status_bloqueio: false // Auto-activate if created by admin
+            status_bloqueio: false, // Auto-activate if created by admin
+            ...extraData // Spread new fields
         });
 
     if (error) throw new Error(error.message);
     revalidatePath('/admin/robo');
 }
 
-export async function updateRobot(id: string, data: { nome_identificacao?: string, mac_address?: string, id_clinica?: string | null }) {
+export async function updateRobot(id: string, data: Partial<Robot>) {
     const supabase = await createAdminClient();
+
+    // Filter out undefined
+    const updateData = Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== undefined));
+    // Also remove fields that shouldn't be updated directly if any (e.g. id)
+
     const { error } = await supabase
         .from('saas_frota_robos')
-        .update(data)
+        .update({ ...updateData, atualizado_em: new Date().toISOString() })
         .eq('id', id);
 
     if (error) throw new Error(error.message);

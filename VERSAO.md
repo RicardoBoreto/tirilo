@@ -35,6 +35,28 @@ Cada versão segue o formato:
 
 ---
 
+## [1.4.0] - 09/12/2024
+
+### 🤖 Robótica e Monetização 
+
+#### Módulo de Manutenção de Frota (O.S.)
+- **Abertura de Chamados:** Sistema completo para abrir Ordens de Serviço (Preventiva, Corretiva, Upgrade).
+- **Workflow:** Status `em_analise`, `aguardando_peca`, `em_reparo`, `concluido`.
+- **Financeiro:** Registro de custo de peças e mão e obra.
+- **Integração:** Bloqueio automático do robô durante manutenção.
+
+#### Monetização de Jogos
+- **Preços:** Jogos agora podem ser "Pagos" ou "Gratuitos".
+- **Controle de Acesso:** Clínicas só acessam jogos licenciados via tabela `saas_clinicas_jogos`.
+- **Distribuição:** Interface para Admin liberar jogos específicos para clínicas.
+
+#### Detalhamento de Hardware
+- **Inventário:** Cadastro de Modelo, Versão de Hardware e Número de Série.
+- **Financeiro da Frota:** Registro de Valor de Venda e Aluguel de cada unidade.
+- **Fotos:** URL de foto do robô integrada ao dashboard.
+
+---
+
 ## [1.3.0] - 07/12/2024
 
 ### 💰 Financeiro (Novo Módulo Completo)

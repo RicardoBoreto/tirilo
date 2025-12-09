@@ -196,6 +196,22 @@ O sistema Tirilo possui **4 perfis de usuário** com diferentes níveis de acess
 3. Terapeutas só acessam **seus pacientes**
 4. Storage buckets são privados com políticas específicas
 
+### 💰 Monetização e Jogos
+1. **Jogos Pagos vs Gratuitos:** Jogos podem ter um preço associado.
+2. **Licenciamento:** Clínicas só podem acessar jogos que foram explicitamente liberados (comprados/licenciados).
+3. **Distribuição:** Admin controla quais clínicas têm acesso a quais jogos via aba "Distribuição".
+
+### 🤖 Gestão de Frota (Robôs)
+1. Cadastros de robôs incluem detalhes de **hardware** (modelo, versão, serial) e **financeiros** (valor venda/aluguel).
+2. Status Operacional: `disponivel`, `em_uso`, `manutencao`, `indisponivel`.
+3. Robôs são vinculados a uma clínica específica ou ficam no "Estoque Global" (sem vínculo).
+
+### 🔧 Manutenção de Frota (O.S.)
+1. **Ordens de Serviço (O.S.):** Ciclo completo (Abertura → Análise → Reparo → Testes → Conclusão).
+2. **Histórico:** Cada robô possui um prontuário com todas as manutenções realizadas.
+3. **Bloqueio Automático:** Robôs podem ser bloqueados automaticamente (`status: manutencao`) ao abrir um chamado.
+4. **Custos:** Registro de custo total e flag para faturamento ao cliente (em caso de mau uso).
+
 ---
 
 ## 📁 Estrutura de Perfis no Banco

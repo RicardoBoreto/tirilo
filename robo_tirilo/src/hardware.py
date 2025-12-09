@@ -231,7 +231,7 @@ class HardwareController:
         # Clean text
         clean_text = str(text).replace('*', '').replace('#', '')
         # clean_text = re.sub(r'[\U00010000-\U0010ffff]', '', clean_text) # Comentado por suspeita de remover acentos
-        print(f"DEBUG SENT TO TTS: '{clean_text}'")
+        print(f"DEBUG SENT TO TTS: {repr(clean_text)}")
         
         if blocking:
             self._run_speak_job(clean_text, ui_callback)

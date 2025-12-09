@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from games.base import GameBase
 import pygame
 import random
@@ -48,8 +49,8 @@ class Game(GameBase):
 
     def stop(self):
         self.running = False
-        # Fim de jogo! Voc\u00ea fez {} pontos.
-        self.hardware.speak_animated(f"Fim de jogo! Voc\u00ea fez {self.score} pontos.", ui_callback=None)
+        # Fim de jogo! Você fez {} pontos.
+        self.hardware.speak_animated(f"Fim de jogo! Você fez {self.score} pontos.", ui_callback=None)
         self.gui.set_state("IDLE")
 
     def generate_level(self):
@@ -139,8 +140,8 @@ class Game(GameBase):
                     self.check_level_complete()
                 else:
                     # Match Errado
-                    # Usando unicode escape para garantir 'não' correto: Ah n\u00e3o
-                    self.hardware.speak_animated("Ah n\u00e3o, tente de novo.", ui_callback=None)
+                    # Texto temporário por falha de encoding persistente no deploy
+                    self.hardware.speak_animated(f"Há não!Tente de novo.", ui_callback=None)
                     pass
             
             if self.selected_shape:
@@ -160,12 +161,12 @@ class Game(GameBase):
         if all(s['matched'] for s in self.shapes):
             self.level += 1
             if self.level > 3:
-                # Parab\u00e9ns! Voc\u00ea completou todos os n\u00edveis!
-                self.hardware.speak_animated("Parab\u00e9ns! Voc\u00ea completou todos os n\u00edveis!", ui_callback=None)
+                # Parabéns! Você completou todos os níveis!
+                self.hardware.speak_animated("Parabéns! Você completou todos os níveis!", ui_callback=None)
                 self.stop()
             else:
-                # Pr\u00f3ximo n\u00edvel!
-                self.hardware.speak_animated("Pr\u00f3ximo n\u00edvel!", ui_callback=None)
+                # Próximo nível!
+                self.hardware.speak_animated("Próximo nível!", ui_callback=None)
                 self.generate_level()
 
     def loop(self):

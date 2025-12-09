@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
 import { cn } from "@/lib/utils"
 
 interface DropdownMenuContextValue {
@@ -35,16 +36,17 @@ const DropdownMenuTrigger = React.forwardRef<
     React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }
 >(({ className, children, asChild = false, ...props }, ref) => {
     const { open, setOpen } = useDropdownMenu()
+    const Comp = asChild ? Slot : "button"
 
     return (
-        <button
+        <Comp
             ref={ref}
             className={cn(className)}
             onClick={() => setOpen(!open)}
             {...props}
         >
             {children}
-        </button>
+        </Comp>
     )
 })
 DropdownMenuTrigger.displayName = "DropdownMenuTrigger"
