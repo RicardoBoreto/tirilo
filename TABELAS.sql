@@ -1210,4 +1210,52 @@ CREATE TABLE IF NOT EXISTS saas_frota_robos (
  - -   C r e a t e   i n d e x   f o r   f a s t e r   l o o k u p s  
  C R E A T E   I N D E X   i d x _ m a n u t e n c a o _ r o b o   O N   s a a s _ m a n u t e n c o e s _ f r o t a ( r o b o _ i d ) ;  
  C R E A T E   I N D E X   i d x _ m a n u t e n c a o _ s t a t u s   O N   s a a s _ m a n u t e n c o e s _ f r o t a ( s t a t u s _ o s ) ;  
+  
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =  
+ - -   M Ã  D U L O   D E   J O G O S   E   V E R S Ã " E S   ( A D I C I O N A D O   E M   2 0 2 5 - 1 2 - 1 0 )  
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =  
+  
+ - -   T a b e l a   P r i n c i p a l   d e   J o g o s  
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   s a a s _ j o g o s   (  
+         i d   U U I D   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) ,  
+         n o m e   T E X T   N O T   N U L L ,  
+         d e s c r i c a o _ r e g r a s   T E X T ,  
+         i n d i c a c a o   T E X T ,  
+         t h u m b n a i l _ u r l   T E X T ,  
+         a t i v o   B O O L E A N   D E F A U L T   T R U E ,  
+         c a t e g o r i a   T E X T ,  
+         c o m a n d o _ e n t r a d a   T E X T ,   - -   e . g .   ' g a m e s . p a r e a r _ c o r '   o r   s c r i p t   n a m e  
+         p r e c o   D E C I M A L ( 1 0 , 2 )   D E F A U L T   0 . 0 0 ,   - -   A d i c i o n a d o   v i a   m i g r a t e   m o n e t i z e  
+         v e r s a o _ a t u a l   T E X T   D E F A U L T   ' 1 . 0 ' ,     - -   A d i c i o n a d o   v i a   m i g r a t e   v e r s i o n s  
+         c r i a d o _ e m   T I M E S T A M P T Z   D E F A U L T   N O W ( ) ,  
+         a t u a l i z a d o _ e m   T I M E S T A M P T Z   D E F A U L T   N O W ( )  
+ ) ;  
+  
+ - -   R L S :   J o g o s  
+ A L T E R   T A B L E   s a a s _ j o g o s   E N A B L E   R O W   L E V E L   S E C U R I T Y ;  
+  
+ C R E A T E   P O L I C Y   " A d m i n   v e   t o d o s   j o g o s "   O N   s a a s _ j o g o s  
+         F O R   S E L E C T   U S I N G   ( t r u e ) ;  
+  
+ C R E A T E   P O L I C Y   " A d m i n   g e r e n c i a   j o g o s "   O N   s a a s _ j o g o s  
+         F O R   A L L   U S I N G   ( a u t h . u i d ( )   I N   ( S E L E C T   i d   F R O M   u s u a r i o s   W H E R E   t i p o _ p e r f i l   I N   ( ' a d m i n ' ,   ' s u p e r _ a d m i n ' ) ) ) ;  
+  
+ - -   T a b e l a   d e   V e r s Ã µ e s   d e   J o g o s  
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   s a a s _ j o g o s _ v e r s o e s   (  
+         i d   U U I D   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) ,  
+         j o g o _ i d   U U I D   R E F E R E N C E S   s a a s _ j o g o s ( i d )   O N   D E L E T E   C A S C A D E ,  
+         v e r s a o   T E X T   N O T   N U L L ,  
+         n o t a s _ a t u a l i z a c a o   T E X T ,    
+         c r i a d o _ e m   T I M E S T A M P T Z   D E F A U L T   N O W ( ) ,  
+         c r i a d o _ p o r   U U I D   R E F E R E N C E S   u s u a r i o s ( i d )   O N   D E L E T E   S E T   N U L L  
+ ) ;  
+  
+ - -   R L S :   V e r s Ã µ e s  
+ A L T E R   T A B L E   s a a s _ j o g o s _ v e r s o e s   E N A B L E   R O W   L E V E L   S E C U R I T Y ;  
+  
+ C R E A T E   P O L I C Y   " A d m i n   v e   v e r s o e s "   O N   s a a s _ j o g o s _ v e r s o e s  
+         F O R   S E L E C T   U S I N G   ( t r u e ) ;  
+  
+ C R E A T E   P O L I C Y   " A d m i n   g e r e n c i a   v e r s o e s "   O N   s a a s _ j o g o s _ v e r s o e s  
+         F O R   A L L   U S I N G   ( a u t h . u i d ( )   I N   ( S E L E C T   i d   F R O M   u s u a r i o s   W H E R E   t i p o _ p e r f i l   I N   ( ' a d m i n ' ,   ' s u p e r _ a d m i n ' ) ) ) ;  
  
