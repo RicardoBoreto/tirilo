@@ -7,6 +7,7 @@ import { Database } from '@/types/database.types'
 type Clinica = Database['public']['Tables']['saas_clinicas']['Row']
 
 export default function ClinicSidebar({ clinica }: { clinica: Clinica }) {
+    // Force Update Sidebar
     const pathname = usePathname()
     const clinicaId = clinica.id
 
@@ -20,6 +21,11 @@ export default function ClinicSidebar({ clinica }: { clinica: Clinica }) {
             href: `/clinica/${clinicaId}/pacientes`,
             label: 'Pacientes',
             icon: '🧸'
+        },
+        {
+            href: `/clinica/${clinicaId}/loja`,
+            label: 'Loja de Apps',
+            icon: '🛍️'
         },
     ]
 

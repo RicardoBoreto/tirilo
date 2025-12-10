@@ -10,6 +10,7 @@ import { getRelatoriosByPaciente } from '@/lib/actions/relatorios'
 import { getPlanosIAByPaciente } from '@/lib/actions/ai_generation'
 import PacienteDetailsTabs from '@/components/PacienteDetailsTabs'
 import Link from 'next/link'
+import { getSessoesLudicas } from '@/lib/actions/ludoterapia'
 
 export default async function PacienteDetailsPage({
     params
@@ -27,15 +28,17 @@ export default async function PacienteDetailsPage({
         terapeutasData,
         linkedTerapeutaIds,
         relatorios,
-        planosIA
+        planosIA,
+        sessoesLudicas // NEW
     ] = await Promise.all([
         getPaciente(pId),
         getResponsaveis(pId),
         getAnamnese(pId),
-        getTerapeutas(), // No args needed as it uses session user's clinic
+        getTerapeutas(),
         getPacientesTerapeutas(pId),
         getRelatoriosByPaciente(pId),
-        getPlanosIAByPaciente(pId)
+        getPlanosIAByPaciente(pId),
+        getSessoesLudicas(pId) // NEW
     ])
 
     if (!paciente) {
@@ -71,6 +74,7 @@ export default async function PacienteDetailsPage({
                 linkedTerapeutaIds={linkedTerapeutaIds}
                 relatorios={relatorios || []}
                 planosIA={planosIA || []}
+                sessoesLudicas={sessoesLudicas || []} // NEW PROP
             />
         </div>
     )

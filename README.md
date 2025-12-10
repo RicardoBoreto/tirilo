@@ -104,6 +104,7 @@ SaaS_tirilo_v2/
 ├── .env.example                      # Template de variáveis
 └── package.json
 ```
+> **Nota sobre Navegação:** Consulte [ARQUITETURA_DE_NAVEGACAO.md](./ARQUITETURA_DE_NAVEGACAO.md) para entender como os múltiplos menus laterais (Sidebar) funcionam.
 
 ## ✨ Funcionalidades Implementadas
 
@@ -146,6 +147,25 @@ SaaS_tirilo_v2/
 - [x] Cookies seguros
 - [x] Validação de formulários
 - [x] TypeScript strict mode
+
+### ✅ Módulo Família (Portal)
+- [x] Dashboard para Pais/Responsáveis
+- [x] Visualização de Filhos vinculados
+- [x] Agenda de Sessões
+- [x] Anamnese rica (incluindo Musicoterapia)
+- [x] Histórico "Aventuras com Tirilo"
+
+### ✅ Módulo Ludoterapia & Robótica
+- [x] Integração com Frota de Robôs (Dashboard)
+- [x] Histórico de Sessões Lúdicas
+- [x] Diário de Bordo automatizado
+- [x] Loja de Habilidades e Jogos para Clínicas (SaaS)
+
+### ✅ Módulo Clínico
+- [x] Gestão de Pacientes
+- [x] Vínculo Paciente-Terapeuta
+- [x] Agendamento de Sessões
+- [x] Prontuário Eletrônico (Básico)
 
 ## 🎨 Páginas Disponíveis
 

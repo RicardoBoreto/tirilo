@@ -22,6 +22,8 @@ export interface Robot {
 
     online?: boolean; // Derivado da telemetria recente
     ultimo_visto?: string;
+    endereco_tailscale?: string;
+    usuario_ssh?: string;
 }
 
 export interface RobotConfig {

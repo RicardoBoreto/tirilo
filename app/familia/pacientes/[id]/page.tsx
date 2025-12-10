@@ -1,10 +1,14 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { getSessoesLudicas } from '@/lib/actions/ludoterapia'
+import { getAgendaPaciente } from '@/lib/actions/familia'
+import LudoterapiaTab from '@/components/LudoterapiaTab'
+import AgendaTab from '@/components/AgendaTab'
 
 export default async function FamilyPacientePage({
     params,
@@ -14,13 +18,14 @@ export default async function FamilyPacientePage({
     const { id } = await params
     const pacienteId = parseInt(id)
     const supabase = await createClient()
+    const adminDb = await createAdminClient()
 
     // 1. Get Logged User
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect('/login')
 
     // 2. Get Responsavel ID
-    const { data: responsavel } = await supabase
+    const { data: responsavel } = await adminDb
         .from('responsaveis')
         .select('id')
         .eq('user_id', user.id)
@@ -29,7 +34,7 @@ export default async function FamilyPacientePage({
     if (!responsavel) redirect('/login')
 
     // 3. Verify Link
-    const { data: link } = await supabase
+    const { data: link } = await adminDb
         .from('pacientes_responsaveis')
         .select('id')
         .eq('paciente_id', pacienteId)
@@ -39,7 +44,7 @@ export default async function FamilyPacientePage({
     if (!link) notFound()
 
     // 4. Fetch Data
-    const { data: paciente } = await supabase
+    const { data: paciente } = await adminDb
         .from('pacientes')
         .select(`
             *,
@@ -52,7 +57,7 @@ export default async function FamilyPacientePage({
     if (!paciente) notFound()
 
     // Fetch Therapists
-    const { data: terapeutas } = await supabase
+    const { data: terapeutas } = await adminDb
         .from('pacientes_terapeutas')
         .select(`
             terapeuta:usuarios!terapeuta_id (
@@ -63,6 +68,12 @@ export default async function FamilyPacientePage({
             )
         `)
         .eq('paciente_id', pacienteId)
+
+    // Fetch Ludic Sessions
+    const sessoesLudicas = await getSessoesLudicas(pacienteId)
+
+    // Fetch Agenda
+    const agenda = await getAgendaPaciente(pacienteId)
 
     return (
         <div className="space-y-6">
@@ -106,15 +117,33 @@ export default async function FamilyPacientePage({
             </div>
 
             {/* Content Tabs */}
-            <Tabs defaultValue="anamnese" className="w-full">
+            <Tabs defaultValue="agenda" className="w-full">
                 <TabsList className="w-full justify-start h-auto p-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mb-6 overflow-x-auto flex-nowrap">
+                    <TabsTrigger value="agenda" className="flex-1 min-w-[150px] py-3 rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-300 gap-2">
+                        <span>📅</span> Agenda
+                    </TabsTrigger>
+                    <TabsTrigger value="ludoterapia" className="flex-1 min-w-[150px] py-3 rounded-lg data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/20 dark:data-[state=active]:text-purple-300 gap-2">
+                        <span>🤖</span> Aventuras com Tirilo
+                    </TabsTrigger>
                     <TabsTrigger value="anamnese" className="flex-1 min-w-[120px] py-3 rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-300">
-                        Anamnese
+                        Histórico
                     </TabsTrigger>
                     <TabsTrigger value="terapeutas" className="flex-1 min-w-[120px] py-3 rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-300">
-                        Equipe Terapêutica
+                        Equipe
                     </TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="agenda">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <AgendaTab agendamentos={agenda} />
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="ludoterapia">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <LudoterapiaTab sessoes={sessoesLudicas} />
+                    </div>
+                </TabsContent>
 
                 <TabsContent value="anamnese">
                     <Card className="border-none shadow-none bg-transparent">

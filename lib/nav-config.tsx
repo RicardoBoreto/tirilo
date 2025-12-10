@@ -1,5 +1,5 @@
 import { CuteBuilding, CuteUsers, CuteSettings } from '@/components/icons/CuteIcons'
-import { Box, Package, Calendar, Sparkles, LifeBuoy, Users, LayoutDashboard, Wallet, Bot, Gamepad2 } from 'lucide-react'
+import { Box, Package, Calendar, Sparkles, LifeBuoy, Users, LayoutDashboard, Wallet, Bot, Gamepad2, ShoppingBag } from 'lucide-react'
 
 type UserRole = 'admin' | 'terapeuta' | 'recepcao' | 'financeiro' | 'super_admin' | string | undefined
 
@@ -99,6 +99,11 @@ export function getSidebarLinks(
             href: '/admin/configuracoes',
             label: 'Configurações',
             icon: <CuteSettings className="w-6 h-6" />,
+        },
+        {
+            href: '/admin/loja',
+            label: 'Loja de Apps',
+            icon: <ShoppingBag className="w-6 h-6" color="#4F46E5" />,
         },
     ]
 

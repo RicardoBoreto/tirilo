@@ -56,7 +56,22 @@ export async function generateBackup() {
         { data: planos_intervencao_ia },
         { data: help_desk_tickets },
         { data: help_desk_mensagens },
-        { data: recursos }
+        { data: recursos },
+        // Games & Monetization
+        { data: saas_jogos },
+        { data: saas_jogos_versoes },
+        { data: saas_clinicas_jogos },
+        // Robotics
+        { data: saas_frota_robos },
+        { data: saas_manutencoes_frota },
+        { data: clinica_config_ia },
+        { data: comandos_robo },
+        { data: sessao_telemetria },
+        // Financial (if any new tables were added recently like categories or accounts receivable, add here if they exist in schema)
+        // Checking TABELAS.sql... 'financeiro_categorias', 'financeiro_lancamentos', 'contratos'
+        { data: financeiro_categorias },
+        { data: financeiro_lancamentos },
+        { data: contratos }
     ] = await Promise.all([
         supabase.from('saas_clinicas').select('*'),
         supabase.from('usuarios').select('*'),
@@ -73,7 +88,21 @@ export async function generateBackup() {
         supabase.from('planos_intervencao_ia').select('*'),
         supabase.from('help_desk_tickets').select('*'),
         supabase.from('help_desk_mensagens').select('*'),
-        supabase.from('recursos').select('*')
+        supabase.from('recursos').select('*'),
+
+        supabase.from('saas_jogos').select('*'),
+        supabase.from('saas_jogos_versoes').select('*'),
+        supabase.from('saas_clinicas_jogos').select('*'),
+
+        supabase.from('saas_frota_robos').select('*'),
+        supabase.from('saas_manutencoes_frota').select('*'),
+        supabase.from('clinica_config_ia').select('*'),
+        supabase.from('comandos_robo').select('*'),
+        supabase.from('sessao_telemetria').select('*'),
+
+        supabase.from('financeiro_categorias').select('*'),
+        supabase.from('financeiro_lancamentos').select('*'),
+        supabase.from('contratos').select('*')
     ])
 
     const backupData = {
@@ -96,7 +125,20 @@ export async function generateBackup() {
             planos_intervencao_ia,
             help_desk_tickets,
             help_desk_mensagens,
-            recursos
+            recursos,
+
+            // New Modules
+            saas_jogos,
+            saas_jogos_versoes,
+            saas_clinicas_jogos,
+            saas_frota_robos,
+            saas_manutencoes_frota,
+            clinica_config_ia,
+            comandos_robo,
+            sessao_telemetria,
+            financeiro_categorias,
+            financeiro_lancamentos,
+            contratos
         }
     }
 

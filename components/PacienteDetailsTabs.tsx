@@ -8,6 +8,7 @@ import AnamneseTab from './AnamneseTab'
 import TerapeutasTab from './TerapeutasTab'
 import RelatoriosTab from './RelatoriosTab'
 import PlanosIATab from './AI/PlanosIATab'
+import LudoterapiaTab from './LudoterapiaTab'
 import { Camera, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -19,6 +20,7 @@ type Props = {
     linkedTerapeutaIds: string[]
     relatorios: any[]
     planosIA: any[]
+    sessoesLudicas: any[]
     clinicLogo?: string | null
     clinicName?: string | null
 }
@@ -31,10 +33,11 @@ export default function PacienteDetailsTabs({
     linkedTerapeutaIds,
     relatorios,
     planosIA,
+    sessoesLudicas,
     clinicLogo,
     clinicName
 }: Props) {
-    const [activeTab, setActiveTab] = useState<'dados' | 'responsaveis' | 'terapeutas' | 'anamnese' | 'relatorios' | 'planos_ia'>('dados')
+    const [activeTab, setActiveTab] = useState<'dados' | 'responsaveis' | 'terapeutas' | 'anamnese' | 'relatorios' | 'planos_ia' | 'ludoterapia'>('dados')
     const [fotoUrl, setFotoUrl] = useState(paciente.foto_url || '')
     const [uploadingFoto, setUploadingFoto] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -64,6 +67,7 @@ export default function PacienteDetailsTabs({
         { id: 'responsaveis' as const, label: 'Responsáveis', icon: '👨‍👩‍👧' },
         { id: 'terapeutas' as const, label: 'Terapeutas', icon: '🩺' },
         { id: 'anamnese' as const, label: 'Anamnese', icon: '📋' },
+        { id: 'ludoterapia' as const, label: 'Ludoterapia', icon: '🎮' },
         { id: 'relatorios' as const, label: 'Relatórios', icon: '📝' },
         { id: 'planos_ia' as const, label: 'Planos IA', icon: '🤖' },
     ]
@@ -249,6 +253,10 @@ export default function PacienteDetailsTabs({
 
                 {activeTab === 'relatorios' && (
                     <RelatoriosTab relatorios={relatorios} pacienteNome={paciente.nome} />
+                )}
+
+                {activeTab === 'ludoterapia' && (
+                    <LudoterapiaTab sessoes={sessoesLudicas} />
                 )}
 
                 {activeTab === 'planos_ia' && (

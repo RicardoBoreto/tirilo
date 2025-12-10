@@ -24,11 +24,19 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useToast } from '@/components/ui/use-toast'
 import { Game, GameVersion, ClinicPermission, createGame, updateGame, toggleGameStatus, deleteGame, getGameVersions, getGamePermissions, updateGamePermission } from '@/lib/actions/games'
-import { MoreHorizontal, Plus, Search, Edit, Trash, Power, Gamepad2, Upload, History, Rocket, Eye, Store, CheckCircle, XCircle } from 'lucide-react'
+import { Habilidade, getHabilidades, getHabilidadesDoJogo, vincularHabilidadeJogo, desvincularHabilidadeJogo, createHabilidade } from '@/lib/actions/ludoterapia'
+import { MoreHorizontal, Plus, Search, Edit, Trash, Power, Gamepad2, Upload, History, Rocket, Eye, Store, CheckCircle, XCircle, Brain, X } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function GamesClient({ initialGames }: { initialGames: Game[] }) {
@@ -39,6 +47,14 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
     const [editingGame, setEditingGame] = useState<Game | null>(null)
     const [gameVersions, setGameVersions] = useState<GameVersion[]>([])
     const [clinicPermissions, setClinicPermissions] = useState<ClinicPermission[]>([])
+    const [allHabilidades, setAllHabilidades] = useState<Habilidade[]>([])
+    const [gameHabilidades, setGameHabilidades] = useState<any[]>([])
+
+    // New Habilidade UI State
+    const [newHabilidadeNome, setNewHabilidadeNome] = useState('')
+    const [selectedHabilidadeId, setSelectedHabilidadeId] = useState('')
+    const [selectedImpacto, setSelectedImpacto] = useState('5')
+
     const [searchTerm, setSearchTerm] = useState('')
     const [clinicSearchTerm, setClinicSearchTerm] = useState('')
     const [isReadOnly, setIsReadOnly] = useState(false)
@@ -58,8 +74,18 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
         setEditingGame(game)
         setIsReadOnly(false)
         setIsLoading(true)
-        const perms = await getGamePermissions(game.id)
+
+        // Parallel data fetching
+        const [perms, habs, gameHabs] = await Promise.all([
+            getGamePermissions(game.id),
+            getHabilidades(),
+            getHabilidadesDoJogo(game.id)
+        ])
+
         setClinicPermissions(perms)
+        setAllHabilidades(habs)
+        setGameHabilidades(gameHabs)
+
         setIsLoading(false)
         setIsOpen(true)
     }
@@ -68,8 +94,17 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
         setEditingGame(game)
         setIsReadOnly(true)
         setIsLoading(true)
-        const perms = await getGamePermissions(game.id)
+
+        const [perms, habs, gameHabs] = await Promise.all([
+            getGamePermissions(game.id),
+            getHabilidades(),
+            getHabilidadesDoJogo(game.id)
+        ])
+
         setClinicPermissions(perms)
+        setAllHabilidades(habs)
+        setGameHabilidades(gameHabs)
+
         setIsLoading(false)
         setIsOpen(true)
     }
@@ -101,6 +136,74 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                 p.clinica_id === clinicId ? { ...p, tem_acesso: !grant } : p
             ))
         }
+    }
+
+    // --- Habilidades Handlers ---
+
+    async function handleAddHabilidade() {
+        if (!editingGame || !selectedHabilidadeId) return
+
+        setIsLoading(true)
+        const result = await vincularHabilidadeJogo(editingGame.id, selectedHabilidadeId, parseInt(selectedImpacto))
+
+        if (result.error) {
+            toast({ title: 'Erro ao vincular', description: result.error, variant: 'destructive' })
+        } else {
+            // Refresh list
+            const updated = await getHabilidadesDoJogo(editingGame.id)
+            setGameHabilidades(updated)
+            toast({ title: 'Sucesso', description: 'Competência vinculada.' })
+        }
+        setIsLoading(false)
+    }
+
+    async function handleCreateAndAddHabilidade() {
+        if (!editingGame || !newHabilidadeNome) return
+
+        const formData = new FormData()
+        formData.append('nome', newHabilidadeNome)
+        formData.append('codigo_ia', newHabilidadeNome.toLowerCase().replace(/\s+/g, '_'))
+
+        setIsLoading(true)
+        const createRes = await createHabilidade(formData)
+
+        if (createRes.error) {
+            toast({ title: 'Erro ao criar', description: createRes.error, variant: 'destructive' })
+            setIsLoading(false)
+            return
+        }
+
+        // Reload all skills to get ID
+        const habs = await getHabilidades()
+        setAllHabilidades(habs)
+        const newHab = habs.find(h => h.nome === newHabilidadeNome)
+
+        if (newHab) {
+            const result = await vincularHabilidadeJogo(editingGame.id, newHab.id, 5)
+            if (result.error) {
+                toast({ title: 'Erro ao vincular', description: result.error, variant: 'destructive' })
+            } else {
+                const updated = await getHabilidadesDoJogo(editingGame.id)
+                setGameHabilidades(updated)
+                setNewHabilidadeNome('')
+                toast({ title: 'Sucesso', description: 'Competência criada e vinculada.' })
+            }
+        }
+        setIsLoading(false)
+    }
+
+    async function handleRemoveHabilidade(habilidadeId: string) {
+        if (!editingGame) return
+
+        setIsLoading(true)
+        const result = await desvincularHabilidadeJogo(editingGame.id, habilidadeId)
+
+        if (result.error) {
+            toast({ title: 'Erro', description: result.error, variant: 'destructive' })
+        } else {
+            setGameHabilidades(prev => prev.filter(h => h.id !== habilidadeId))
+        }
+        setIsLoading(false)
     }
 
     async function handleOpenHistory(game: Game) {
@@ -313,10 +416,11 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                     </DialogHeader>
 
                     <Tabs defaultValue="details" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
+                        <TabsList className="grid w-full grid-cols-4">
                             <TabsTrigger value="details">Detalhes</TabsTrigger>
+                            <TabsTrigger value="competencies" disabled={!editingGame}>Competências</TabsTrigger>
                             <TabsTrigger value="distribution" disabled={!editingGame}>Distribuição</TabsTrigger>
-                            {!isReadOnly && editingGame && <TabsTrigger value="update">Lançar Atualização</TabsTrigger>}
+                            {!isReadOnly && editingGame && <TabsTrigger value="update">Atualizar</TabsTrigger>}
                         </TabsList>
 
                         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
@@ -379,6 +483,93 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                                 <div className="flex items-center space-x-2 pt-2">
                                     <Switch id="ativo" name="ativo" defaultChecked={editingGame ? editingGame.ativo : true} value="true" disabled={isReadOnly} />
                                     <Label htmlFor="ativo">Jogo Ativo (Visível na lista de seleção)</Label>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="competencies" forceMount={true} className="space-y-4 data-[state=inactive]:hidden">
+                                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border space-y-4">
+                                    <div className="flex items-center gap-2 text-primary font-semibold">
+                                        <Brain className="w-4 h-4" />
+                                        Habilidades Trabalhadas
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                        Defina quais competências este jogo estimula. Isso será usado pela IA para sugerir atividades.
+                                    </p>
+
+                                    {!isReadOnly && (
+                                        <div className="flex flex-col gap-3 p-3 bg-white dark:bg-gray-950 rounded border">
+                                            <div className="flex gap-2">
+                                                <div className="flex-1">
+                                                    <Select value={selectedHabilidadeId} onValueChange={setSelectedHabilidadeId}>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Selecione ou crie..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {allHabilidades.map(h => (
+                                                                <SelectItem key={h.id} value={h.id}>{h.nome}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <Input
+                                                    className="w-20"
+                                                    type="number"
+                                                    min="1" max="10"
+                                                    value={selectedImpacto}
+                                                    onChange={e => setSelectedImpacto(e.target.value)}
+                                                    placeholder="Nível"
+                                                    title="Nível de Impacto (1-10)"
+                                                />
+                                                <Button type="button" size="sm" onClick={handleAddHabilidade} disabled={!selectedHabilidadeId || isLoading}>
+                                                    Adicionar
+                                                </Button>
+                                            </div>
+
+                                            <div className="relative">
+                                                <div className="absolute inset-0 flex items-center">
+                                                    <span className="w-full border-t" />
+                                                </div>
+                                                <div className="relative flex justify-center text-xs uppercase">
+                                                    <span className="bg-white dark:bg-gray-950 px-2 text-muted-foreground">Ou crie nova</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    placeholder="Nome da habilidade (ex: Motricidade)"
+                                                    value={newHabilidadeNome}
+                                                    onChange={e => setNewHabilidadeNome(e.target.value)}
+                                                />
+                                                <Button type="button" size="sm" variant="outline" onClick={handleCreateAndAddHabilidade} disabled={!newHabilidadeNome || isLoading}>
+                                                    Criar & Vincular
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-2 mt-4">
+                                        {gameHabilidades.length === 0 ? (
+                                            <div className="text-center py-6 text-muted-foreground bg-white dark:bg-gray-950 rounded border border-dashed">
+                                                Nenhuma competência vinculada.
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                {gameHabilidades.map((gh) => (
+                                                    <div key={gh.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-950 border rounded shadow-sm">
+                                                        <div>
+                                                            <div className="font-medium text-sm">{gh.nome}</div>
+                                                            <div className="text-xs text-blue-600 dark:text-blue-400">Impacto: {gh.nivel_impacto}/10</div>
+                                                        </div>
+                                                        {!isReadOnly && (
+                                                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:bg-red-50 hover:text-red-700" onClick={() => handleRemoveHabilidade(gh.id)}>
+                                                                <X className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </TabsContent>
 

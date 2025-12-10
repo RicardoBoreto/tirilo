@@ -49,7 +49,7 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
     // 5. Fetch Therapist Data (Curriculum)
     const { data: terapeutaUser } = await supabase
         .from('usuarios')
-        .select('nome_completo')
+        .select('nome_completo, id_clinica')
         .eq('id', user.id)
         .single()
 
@@ -58,6 +58,11 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
         .select('*')
         .eq('id_usuario', user.id)
         .maybeSingle()
+
+    // --- LUDOTERAPIA DATA ---
+    const jogosDisponiveis = await getJogosDisponiveisTexto(supabase, terapeutaUser?.id_clinica)
+    const historicoLudico = await getHistoricoLudicoTexto(supabase, pacienteId)
+    // ------------------------
 
     // 6. Fetch Previous Plan (for objective continuity)
     const { data: ultimoPlano } = await supabase
@@ -109,6 +114,10 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
         .replace(/{{RECURSOS_LISTA}}/g, recursosTexto)
         .replace(/{{SALAS_LISTA}}/g, salasTexto)
         .replace(/{{OBJETIVO_PRINCIPAL_PLANO}}/g, objetivoPlano)
+
+        // Ludoterapia
+        .replace(/{{JOGOS_DISPONIVEIS}}/g, jogosDisponiveis)
+        .replace(/{{HISTORICO_LUDICO}}/g, historicoLudico)
 
         // Therapist Placeholders
         .replace(/{{TERAPEUTA_NOME}}/g, terapeutaUser?.nome_completo || 'Terapeuta')
@@ -214,6 +223,10 @@ export async function generateSessionReport(promptId: number, pacienteId: number
         `--- Relatório de ${new Date(r.created_at).toLocaleDateString()} ---\n${r.relatorio_gerado}`
     ).reverse().join('\n\n') || 'Nenhum relatório anterior.'
 
+    // --- LUDOTERAPIA: DIARIO ---
+    const diarioSessao = await getDiarioSessaoTexto(supabase, pacienteId)
+    // ---------------------------
+
     // 6. Replace Placeholders
     const dataSessao = new Date().toLocaleDateString('pt-BR')
     const credencial = `${terapeutaUser?.nome_completo || 'Terapeuta'} - ${curriculo?.registro_profissional || ''}`
@@ -244,6 +257,9 @@ export async function generateSessionReport(promptId: number, pacienteId: number
         .replace(/{{DATA_SESSAO}}/g, dataSessao)
         .replace(/{{OBJETIVO_PRINCIPAL_PLANO}}/g, objetivoPlano)
         .replace(/{{ULTIMAS_SESSOES}}/g, ultimasSessoesResumo)
+
+        // Ludoterapia
+        .replace(/{{DIARIO_SESSAO}}/g, diarioSessao)
 
         // Therapist Placeholders
         .replace(/{{TERAPEUTA_NOME}}/g, terapeutaUser?.nome_completo || 'Terapeuta')
@@ -293,4 +309,103 @@ export async function getPlanosIAByPaciente(pacienteId: number) {
         titulo: p.prompt?.nome_prompt || 'Plano Sem Título',
         modelo_ia: 'IA' // Default since column is missing
     }))
+}
+
+// --- Helpers de Ludoterapia ---
+
+async function getJogosDisponiveisTexto(supabase: any, clinicaId: number) {
+    if (!clinicaId) return 'Clínica não identificada.'
+
+    // Busca jogos licenciados
+    const { data: jogos, error } = await supabase
+        .from('saas_clinicas_jogos')
+        .select(`
+            ativo,
+            jogo:saas_jogos (
+                nome,
+                recursos_terapeuticos,
+                habilidades:saas_jogos_habilidades (
+                    habilidade:saas_habilidades (nome)
+                )
+            )
+        `)
+        .eq('clinica_id', clinicaId)
+        .eq('ativo', true)
+
+    if (error) console.error('Erro ao buscar jogos:', error)
+    if (!jogos || jogos.length === 0) return 'Nenhum jogo digital (Robô Tirilo) disponível/licenciado nesta clínica.'
+
+    return jogos.map((item: any) => {
+        const j = item.jogo
+        // Safe navigation para arrays aninhados
+        const habilidades = j.habilidades?.map((h: any) => h.habilidade?.nome).filter(Boolean).join(', ')
+        const foco = habilidades ? `(Foco: ${habilidades})` : ''
+        return `- ${j.nome} ${foco}`
+    }).join('\n')
+}
+
+async function getHistoricoLudicoTexto(supabase: any, pacienteId: number) {
+    const { data: sessoes, error } = await supabase
+        .from('sessao_ludica')
+        .select(`
+            data_inicio,
+            pontuacao_final,
+            nivel_dificuldade,
+            metricas,
+            jogo:saas_jogos(nome)
+        `)
+        .eq('paciente_id', pacienteId)
+        .order('data_inicio', { ascending: false })
+        .limit(5)
+
+    if (error) console.error('Erro ao buscar histórico lúdico:', error)
+    if (!sessoes || sessoes.length === 0) return 'Nenhum histórico de jogos registrado com o Robô.'
+
+    return sessoes.map((s: any) => {
+        const data = new Date(s.data_inicio).toLocaleDateString('pt-BR')
+        // Tenta formatar métricas se existirem
+        let metricasTxt = ''
+        if (s.metricas && typeof s.metricas === 'object') {
+            const m = s.metricas
+            const parts = []
+            if (m.erros !== undefined) parts.push(`Erros: ${m.erros}`)
+            if (m.acertos !== undefined) parts.push(`Acertos: ${m.acertos}`)
+            if (parts.length > 0) metricasTxt = `[${parts.join(', ')}]`
+        }
+
+        return `- ${data}: ${s.jogo?.nome || 'Jogo Desconhecido'} (${s.nivel_dificuldade || 'N/A'}). Pontos: ${s.pontuacao_final}. ${metricasTxt}`
+    }).join('\n')
+}
+
+async function getDiarioSessaoTexto(supabase: any, pacienteId: number) {
+    // 1. Busca a sessão lúdica mais recente (últimas 24h para garantir relevância)
+    const ontem = new Date()
+    ontem.setDate(ontem.getDate() - 1)
+
+    const { data: ultimaSessao } = await supabase
+        .from('sessao_ludica')
+        .select('id')
+        .eq('paciente_id', pacienteId)
+        .gte('data_inicio', ontem.toISOString())
+        .order('data_inicio', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    if (!ultimaSessao) return 'Nenhum registro automático (diário de bordo) do Robô encontrado nas últimas 24h.'
+
+    // 2. Busca logs dessa sessão
+    const { data: logs, error } = await supabase
+        .from('sessao_diario_bordo')
+        .select('timestamp, texto_transcrito, tipo_evento')
+        .eq('sessao_ludica_id', ultimaSessao.id)
+        .order('timestamp', { ascending: true })
+
+    if (error) console.error('Erro ao buscar diário:', error)
+    if (!logs || logs.length === 0) return 'Sessão registrada, mas sem transcrições de áudio/texto.'
+
+    return logs.map((l: any) => {
+        const hora = new Date(l.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        const prefixo = l.tipo_evento === 'FALA_ROBO' ? '[Robô]' : '[Audio]'
+        return `${prefixo} ${hora}: ${l.texto_transcrito}`
+    }).join('\n')
 }

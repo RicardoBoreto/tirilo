@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -152,11 +153,11 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
             })
             alert('Robô atualizado!')
             setIsEditing(false)
-            loadRobots() // Refresh list
-
-            // Optimistic update logic simplified: refresh list is safer. 
-            // If we really want optimistic:
-            // setSelectedRobot(prev => prev ? { ...prev, ...updatedFields } : null)
+            loadRobots()
+            if (selectedRobot) {
+                // Refresh optimistic but reloading list is safer
+                loadRobots()
+            }
         } catch (e) {
             alert('Erro ao atualizar: ' + e)
         }
@@ -214,7 +215,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                         className="w-full mb-2 p-2 rounded border dark:bg-gray-700 dark:border-gray-600 text-sm"
                         value={newClinicId}
                         onChange={e => setNewClinicId(e.target.value)}
-                        disabled={!!clinicaId} // Disable if scoped to specific clinic
+                        disabled={!!clinicaId}
                     >
                         <option value="">Selecione a Clínica...</option>
                         {clinics.map(c => (
@@ -449,8 +450,8 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                                     <button
                                                         onClick={() => handleToggleBlock(selectedRobot)}
                                                         className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border ${selectedRobot.status_bloqueio
-                                                                ? 'text-green-600 bg-green-50 hover:bg-green-100 border-green-100'
-                                                                : 'text-red-600 bg-red-50 hover:bg-red-100 border-red-100'
+                                                            ? 'text-green-600 bg-green-50 hover:bg-green-100 border-green-100'
+                                                            : 'text-red-600 bg-red-50 hover:bg-red-100 border-red-100'
                                                             }`}
                                                     >
                                                         {selectedRobot.status_bloqueio ? (
@@ -539,7 +540,9 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
 
                         </div>
 
+                        {/* CARDS DE AÇÃO */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                            {/* Comandos Rapidos */}
                             <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                                 <h3 className="font-semibold mb-3 text-gray-700 dark:text-gray-200">Comandos Rápidos</h3>
                                 <div className="grid grid-cols-2 gap-2">
@@ -552,6 +555,8 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                     <button onClick={() => handleCommand('PARAR')} className="p-2 bg-red-50 border border-red-100 text-red-600 text-sm rounded shadow-sm hover:bg-red-100">🛑 Parar Tudo</button>
                                 </div>
                             </div>
+
+                            {/* Enviar Fala */}
                             <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                                 <h3 className="font-semibold mb-3 text-gray-700 dark:text-gray-200">Enviar Fala</h3>
                                 <div className="flex gap-2">
@@ -563,6 +568,61 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                         }}
                                         className="bg-blue-600 text-white px-3 rounded text-sm"
                                     >Enviar</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* CONECTIVIDADE & SUPORTE (NOVO) */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                                <span className="bg-indigo-100 text-indigo-700 p-1.5 rounded-lg">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z" /></svg>
+                                </span>
+                                Conectividade e Acesso Remoto
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Status Card */}
+                                <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-600">
+                                    <p className="text-xs text-gray-500 uppercase font-semibold mb-2">Status da Rede</p>
+                                    <div className="flex items-center gap-3">
+                                        {telemetry.length > 0 && (new Date().getTime() - new Date(telemetry[0].timestamp).getTime()) < 120000 ? (
+                                            <>
+                                                <span className="relative flex h-3 w-3">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                                </span>
+                                                <span className="font-bold text-green-700 dark:text-green-400">ONLINE (Ativo agora)</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="h-3 w-3 rounded-full bg-gray-400"></span>
+                                                <span className="font-bold text-gray-500">OFFLINE (Visto há {telemetry.length > 0 ? Math.floor((new Date().getTime() - new Date(telemetry[0].timestamp).getTime()) / 60000) + ' min' : 'nunca'})</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-2">Baseado na telemetria via Supabase</p>
+                                </div>
+
+                                {/* SSH Access */}
+                                <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-600">
+                                    <p className="text-xs text-gray-500 uppercase font-semibold mb-2">Acesso Seguro (Tailscale)</p>
+                                    {selectedRobot.endereco_tailscale ? (
+                                        <div>
+                                            <code className="block bg-black text-green-400 p-2 rounded text-xs font-mono mb-2 overflow-x-auto">
+                                                ssh {selectedRobot.usuario_ssh || 'pi'}@{selectedRobot.endereco_tailscale}
+                                            </code>
+                                            <button
+                                                onClick={() => navigator.clipboard.writeText(`ssh ${selectedRobot.usuario_ssh || 'pi'}@${selectedRobot.endereco_tailscale}`)}
+                                                className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5" /></svg>
+                                                Copiar Comando SSH
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-400 italic">Endereço IP não cadastrado.</p>
+                                    )}
                                 </div>
                             </div>
                         </div>

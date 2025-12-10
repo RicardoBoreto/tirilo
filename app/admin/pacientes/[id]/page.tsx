@@ -3,6 +3,7 @@ import { getTerapeutas } from '@/lib/actions/terapeutas'
 import { getRelatoriosByPaciente } from '@/lib/actions/relatorios'
 import { getPlanosIAByPaciente } from '@/lib/actions/ai_generation'
 import { getClinica } from '@/lib/actions/clinica'
+import { getSessoesLudicas } from '@/lib/actions/ludoterapia'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import PacienteDetailsTabs from '@/components/PacienteDetailsTabs'
@@ -19,14 +20,15 @@ export default async function PacienteDetailsPage({
     const pacienteId = parseInt(id)
     const supabase = await createClient()
 
-    const [paciente, responsaveis, anamnese, terapeutasData, relatorios, planosIA, clinic] = await Promise.all([
+    const [paciente, responsaveis, anamnese, terapeutasData, relatorios, planosIA, clinic, sessoesLudicas] = await Promise.all([
         getPaciente(pacienteId),
         getResponsaveis(pacienteId),
         getAnamnese(pacienteId),
         getTerapeutas().catch(() => ({ terapeutas: [] })), // Handle error if user not allowed
         getRelatoriosByPaciente(pacienteId),
         getPlanosIAByPaciente(pacienteId),
-        getClinica()
+        getClinica(),
+        getSessoesLudicas(pacienteId)
     ])
 
     if (!paciente) {
@@ -106,6 +108,7 @@ export default async function PacienteDetailsPage({
                 linkedTerapeutaIds={linkedTerapeutaIds}
                 relatorios={relatorios || []}
                 planosIA={planosIA || []}
+                sessoesLudicas={sessoesLudicas || []}
                 clinicLogo={clinic?.logo_url}
                 clinicName={clinic?.nome_fantasia || clinic?.razao_social}
             />

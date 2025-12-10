@@ -1,9 +1,10 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function getMeusFilhos() {
     const supabase = await createClient()
+    const adminDb = await createAdminClient()
 
     // 1. Get Logged User
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -11,8 +12,8 @@ export async function getMeusFilhos() {
         return []
     }
 
-    // 2. Get Responsavel ID
-    const { data: responsavel, error: respError } = await supabase
+    // 2. Get Responsavel ID (usando ID do usuário logado)
+    const { data: responsavel, error: respError } = await adminDb
         .from('responsaveis')
         .select('id')
         .eq('user_id', user.id)
@@ -24,7 +25,7 @@ export async function getMeusFilhos() {
     }
 
     // 3. Get Pacientes linked to Responsavel
-    const { data: vinculos, error: vincError } = await supabase
+    const { data: vinculos, error: vincError } = await adminDb
         .from('pacientes_responsaveis')
         .select('paciente_id')
         .eq('responsavel_id', responsavel.id)
@@ -36,7 +37,7 @@ export async function getMeusFilhos() {
     const pacienteIds = vinculos.map(v => v.paciente_id)
 
     // 4. Get Pacientes Details + Anamnese (Musicoterapia) + Clinica
-    const { data: pacientes, error: pacError } = await supabase
+    const { data: pacientes, error: pacError } = await adminDb
         .from('pacientes')
         .select(`
             *,
@@ -139,4 +140,24 @@ export async function enableResponsavelAccess(responsavelId: number, email: stri
     }
 
     return { success: true, message: 'Acesso habilitado! Senha temporária: Tirilo2025!' }
+}
+
+export async function getAgendaPaciente(pacienteId: number) {
+    const adminDb = await createAdminClient()
+
+    const { data: agendamentos, error } = await adminDb
+        .from('agendamentos')
+        .select(`
+            *,
+            terapeuta:usuarios!id_terapeuta(nome_completo, foto_url)
+        `)
+        .eq('id_paciente', pacienteId)
+        .order('data_hora_inicio', { ascending: true })
+
+    if (error) {
+        console.error('Erro ao buscar agenda:', error)
+        return []
+    }
+
+    return agendamentos
 }

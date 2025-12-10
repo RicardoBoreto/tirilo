@@ -42,9 +42,9 @@ Write-Host "Destino: $RemotePath"
 Write-Host "-> Copiando arquivos..."
 scp -r $LocalPath "${User}@${Ip}:${RemotePath}/src/"
 
-# 2. Copiar Requirements (se houver root)
-# 2. Copiar Requirements (Desativado para economizar senha, copie manualmente se mudar)
+# 2. Copiar Requirements
 # if (Test-Path ".\robo_tirilo\requirements.txt") {
+#    Write-Host "-> Copiando requirements.txt..."
 #    scp ".\robo_tirilo\requirements.txt" "${User}@${Ip}:${RemotePath}/"
 # }
 
