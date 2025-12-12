@@ -9,6 +9,15 @@ const clinicaSchema = z.object({
     razao_social: z.string().min(1, 'Razão social é obrigatória'),
     nome_fantasia: z.string().optional(),
     cnpj: z.string().optional(),
+    inscricao_estadual: z.string().optional(),
+    missao: z.string().optional(),
+    end_cep: z.string().optional(),
+    end_logradouro: z.string().optional(),
+    end_numero: z.string().optional(),
+    end_complemento: z.string().optional(),
+    end_bairro: z.string().optional(),
+    end_cidade: z.string().optional(),
+    end_estado: z.string().optional(),
     logo_url: z.string().url('URL inválida').optional().or(z.literal('')),
     status_assinatura: z.enum(['ativo', 'inativo', 'suspenso']),
     config_cor_primaria: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida'),
@@ -24,6 +33,15 @@ export default function NovaClinicaPage() {
         razao_social: '',
         nome_fantasia: '',
         cnpj: '',
+        inscricao_estadual: '',
+        missao: '',
+        end_cep: '',
+        end_logradouro: '',
+        end_numero: '',
+        end_complemento: '',
+        end_bairro: '',
+        end_cidade: '',
+        end_estado: '',
         logo_url: '',
         status_assinatura: 'ativo',
         config_cor_primaria: '#3b82f6',
@@ -43,6 +61,15 @@ export default function NovaClinicaPage() {
                     razao_social: validatedData.razao_social,
                     nome_fantasia: validatedData.nome_fantasia || null,
                     cnpj: validatedData.cnpj || null,
+                    inscricao_estadual: validatedData.inscricao_estadual || null,
+                    missao: validatedData.missao || null,
+                    end_cep: validatedData.end_cep || null,
+                    end_logradouro: validatedData.end_logradouro || null,
+                    end_numero: validatedData.end_numero || null,
+                    end_complemento: validatedData.end_complemento || null,
+                    end_bairro: validatedData.end_bairro || null,
+                    end_cidade: validatedData.end_cidade || null,
+                    end_estado: validatedData.end_estado || null,
                     logo_url: validatedData.logo_url || null,
                     status_assinatura: validatedData.status_assinatura,
                     config_cor_primaria: validatedData.config_cor_primaria,
@@ -123,17 +150,130 @@ export default function NovaClinicaPage() {
                         />
                     </div>
 
-                    <div>
-                        <label htmlFor="cnpj" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            CNPJ
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="cnpj" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                CNPJ
+                            </label>
+                            <input
+                                id="cnpj"
+                                type="text"
+                                value={formData.cnpj}
+                                onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                                placeholder="00.000.000/0000-00"
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="inscricao_estadual" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Inscrição Estadual
+                            </label>
+                            <input
+                                id="inscricao_estadual"
+                                type="text"
+                                value={formData.inscricao_estadual}
+                                onChange={(e) => setFormData({ ...formData, inscricao_estadual: e.target.value })}
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                                placeholder="Isento ou Número"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Endereço</label>
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                            <div className="md:col-span-2">
+                                <label htmlFor="end_cep" className="text-xs text-gray-500 mb-1 block">CEP</label>
+                                <input
+                                    id="end_cep"
+                                    type="text"
+                                    value={formData.end_cep}
+                                    onChange={(e) => setFormData({ ...formData, end_cep: e.target.value })}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                                    placeholder="00000-000"
+                                />
+                            </div>
+                            <div className="md:col-span-3">
+                                <label htmlFor="end_logradouro" className="text-xs text-gray-500 mb-1 block">Logradouro</label>
+                                <input
+                                    id="end_logradouro"
+                                    type="text"
+                                    value={formData.end_logradouro}
+                                    onChange={(e) => setFormData({ ...formData, end_logradouro: e.target.value })}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                                    placeholder="Rua, Av..."
+                                />
+                            </div>
+                            <div className="md:col-span-1">
+                                <label htmlFor="end_numero" className="text-xs text-gray-500 mb-1 block">Número</label>
+                                <input
+                                    id="end_numero"
+                                    type="text"
+                                    value={formData.end_numero}
+                                    onChange={(e) => setFormData({ ...formData, end_numero: e.target.value })}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                                    placeholder="123"
+                                />
+                            </div>
+                            <div className="md:col-span-3">
+                                <label htmlFor="end_complemento" className="text-xs text-gray-500 mb-1 block">Complemento</label>
+                                <input
+                                    id="end_complemento"
+                                    type="text"
+                                    value={formData.end_complemento}
+                                    onChange={(e) => setFormData({ ...formData, end_complemento: e.target.value })}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                                    placeholder="Ap 101"
+                                />
+                            </div>
+                            <div className="md:col-span-3">
+                                <label htmlFor="end_bairro" className="text-xs text-gray-500 mb-1 block">Bairro</label>
+                                <input
+                                    id="end_bairro"
+                                    type="text"
+                                    value={formData.end_bairro}
+                                    onChange={(e) => setFormData({ ...formData, end_bairro: e.target.value })}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                                    placeholder="Bairro"
+                                />
+                            </div>
+                            <div className="md:col-span-4">
+                                <label htmlFor="end_cidade" className="text-xs text-gray-500 mb-1 block">Cidade</label>
+                                <input
+                                    id="end_cidade"
+                                    type="text"
+                                    value={formData.end_cidade}
+                                    onChange={(e) => setFormData({ ...formData, end_cidade: e.target.value })}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                                    placeholder="Cidade"
+                                />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label htmlFor="end_estado" className="text-xs text-gray-500 mb-1 block">Estado</label>
+                                <input
+                                    id="end_estado"
+                                    type="text"
+                                    value={formData.end_estado}
+                                    onChange={(e) => setFormData({ ...formData, end_estado: e.target.value })}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                                    placeholder="UF"
+                                    maxLength={2}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label htmlFor="missao" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Missão
                         </label>
-                        <input
-                            id="cnpj"
-                            type="text"
-                            value={formData.cnpj}
-                            onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                        <textarea
+                            id="missao"
+                            rows={3}
+                            value={formData.missao}
+                            onChange={(e) => setFormData({ ...formData, missao: e.target.value })}
                             className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                            placeholder="00.000.000/0000-00"
+                            placeholder="Missão e valores da clínica..."
                         />
                     </div>
 

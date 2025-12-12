@@ -21,6 +21,15 @@ export interface Database {
                     config_cor_primaria: string
                     plano_atual: string
                     max_terapeutas: number
+                    inscricao_estadual: string | null
+                    missao: string | null
+                    end_cep: string | null
+                    end_logradouro: string | null
+                    end_numero: string | null
+                    end_complemento: string | null
+                    end_bairro: string | null
+                    end_cidade: string | null
+                    end_estado: string | null
                 }
                 Insert: {
                     id?: never
@@ -33,6 +42,15 @@ export interface Database {
                     config_cor_primaria?: string
                     plano_atual?: string
                     max_terapeutas?: number
+                    inscricao_estadual?: string | null
+                    missao?: string | null
+                    end_cep?: string | null
+                    end_logradouro?: string | null
+                    end_numero?: string | null
+                    end_complemento?: string | null
+                    end_bairro?: string | null
+                    end_cidade?: string | null
+                    end_estado?: string | null
                 }
                 Update: {
                     id?: never
@@ -45,6 +63,15 @@ export interface Database {
                     config_cor_primaria?: string
                     plano_atual?: string
                     max_terapeutas?: number
+                    inscricao_estadual?: string | null
+                    missao?: string | null
+                    end_cep?: string | null
+                    end_logradouro?: string | null
+                    end_numero?: string | null
+                    end_complemento?: string | null
+                    end_bairro?: string | null
+                    end_cidade?: string | null
+                    end_estado?: string | null
                 }
             }
             usuarios: {

@@ -15,8 +15,23 @@ CREATE TABLE public.saas_clinicas (
     cnpj TEXT UNIQUE,
     email_contato TEXT,
     telefone TEXT,
-    endereco JSONB, -- { "rua": "...", "numero": "...", ... }
+    endereco JSONB, -- { "rua": "...", "numero": "...", ... } (Legado/Alternativo)
+    
+    -- Endereço Estruturado (Adicionado em 12/12/2025)
+    end_logradouro TEXT,
+    end_numero TEXT,
+    end_complemento TEXT,
+    end_bairro TEXT,
+    end_cidade TEXT,
+    end_estado TEXT,
+    end_cep TEXT,
+
     logo_url TEXT,
+    
+    -- Dados Adicionais (Adicionado em 12/12/2025)
+    inscricao_estadual TEXT,
+    missao TEXT,
+
     created_at TIMESTAMPTZ DEFAULT NOW(),
     ativo BOOLEAN DEFAULT TRUE,
 

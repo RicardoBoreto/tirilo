@@ -90,11 +90,7 @@ export function getSidebarLinks(
             label: 'Suporte',
             icon: <LifeBuoy className="w-6 h-6" color="#4F46E5" />,
         },
-        {
-            href: '/admin/robo',
-            label: 'Robôs',
-            icon: <Bot className="w-6 h-6" color="#4F46E5" />,
-        },
+
         {
             href: '/admin/configuracoes',
             label: 'Configurações',

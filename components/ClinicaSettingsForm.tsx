@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Upload } from 'lucide-react'
 
 export default function ClinicaSettingsForm({ clinic }: { clinic: any }) {
@@ -18,9 +19,9 @@ export default function ClinicaSettingsForm({ clinic }: { clinic: any }) {
         try {
             await updateClinica(formData)
             alert('Configurações salvas com sucesso!')
-        } catch (error) {
+        } catch (error: any) {
             console.error(error)
-            alert('Erro ao salvar configurações.')
+            alert(`Erro ao salvar configurações: ${error.message || 'Erro desconhecido'}`)
         } finally {
             setIsLoading(false)
         }
@@ -104,6 +105,125 @@ export default function ClinicaSettingsForm({ clinic }: { clinic: any }) {
                                 required
                                 placeholder="Ex: Tirilo Serviços Ltda"
                                 className="h-12"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="cnpj">CNPJ</Label>
+                            <Input
+                                type="text"
+                                name="cnpj"
+                                id="cnpj"
+                                defaultValue={clinic?.cnpj || ''}
+                                placeholder="00.000.000/0000-00"
+                                className="h-12"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="inscricao_estadual">Inscrição Estadual/Municipal</Label>
+                            <Input
+                                type="text"
+                                name="inscricao_estadual"
+                                id="inscricao_estadual"
+                                defaultValue={clinic?.inscricao_estadual || ''}
+                                placeholder="Isento ou Número"
+                                className="h-12"
+                            />
+                        </div>
+
+                        <div className="md:col-span-2 space-y-4">
+                            <Label className="text-base font-semibold">Endereço</Label>
+                            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                                <div className="md:col-span-2 space-y-2">
+                                    <Label htmlFor="endereco_cep">CEP</Label>
+                                    <Input
+                                        type="text"
+                                        name="endereco_cep"
+                                        id="endereco_cep"
+                                        defaultValue={clinic?.end_cep || ''}
+                                        placeholder="00000-000"
+                                        className="h-12"
+                                    />
+                                </div>
+                                <div className="md:col-span-3 space-y-2">
+                                    <Label htmlFor="endereco_logradouro">Logradouro</Label>
+                                    <Input
+                                        type="text"
+                                        name="endereco_logradouro"
+                                        id="endereco_logradouro"
+                                        defaultValue={clinic?.end_logradouro || ''}
+                                        placeholder="Rua, Av..."
+                                        className="h-12"
+                                    />
+                                </div>
+                                <div className="md:col-span-1 space-y-2">
+                                    <Label htmlFor="endereco_numero">Número</Label>
+                                    <Input
+                                        type="text"
+                                        name="endereco_numero"
+                                        id="endereco_numero"
+                                        defaultValue={clinic?.end_numero || ''}
+                                        placeholder="123"
+                                        className="h-12"
+                                    />
+                                </div>
+                                <div className="md:col-span-3 space-y-2">
+                                    <Label htmlFor="endereco_complemento">Complemento</Label>
+                                    <Input
+                                        type="text"
+                                        name="endereco_complemento"
+                                        id="endereco_complemento"
+                                        defaultValue={clinic?.end_complemento || ''}
+                                        placeholder="Ap 101, Bloco B"
+                                        className="h-12"
+                                    />
+                                </div>
+                                <div className="md:col-span-3 space-y-2">
+                                    <Label htmlFor="endereco_bairro">Bairro</Label>
+                                    <Input
+                                        type="text"
+                                        name="endereco_bairro"
+                                        id="endereco_bairro"
+                                        defaultValue={clinic?.end_bairro || ''}
+                                        placeholder="Bairro"
+                                        className="h-12"
+                                    />
+                                </div>
+                                <div className="md:col-span-4 space-y-2">
+                                    <Label htmlFor="endereco_cidade">Cidade</Label>
+                                    <Input
+                                        type="text"
+                                        name="endereco_cidade"
+                                        id="endereco_cidade"
+                                        defaultValue={clinic?.end_cidade || ''}
+                                        placeholder="Cidade"
+                                        className="h-12"
+                                    />
+                                </div>
+                                <div className="md:col-span-2 space-y-2">
+                                    <Label htmlFor="endereco_estado">Estado (UF)</Label>
+                                    <Input
+                                        type="text"
+                                        name="endereco_estado"
+                                        id="endereco_estado"
+                                        defaultValue={clinic?.end_estado || ''}
+                                        placeholder="SP"
+                                        maxLength={2}
+                                        className="h-12"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-2 space-y-2">
+                            <Label htmlFor="missao">Missão da Clínica</Label>
+                            <Textarea
+                                name="missao"
+                                id="missao"
+                                defaultValue={clinic?.missao || ''}
+                                placeholder="Descreva a missão e valores da sua clínica..."
+                                className="min-h-[100px]"
                             />
                         </div>
 

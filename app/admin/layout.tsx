@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import Header from '@/components/Header'
 import ForcePasswordChangeCheck from '@/components/ForcePasswordChangeCheck'
+import AdminLayoutWrapper from './AdminLayoutWrapper'
 
 export default async function AdminLayout({
     children,
@@ -38,23 +39,13 @@ export default async function AdminLayout({
     }
 
     return (
-        <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-            <ForcePasswordChangeCheck needsChange={userProfile?.precisa_trocar_senha || false} />
-            {clinicData?.config_cor_primaria && (
-                <style>{`
-                    :root {
-                        --primary: ${hexToHsl(clinicData.config_cor_primaria)};
-                    }
-                `}</style>
-            )}
-            <Sidebar clinic={clinicData} userRole={userProfile?.tipo_perfil} userId={user.id} className="hidden lg:block" />
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <Header user={{ ...user, ...userProfile, nome: userProfile?.nome_completo }} clinic={clinicData} />
-                <main className="flex-1 overflow-y-auto p-6">
-                    {children}
-                </main>
-            </div>
-        </div>
+        <AdminLayoutWrapper
+            user={user}
+            userProfile={userProfile}
+            clinicData={clinicData}
+        >
+            {children}
+        </AdminLayoutWrapper>
     )
 }
 

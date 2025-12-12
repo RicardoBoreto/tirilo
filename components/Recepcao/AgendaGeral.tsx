@@ -61,7 +61,7 @@ export default function AgendaGeral() {
     }
 
     return (
-        <Card className="h-full flex flex-col">
+        <Card className="flex flex-col">
             <CardHeader className="pb-4 border-b">
                 <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2">

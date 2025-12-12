@@ -136,9 +136,10 @@ class CloudManager:
         # Since I cannot easily debug the realtime connection in this environment without a real server,
         # I will implement a polling fallback for reliability, but structure it as a listener.
         
-        print("Starting command listener...")
+        print(f"Starting command listener for MAC: {self.mac_address}...")
         last_id = 0
-        
+        loop_count = 0
+                
         # Get last command ID to avoid re-processing
         try:
             res = self.client.table('comandos_robo').select('id').order('id', desc=True).limit(1).execute()
@@ -166,6 +167,16 @@ class CloudManager:
             
             import time
             time.sleep(2) # Poll every 2 seconds
+            
+            # Heartbeat logic (every ~60s)
+            if loop_count >= 30:
+                try:
+                    from datetime import datetime, timezone
+                    self.send_telemetry('SYSTEM', 'HEARTBEAT', datetime.now(timezone.utc).isoformat())
+                except Exception:
+                    pass
+                loop_count = 0
+            loop_count += 1
 
     def start_listener(self):
         self.running = True

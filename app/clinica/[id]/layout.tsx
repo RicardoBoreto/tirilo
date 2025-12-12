@@ -1,4 +1,4 @@
-import ClinicSidebar from '@/components/ClinicSidebar'
+import ClinicLayoutWrapper from './ClinicLayoutWrapper'
 import { getClinica } from '@/lib/actions/clinicas'
 import { notFound } from 'next/navigation'
 
@@ -18,11 +18,8 @@ export default async function ClinicLayout({
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <ClinicSidebar clinica={clinica} />
-            <main className="pl-64">
-                {children}
-            </main>
-        </div>
+        <ClinicLayoutWrapper clinica={clinica}>
+            {children}
+        </ClinicLayoutWrapper>
     )
 }

@@ -50,7 +50,9 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         venda: '0',
         aluguel: '0',
         statusOp: 'disponivel',
-        foto: ''
+        foto: '',
+        tailscaleIp: '',
+        sshUser: ''
     })
 
     useEffect(() => {
@@ -61,13 +63,26 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
 
     useEffect(() => {
         let interval: NodeJS.Timeout
+        let pingInterval: NodeJS.Timeout
+
         if (selectedRobot) {
+            // Send immediate PING to check status
+            sendCommand(selectedRobot.mac_address, 'PING').catch(e => console.error("Ping error:", e))
+
             loadTelemetry(selectedRobot.mac_address)
             interval = setInterval(() => {
                 loadTelemetry(selectedRobot.mac_address, true)
             }, 3000)
+
+            // Optional: Keep pinging every 60s
+            pingInterval = setInterval(() => {
+                sendCommand(selectedRobot.mac_address, 'PING').catch(() => { })
+            }, 60000)
         }
-        return () => clearInterval(interval)
+        return () => {
+            clearInterval(interval)
+            clearInterval(pingInterval)
+        }
     }, [selectedRobot])
 
     async function loadRobots() {
@@ -149,7 +164,9 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                 valor_venda: parseFloat(editForm.venda) || 0,
                 valor_aluguel: parseFloat(editForm.aluguel) || 0,
                 status_operacional: editForm.statusOp,
-                foto_url: editForm.foto
+                foto_url: editForm.foto,
+                endereco_tailscale: editForm.tailscaleIp,
+                usuario_ssh: editForm.sshUser
             })
             alert('Robô atualizado!')
             setIsEditing(false)
@@ -176,7 +193,9 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                 venda: selectedRobot.valor_venda ? String(selectedRobot.valor_venda) : '0',
                 aluguel: selectedRobot.valor_aluguel ? String(selectedRobot.valor_aluguel) : '0',
                 statusOp: selectedRobot.status_operacional || 'disponivel',
-                foto: selectedRobot.foto_url || ''
+                foto: selectedRobot.foto_url || '',
+                tailscaleIp: selectedRobot.endereco_tailscale || '',
+                sshUser: selectedRobot.usuario_ssh || 'pi'
             })
             setIsEditing(false)
         }
@@ -404,6 +423,32 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                                 />
                                             </div>
                                         </div>
+
+                                        {/* Conectividade */}
+                                        <div className="md:col-span-2 pt-2 border-t border-yellow-200 mt-2">
+                                            <h4 className="text-xs font-bold text-yellow-800 uppercase mb-2">Conectividade (Admin)</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-xs font-semibold block mb-1">Tailscale IP (100.x.y.z)</label>
+                                                    <input
+                                                        className="w-full p-2 border rounded text-sm font-mono"
+                                                        placeholder="100.100.100.100"
+                                                        value={editForm.tailscaleIp}
+                                                        onChange={e => setEditForm({ ...editForm, tailscaleIp: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-semibold block mb-1">Usuário SSH</label>
+                                                    <input
+                                                        className="w-full p-2 border rounded text-sm font-mono"
+                                                        placeholder="pi"
+                                                        value={editForm.sshUser}
+                                                        onChange={e => setEditForm({ ...editForm, sshUser: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
 
                                         <div className="flex gap-2 mt-4 pt-2 border-t border-yellow-200 justify-end">
                                             <button onClick={handleUpdateRobot} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition">Salvar Alterações</button>

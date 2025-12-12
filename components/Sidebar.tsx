@@ -18,16 +18,17 @@ interface SidebarProps {
     onLinkClick?: () => void
 }
 
-export default function Sidebar({ clinic, userRole, userId, className, onLinkClick }: SidebarProps) {
+
+export default function Sidebar({ clinic, userRole, userId, className, onLinkClick, collapsed = false }: SidebarProps & { collapsed?: boolean }) {
     const pathname = usePathname()
     const links = getSidebarLinks(clinic, userRole, userId)
 
     return (
-        <aside className={`w-64 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 ${className || ''}`}>
+        <aside className={`bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 ${className || ''} ${collapsed ? 'w-20' : 'w-64'} transition-all duration-300`}>
             <div className="h-full flex flex-col">
-                <div className="p-8 border-b border-gray-100 dark:border-gray-700 flex flex-col items-center text-center">
+                <div className={`border-b border-gray-100 dark:border-gray-700 flex flex-col items-center text-center transition-all duration-300 ${collapsed ? 'p-4' : 'p-8'}`}>
                     {clinic?.logo_url ? (
-                        <div className="relative w-28 h-28 mb-4 rounded-3xl overflow-hidden shadow-sm border-2 border-gray-50">
+                        <div className={`relative mb-4 rounded-3xl overflow-hidden shadow-sm border-2 border-gray-50 transition-all duration-300 ${collapsed ? 'w-10 h-10 rounded-xl' : 'w-28 h-28'}`}>
                             <Image
                                 src={clinic.logo_url}
                                 alt="Logo"
@@ -36,19 +37,24 @@ export default function Sidebar({ clinic, userRole, userId, className, onLinkCli
                             />
                         </div>
                     ) : (
-                        <div className="w-20 h-20 bg-primary/20 rounded-3xl flex items-center justify-center text-primary font-bold text-3xl mb-4 shadow-inner">
+                        <div className={`bg-primary/20 flex items-center justify-center text-primary font-bold shadow-inner transition-all duration-300 ${collapsed ? 'w-10 h-10 rounded-xl text-lg mb-2' : 'w-20 h-20 rounded-3xl text-3xl mb-4'}`}>
                             {clinic?.nome_fantasia?.charAt(0) || 'T'}
                         </div>
                     )}
-                    <h1 className="text-xl font-heading font-bold text-gray-800 dark:text-white truncate w-full">
-                        {clinic?.nome_fantasia || clinic?.razao_social || 'SaaS Tirilo'}
-                    </h1>
-                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mt-1 uppercase tracking-wider">
-                        {clinic ? 'Painel da Clínica' : 'Admin Panel'}
-                    </p>
+
+                    {!collapsed && (
+                        <>
+                            <h1 className="text-xl font-heading font-bold text-gray-800 dark:text-white truncate w-full animate-in fade-in slide-in-from-left-4 duration-300">
+                                {clinic?.nome_fantasia || clinic?.razao_social || 'SaaS Tirilo'}
+                            </h1>
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mt-1 uppercase tracking-wider animate-in fade-in slide-in-from-left-4 duration-500">
+                                {clinic ? 'Painel da Clínica' : 'Admin Panel'}
+                            </p>
+                        </>
+                    )}
                 </div>
 
-                <nav className="flex-1 p-6 space-y-3">
+                <nav className={`flex-1 space-y-3 ${collapsed ? 'p-2' : 'p-6'}`}>
                     {links.map((link) => {
                         const isActive = pathname.startsWith(link.href)
                         return (
@@ -56,24 +62,28 @@ export default function Sidebar({ clinic, userRole, userId, className, onLinkCli
                                 key={link.href}
                                 href={link.href}
                                 onClick={onLinkClick}
-                                className={`flex items-center gap-4 px-6 py-4 rounded-2xl transition-all duration-200 group ${isActive
-                                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105'
-                                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:scale-105'
+                                className={`flex items-center gap-4 rounded-2xl transition-all duration-200 group relative
+                                    ${collapsed ? 'justify-center px-0 py-3' : 'px-6 py-4'}
+                                    ${isActive
+                                        ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105'
+                                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:scale-105'
                                     }`}
+                                title={collapsed ? link.label : ''}
                             >
                                 <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
                                     {link.icon}
                                 </div>
-                                <span className="font-medium text-base">{link.label}</span>
+                                {!collapsed && <span className="font-medium text-base whitespace-nowrap">{link.label}</span>}
                             </Link>
                         )
                     })}
                 </nav>
 
-                <div className="p-6 border-t border-gray-100 dark:border-gray-700">
-                    <p className="text-xs text-gray-400 dark:text-gray-500 text-center font-medium">
+                <div className={`border-t border-gray-100 dark:border-gray-700 ${collapsed ? 'p-4' : 'p-6'}`}>
+                    <p className={`text-xs text-gray-400 dark:text-gray-500 text-center font-medium ${collapsed ? 'hidden' : 'block'}`}>
                         Feito com 💙 para o Tirilo
                     </p>
+                    {collapsed && <div className="w-full text-center text-xs">💙</div>}
                 </div>
             </div>
         </aside>

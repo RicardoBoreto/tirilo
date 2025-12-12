@@ -91,6 +91,40 @@ export default async function ClinicaDetailPage({ params }: { params: Promise<{ 
 
                         <div>
                             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                                Inscrição Estadual
+                            </h3>
+                            <p className="text-lg font-mono text-gray-900 dark:text-white">
+                                {clinica.inscricao_estadual || '-'}
+                            </p>
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                                Endereço
+                            </h3>
+                            <p className="text-lg text-gray-900 dark:text-white">
+                                {[
+                                    clinica.end_logradouro,
+                                    clinica.end_numero,
+                                    clinica.end_complemento,
+                                    clinica.end_bairro,
+                                    [(clinica.end_cidade || ''), (clinica.end_estado || '')].filter(Boolean).join('/'),
+                                    clinica.end_cep ? `CEP: ${clinica.end_cep}` : null
+                                ].filter(Boolean).join(', ') || '-'}
+                            </p>
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                                Missão
+                            </h3>
+                            <p className="text-base text-gray-900 dark:text-white whitespace-pre-wrap">
+                                {clinica.missao || '-'}
+                            </p>
+                        </div>
+
+                        <div>
+                            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                                 Data de Cadastro
                             </h3>
                             <p className="text-lg text-gray-900 dark:text-white">
@@ -113,10 +147,10 @@ export default async function ClinicaDetailPage({ params }: { params: Promise<{ 
                             </h3>
                             <span
                                 className={`inline-block px-4 py-2 rounded-lg text-sm font-medium capitalize ${clinica.status_assinatura === 'ativo'
-                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                                        : clinica.status_assinatura === 'inativo'
-                                            ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                                    : clinica.status_assinatura === 'inativo'
+                                        ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
                                     }`}
                             >
                                 {clinica.status_assinatura}

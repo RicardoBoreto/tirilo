@@ -33,6 +33,50 @@ Cada versão segue o formato:
 - **Problema:** Erro ao salvar prompts com mesmo nome para terapeutas diferentes.
 - **Solução:** Ajustada regra de unicidade do banco de dados para considerar o `terapeuta_id`. Agora múltiplos terapeutas podem ter prompts com o mesmo nome (ex: "Sessão Padrão") na mesma clínica.
 
+## [1.6.0] - 12/12/2025
+
+### ✨ Novos Recursos
+
+#### Endereço Estruturado
+- **Descrição:** Migração do campo de endereço único para múltiplos campos estruturados.
+- **Campos:** CEP, Logradouro, Número, Complemento, Bairro, Cidade, Estado.
+- **Interface:** Novos campos nos formulários de criação, edição e configurações da clínica.
+- **API:** Validação e processamento individual de cada componente do endereço.
+
+#### Dados Corporativos
+- **Novos Campos:**
+  - `nome_fantasia`: Nome comercial da clínica.
+  - `inscricao_estadual`: Registro estadual (opcional).
+  - `missao`: Missão e valores da clínica (campo de texto longo).
+- **Visibilidade:** Exibição detalhada no perfil da clínica e painel administrativo.
+
+### 🗄️ Banco de Dados
+
+#### Migrações
+- **Tabela `saas_clinicas`:**
+  - Adição de colunas textuais para endereço (`end_cep`, `end_logradouro`, etc.).
+  - Adição de colunas `inscricao_estadual` e `missao`.
+  - Coluna `endereco` JSONB mantida como legado/backup.
+
+---
+
+## [1.5.0] - 10/12/2024
+
+### 🤖 Gestão de Frota e Acesso Seguro
+
+#### Monitoramento em Tempo Real
+- **Status Online:** Implementado sistema de Heartbeat (60s) e Ping Ativo para monitorar robôs.
+- **Painel:** Visualização clara de Status (Online/Offline) e tempo desde o último contato.
+- **Telemetria:** Feedback visual instantâneo ao enviar comandos (Ping/Pong).
+
+#### Acesso Seguro (Tailscale/SSH)
+- **Integração:** Campos para gerenciar Endereço Tailscale e Usuário SSH diretamente no dashboard.
+- **Facilidade:** Botão "Copiar Comando SSH" gera a string de conexão pronta para uso.
+- **Manuais:** Criado `MANUAL_GESTAO_ROBOS.md` para auxiliar administradores.
+
+#### Módulo de Segurnaça IoT
+- **RLS:** Políticas de segurança robustas permitindo que robôs (acesso anônimo) enviem telemetria mas sem comprometer dados sensíveis.
+
 ---
 
 ## [1.4.0] - 09/12/2024

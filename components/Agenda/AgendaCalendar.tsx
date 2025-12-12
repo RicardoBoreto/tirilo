@@ -158,7 +158,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                 {HOURS.map(hour => {
                     const slotAgendamentos = getAgendamentosForSlot(currentDate, hour)
                     return (
-                        <div key={hour} className="grid grid-cols-[80px_1fr] min-h-[100px] border-b border-gray-300 dark:border-gray-700">
+                        <div key={hour} className="grid grid-cols-[80px_1fr] min-h-[80px] border-b border-gray-300 dark:border-gray-700">
                             <div className="p-4 text-sm font-medium text-gray-400 text-right border-r border-gray-300 dark:border-gray-700 bg-gray-50/30">
                                 {hour.toString().padStart(2, '0')}:00
                             </div>
@@ -245,7 +245,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                 </div>
                 <div className="flex-1 overflow-y-auto">
                     {HOURS.map(hour => (
-                        <div key={hour} className="grid grid-cols-[60px_repeat(6,minmax(0,1fr))] min-h-[100px]">
+                        <div key={hour} className="grid grid-cols-[60px_repeat(6,minmax(0,1fr))] min-h-[80px]">
                             <div className="p-2 text-xs font-medium text-gray-400 text-right border-r border-b border-gray-50 bg-gray-50/30 sticky left-0">
                                 {hour.toString().padStart(2, '0')}:00
                             </div>
@@ -383,7 +383,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)]">
+        <div className="flex flex-col h-[calc(100vh-100px)] min-h-[600px]">
             {renderHeader()}
 
             {viewMode === 'day' && renderDayView()}

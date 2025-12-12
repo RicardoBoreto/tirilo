@@ -64,13 +64,29 @@ CREATE TABLE sessao_diario_bordo (
 
 ---
 
-## 3. Gestão de Frotas com Tailscale
+---
 
-A integração com Tailscale permite que o SaaS Tirilo atue como um MDM para suporte avançado. O dia-a-dia usa Supabase, o suporte técnico usa Tailscale.
+## 3. Gestão de Frotas com Tailscale e Telemetria
 
-### Funcionalidades:
-1.  **Diagnóstico Remoto:** Acesso SSH (`ssh pi@100.x.y.z`) seguro.
-2.  **Atualização em Massa:** Scripts via SSH para `git pull`.
+A integração com Tailscale permite que o SaaS Tirilo atue como um MDM para suporte avançado, enquanto a telemetria via Supabase garante monitoramento em tempo real.
+
+### 3.1 Conectividade e Status (Heartbeat)
+O robô mantém uma conexão constante para informar que está operacional:
+*   **Heartbeat Passivo:** O script Python envia um sinal (`SYSTEM: HEARTBEAT`) a cada **60 segundos** para a tabela `sessao_telemetria`.
+*   **Ping Ativo:** Quando um admin seleciona o robô no dashboard, o frontend envia um comando `PING`. O robô responde imediatamente com `PONG`, confirmando que a escuta de comandos está ativa e sem latência.
+*   **Critério Online:** O dashboard considera o robô **ONLINE (Verde)** se houver telemetria nos últimos 120 segundos.
+
+### 3.2 Acesso Remoto Seguro
+Para permitir diagnóstico profundo e intervenção manual:
+1.  **Tailscale:** Cada robô deve estar conectado à VPN Tailscale da organização.
+2.  **Dashboard:** O admin edita o cadastro do robô para vincular o **IP Tailscale** (ex: `100.x.y.z`) e o **Usuário SSH** (ex: `pi`).
+3.  **Uso:** O sistema gera automaticamente o comando de conexão (`ssh pi@100...`) para ser copiado pelo suporte técnico.
+
+### 3.3 Segurança e Permissões (RLS)
+Como o robô é um dispositivo IoT operando com **Chave Anônima** (ou Service Role restrita), políticas de Row Level Security (RLS) específicas são necessárias:
+*   **`sessao_telemetria`**: `INSERT` público liberado (para enviar heartbeat/dados de jogo) e `SELECT` liberado (para a biblioteca retornar confirmação).
+*   **`comandos_robo`**: `SELECT` público liberado (para ler fila de comandos).
+*   **`saas_frota_robos`**: `SELECT` público liberado (para verificar status de bloqueio remoto).
 
 ---
 
@@ -130,9 +146,10 @@ Para transformar este projeto em realidade, a sequência sugerida de desenvolvim
     *   Criar `getJogosDisponiveis(clinicaId)`
     *   Criar `registrarSessaoLudica(dados)`
     *   Atualizar `generateAIPlan` para processar novas chaves.
-3.  [ ] **Frontend (Loja):** Criar página de Marketplace de Jogos.
-4.  [ ] **Frontend (Paciente):** Criar aba "Ludoterapia" com gráficos de evolução.
-5.  [ ] **Robô (Python):** Atualizar script principal para consultar licenças antes de baixar jogos.
+3.  [x] **Frontend (Robôs):** Dashboard com edição de IP Tailscale, Status Online e Ping.
+4.  [ ] **Frontend (Loja):** Criar página de Marketplace de Jogos.
+5.  [ ] **Frontend (Paciente):** Criar aba "Ludoterapia" com gráficos de evolução.
+6.  [x] **Robô (Python):** Script `cloud.py` com suporte a Heartbeat e `main.py` com Ping/Pong.
 
 ---
 **Status do Projeto:** Design Aprovado. Pronto para Codificação.

@@ -157,6 +157,7 @@ SaaS_tirilo_v2/
 
 ### ✅ Módulo Ludoterapia & Robótica
 - [x] Integração com Frota de Robôs (Dashboard)
+- [x] Acesso Remoto Seguro (Tailscale/SSH)
 - [x] Histórico de Sessões Lúdicas
 - [x] Diário de Bordo automatizado
 - [x] Loja de Habilidades e Jogos para Clínicas (SaaS)
@@ -210,6 +211,14 @@ CREATE POLICY "Permitir exclusão para autenticados"
 ON saas_clinicas FOR DELETE
 TO authenticated
 USING (true);
+
+-- Política: Robôs enviam telemetria (Acesso Anônimo)
+CREATE POLICY "Robos enviam telemetria" ON sessao_telemetria
+FOR INSERT TO anon, authenticated WITH CHECK (true);
+
+-- Política: Robôs leem comandos (Acesso Anônimo)
+CREATE POLICY "Robos leem comandos" ON comandos_robo
+FOR SELECT TO anon, authenticated USING (true);
 ```
 
 ## 🛠️ Scripts Disponíveis

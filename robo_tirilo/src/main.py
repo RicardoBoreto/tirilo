@@ -105,6 +105,11 @@ def main():
                         # State update handled in main loop now
                         hardware.speak_animated(text, ui_callback=None)
 
+                elif payload == "PING":
+                    from datetime import datetime, timezone
+                    print("Received PING, sending PONG...")
+                    cloud.send_telemetry('SYSTEM', 'PONG', datetime.now(timezone.utc).isoformat())
+
         except queue.Empty:
             pass
 

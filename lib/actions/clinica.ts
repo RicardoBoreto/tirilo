@@ -9,6 +9,10 @@ const ClinicaSchema = z.object({
     nome_fantasia: z.string().min(3, 'Nome fantasia deve ter pelo menos 3 caracteres'),
     razao_social: z.string().min(3, 'Razão social deve ter pelo menos 3 caracteres'),
     config_cor_primaria: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Cor inválida'),
+    cnpj: z.string().optional(),
+    inscricao_estadual: z.string().optional(),
+    endereco_completo: z.string().optional(),
+    missao: z.string().optional(),
 })
 
 export async function updateClinica(formData: FormData) {
@@ -36,6 +40,17 @@ export async function updateClinica(formData: FormData) {
         nome_fantasia: formData.get('nome_fantasia'),
         razao_social: formData.get('razao_social'),
         config_cor_primaria: formData.get('config_cor_primaria'),
+        cnpj: formData.get('cnpj'),
+        inscricao_estadual: formData.get('inscricao_estadual'),
+        missao: formData.get('missao'),
+        // Address parts
+        endereco_cep: formData.get('endereco_cep'),
+        endereco_logradouro: formData.get('endereco_logradouro'),
+        endereco_numero: formData.get('endereco_numero'),
+        endereco_complemento: formData.get('endereco_complemento'),
+        endereco_bairro: formData.get('endereco_bairro'),
+        endereco_cidade: formData.get('endereco_cidade'),
+        endereco_estado: formData.get('endereco_estado'),
     }
 
     const validated = ClinicaSchema.parse(rawData)
@@ -67,6 +82,18 @@ export async function updateClinica(formData: FormData) {
         nome_fantasia: validated.nome_fantasia,
         razao_social: validated.razao_social,
         config_cor_primaria: validated.config_cor_primaria,
+        cnpj: validated.cnpj,
+        inscricao_estadual: validated.inscricao_estadual,
+        missao: validated.missao,
+
+        // Address Cols
+        end_cep: rawData.endereco_cep,
+        end_logradouro: rawData.endereco_logradouro,
+        end_numero: rawData.endereco_numero,
+        end_complemento: rawData.endereco_complemento,
+        end_bairro: rawData.endereco_bairro,
+        end_cidade: rawData.endereco_cidade,
+        end_estado: rawData.endereco_estado
     }
 
     if (logoUrl) {
@@ -79,11 +106,12 @@ export async function updateClinica(formData: FormData) {
         .eq('id', clinicId)
 
     if (error) {
-        throw new Error('Erro ao atualizar clínica')
+        console.error('Supabase Update Error:', error)
+        throw new Error(`Erro ao atualizar clínica: ${error.message || error.details || JSON.stringify(error)}`)
     }
 
     revalidatePath('/admin')
-    redirect('/admin/configuracoes')
+    revalidatePath('/admin/configuracoes')
 }
 
 export async function getClinica() {
