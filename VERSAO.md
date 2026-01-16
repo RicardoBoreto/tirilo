@@ -9,29 +9,60 @@ Cada versão segue o formato:
   - ✨ Novos Recursos
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
-- **Edição Completa:** Funcionalidade para editar dados do robô (Nome, MAC, Clínica) após o cadastro.
-- **Interface Melhorada:** Visualização clara da clínica vinculada e botão de edição acessível.
+## [1.7.3] - 16/01/2026
 
-### 💰 Financeiro & Contratos
+### 🔒 Segurança e Privacidade (IA)
+- **Anonimização de Dados (Data Masking):** Implementado sistema de proteção de identidade que substitui nomes reais por codinomes ("HORACE" para pacientes, "SAM" para terapeutas) antes de enviar dados para a IA.
+- **Deanonimização Automática:** O sistema reverte os codinomes para os nomes reais ao receber a resposta, garantindo transparência para o usuário.
 
-#### Correção de Acesso para Terapeutas
-- **Problema:** Terapeutas não conseguiam criar contratos ou ver lançamentos (erro de política RLS).
-- **Solução:** 
-  - Adicionada coluna `id_terapeuta` na tabela `contratos` para vínculo correto.
-  - Atualizadas políticas de segurança (RLS) para permitir que terapeutas gerenciem seus próprios dados financeiros.
-  - Menu "Financeiro" desbloqueado para o perfil `terapeuta`.
+### 📱 Melhorias de Interface Mobile (Responsividade)
+- **Help Desk:** Corrigido layout da lista de chamados e do chat (mensagens cortadas e altura da tela).
+- **Agenda:** Melhorada visualização em telas pequenas (botões quebrados em linhas, dias da semana abreviados) e adicionado botão "Cancelar" no formulário.
+- **Gerenciar Jogos:** Adicionada rolagem horizontal na tabela para evitar cortes.
 
-#### Usabilidade e Filtros
-- **Correção de "Flash" de Dados:** Corrigido problema onde a lista de contas ou faturamento exibia momentaneamente dados de todos os terapeutas antes de aplicar o filtro do usuário logado.
-- **Valor Padrão Inteligente:** Ao criar contrato, o valor da sessão é preenchido automaticamente com o valor padrão do currículo do terapeuta.
-- **Filtro de Pacientes:** Lista de pacientes no contrato filtra automaticamente aqueles que já possuem contrato ativo (evita duplicidade).
-- **Filtro de Status:** Lista de contratos agora possui filtro rápido: "Ativos", "Inativos" ou "Todos".
+## [1.7.2] - 16/01/2026
 
-### 🤖 Assistente IA
+### ✨ Melhorias de Interface (UI/UX)
 
-#### Correção de Duplicidade de Nomes
-- **Problema:** Erro ao salvar prompts com mesmo nome para terapeutas diferentes.
-- **Solução:** Ajustada regra de unicidade do banco de dados para considerar o `terapeuta_id`. Agora múltiplos terapeutas podem ter prompts com o mesmo nome (ex: "Sessão Padrão") na mesma clínica.
+#### Configurações SaaS - Premium UI
+- **Redesign Completo:** Formulário de configurações da empresa SaaS (`ConfigSaasForm`) reescrito utilizando componentes visuais modernos (Shadcn UI).
+- **Cards Organizadores:** Dados agrupados logicamente em "Dados Cadastrais", "Endereço" e "Contato".
+- **Identificação Clara:** Campos renomeados para maior clareza (ex: "Inscrição Estadual (IE)").
+- **Preview de Logo:** Melhor visualização do logo atual e preview imediato ao selecionar nova imagem.
+
+### 🐛 Correções de Bugs
+
+#### Permissões de Super Admin
+- **Acesso SaaS:** Garantido que usuários com perfil `master_admin` ou `super_admin` tenham acesso às configurações SaaS, corrigindo bloqueio indevido quando vinculados a uma clínica para testes.
+
+## [1.7.1] - 14/12/2025
+
+### 🐛 Correções e Melhorias
+
+#### Configurações SaaS
+- **Correção de Permissões (RLS):** Ajustada política de segurança da tabela `saas_empresa` para identificar corretamente Super Admins (usuários sem vínculo com clínica) e permitir a edição dos dados.
+- **Interface:** O logo e nome da Empresa SaaS agora são exibidos corretamente no menu lateral do Super Admin.
+- **Navegação:** Corrigida lógica do menu lateral para manter os links de administração (Master) visíveis mesmo quando os dados da empresa são carregados.
+
+## [1.7.0] - 13/12/2025
+
+### ✨ Novos Recursos
+
+#### Configurações da Empresa (SaaS)
+- **Descrição:** Módulo para gerenciamento dos dados da empresa proprietária do software (Tirilo SaaS).
+- **Dados Cadastrais:** Razão Social, Nome Fantasia, CNPJ, Inscrição Estadual/Municipal.
+- **Endereço e Contato:** Endereço completo estruturado, telefone, email e site.
+- **Identidade Visual:** Upload de logo da empresa (bucket `logos`).
+- **Acesso:** Exclusivo para Super Administradores.
+
+### 🗄️ Banco de Dados
+
+#### Novas Estruturas
+- **Tabela `saas_empresa`:** Armazena dados únicos da empresa proprietária.
+- **Bucket `logos`:** Armazenamento público para logos de empresas/clínicas.
+- **RLS:** Políticas de segurança configuradas para limitar escrita ao Super Admin.
+
+---
 
 ## [1.6.0] - 12/12/2025
 

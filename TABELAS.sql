@@ -8,6 +8,32 @@
 -- 1. SAAS & CLÍNICAS
 -- ----------------------------------------------------------------------------
 
+CREATE TABLE public.saas_empresa (
+    id SERIAL PRIMARY KEY,
+    razao_social TEXT NOT NULL,
+    nome_fantasia TEXT,
+    cnpj TEXT,
+    inscricao_estadual TEXT,
+    inscricao_municipal TEXT,
+    
+    -- Endereço Estruturado
+    end_logradouro TEXT,
+    end_numero TEXT,
+    end_complemento TEXT,
+    end_bairro TEXT,
+    end_cidade TEXT,
+    end_estado TEXT,
+    end_cep TEXT,
+
+    telefone TEXT,
+    email_contato TEXT,
+    site_url TEXT,
+    logo_url TEXT,
+    
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE public.saas_clinicas (
     id SERIAL PRIMARY KEY,
     nome_fantasia TEXT NOT NULL,

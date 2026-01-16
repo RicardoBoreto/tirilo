@@ -109,6 +109,71 @@ export interface Database {
                     foto_url?: string | null
                 }
             }
+            saas_empresa: {
+                Row: {
+                    id: number
+                    razao_social: string
+                    nome_fantasia: string | null
+                    cnpj: string | null
+                    inscricao_estadual: string | null
+                    inscricao_municipal: string | null
+                    end_logradouro: string | null
+                    end_numero: string | null
+                    end_complemento: string | null
+                    end_bairro: string | null
+                    end_cidade: string | null
+                    end_estado: string | null
+                    end_cep: string | null
+                    telefone: string | null
+                    email_contato: string | null
+                    site_url: string | null
+                    logo_url: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: number
+                    razao_social: string
+                    nome_fantasia?: string | null
+                    cnpj?: string | null
+                    inscricao_estadual?: string | null
+                    inscricao_municipal?: string | null
+                    end_logradouro?: string | null
+                    end_numero?: string | null
+                    end_complemento?: string | null
+                    end_bairro?: string | null
+                    end_cidade?: string | null
+                    end_estado?: string | null
+                    end_cep?: string | null
+                    telefone?: string | null
+                    email_contato?: string | null
+                    site_url?: string | null
+                    logo_url?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: number
+                    razao_social?: string
+                    nome_fantasia?: string | null
+                    cnpj?: string | null
+                    inscricao_estadual?: string | null
+                    inscricao_municipal?: string | null
+                    end_logradouro?: string | null
+                    end_numero?: string | null
+                    end_complemento?: string | null
+                    end_bairro?: string | null
+                    end_cidade?: string | null
+                    end_estado?: string | null
+                    end_cep?: string | null
+                    telefone?: string | null
+                    email_contato?: string | null
+                    site_url?: string | null
+                    logo_url?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+            }
             terapeutas_curriculo: {
                 Row: {
                     id: number

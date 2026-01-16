@@ -83,7 +83,7 @@ export default function AdminLayoutWrapper({
                         }
                     `}</style>
                 )}
-                <Sidebar clinic={clinicData} userRole={userProfile?.tipo_perfil} userId={user.id} className="hidden lg:block w-64" />
+                <Sidebar clinic={clinicData} userRole={userProfile?.tipo_perfil || 'super_admin'} userId={user.id} className="hidden lg:block w-64" />
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <Header user={{ ...user, ...userProfile, nome: userProfile?.nome_completo }} clinic={clinicData} />
                     <main className="flex-1 overflow-y-auto p-6">
@@ -112,7 +112,7 @@ export default function AdminLayoutWrapper({
             >
                 <Sidebar
                     clinic={clinicData}
-                    userRole={userProfile?.tipo_perfil}
+                    userRole={userProfile?.tipo_perfil || 'super_admin'}
                     userId={user.id}
                     className="w-full h-full border-none"
                     collapsed={!isSidebarOpen}

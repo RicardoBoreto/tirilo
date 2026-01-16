@@ -42,6 +42,11 @@ export function getSidebarLinks(
             label: 'Gerenciar Jogos',
             icon: <Gamepad2 className="w-6 h-6" color="#4F46E5" />,
         },
+        {
+            href: '/admin/configuracoes-saas',
+            label: 'Configurações SaaS',
+            icon: <CuteSettings className="w-6 h-6" />,
+        },
     ]
 
     const clinicLinks: NavLink[] = [
@@ -102,6 +107,10 @@ export function getSidebarLinks(
             icon: <ShoppingBag className="w-6 h-6" color="#4F46E5" />,
         },
     ]
+
+    if (userRole === 'super_admin' || userRole === 'master_admin') {
+        return masterLinks
+    }
 
     if (!clinic) {
         return masterLinks

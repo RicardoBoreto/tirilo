@@ -6,6 +6,43 @@ import { differenceInYears, parseISO } from 'date-fns'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '')
 
+// --- Anonymization Helpers ---
+function anonymize(text: string, map: Record<string, string>) {
+    if (!text) return text
+    let result = text
+    // Order by length descending to replace longer names first (e.g. "Ana Maria" before "Ana")
+    const sortedKeys = Object.keys(map).sort((a, b) => b.length - a.length)
+
+    for (const real of sortedKeys) {
+        if (!real || real.length < 3) continue // Skip very short names to avoid false positives
+        const fake = map[real]
+        // Case insensitive global replacement escaping special chars
+        const escaped = real.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const regex = new RegExp(`\\b${escaped}\\b`, 'gi') // Word boundaries for safety
+        result = result.replace(regex, fake)
+
+        // Also try without word boundaries for partial matches if needed, but word boundary is safer for names
+        // Fallback: replace just the string if word boundary fails involved with punctuation
+        const regexSimple = new RegExp(escaped, 'gi')
+        result = result.replace(regexSimple, fake)
+    }
+    return result
+}
+
+function deanonymize(text: string, map: Record<string, string>) {
+    if (!text) return text
+    let result = text
+    const sortedKeys = Object.keys(map).sort((a, b) => b.length - a.length)
+
+    for (const real of sortedKeys) {
+        const fake = map[real]
+        const escaped = fake.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const regex = new RegExp(escaped, 'gi')
+        result = result.replace(regex, real)
+    }
+    return result
+}
+
 export async function generateInterventionPlan(promptId: number, pacienteId: number) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -102,30 +139,63 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
     const recursosTexto = recursos?.map(r => r.nome_item).join(', ') || 'Nenhum recurso cadastrado.'
     const salasTexto = salas?.map(s => s.nome).join(', ') || 'Nenhuma sala cadastrada.'
 
-    // 7. Replace Placeholders
+    // --- ANONYMIZATION SETUP ---
+    const realPatientName = paciente.nome
+    const realTherapistName = terapeutaUser?.nome_completo || 'Terapeuta'
+
+    // Split names to anonymize first names too check length to avoid replacing short words like "Ana" inappropriately if logic was simpler, but "Horace" is safe.
+    const realPatientFirst = realPatientName.split(' ')[0]
+    const realTherapistFirst = realTherapistName.split(' ')[0]
+
+    const anonymizationMap: Record<string, string> = {
+        [realPatientName]: 'HORACE',
+        [realTherapistName]: 'SAM',
+    }
+    // Add first names if they are distinct and long enough to be safe, or just force them
+    if (realPatientFirst.length > 2) anonymizationMap[realPatientFirst] = 'HORACE'
+    if (realTherapistFirst.length > 2 && realTherapistFirst !== realPatientFirst) anonymizationMap[realTherapistFirst] = 'SAM'
+
+    // --- ANONYMIZE DATA FIELDS ---
+    // We must anonymize ALL free-text fields that might contain the real names
+    const anonDiagnostico = anonymize(diagnostico, anonymizationMap)
+    const anonPreferencias = anonymize(preferencias, anonymizationMap)
+    const anonSensibilidades = anonymize(sensibilidades, anonymizationMap)
+    const anonSessoesTexto = anonymize(sessoesTexto, anonymizationMap)
+    const anonObjetivoPlano = anonymize(objetivoPlano, anonymizationMap)
+    const anonJogosDisponiveis = anonymize(jogosDisponiveis, anonymizationMap)
+    const anonHistoricoLudico = anonymize(historicoLudico, anonymizationMap)
+
+    const anonTerapeutaFormacao = anonymize(curriculo?.formacao || 'Profissional de Saúde', anonymizationMap)
+    const anonTerapeutaTecnicas = anonymize(curriculo?.tecnicas_preferidas || 'Não informado', anonymizationMap)
+    const anonTerapeutaRecursos = anonymize(curriculo?.recursos_preferidos || 'Não informado', anonymizationMap)
+    const anonTerapeutaEstilo = anonymize(curriculo?.estilo_conducao || 'Não informado', anonymizationMap)
+    const anonTerapeutaObs = anonymize(curriculo?.observacoes_clinicas || 'Não informado', anonymizationMap)
+
+    // 7. Replace Placeholders with ANONYMIZED Data
     let promptFinal = promptData.prompt_texto
-        .replace(/{{NOME}}/g, paciente.nome)
+        // Direct Name Replacements with CODENAMES
+        .replace(/{{NOME}}/g, 'HORACE')
         .replace(/{{IDADE}}/g, idade.toString())
-        .replace(/{{DIAGNOSTICO}}/g, diagnostico)
-        .replace(/{{DIAGNOSTICO_E_ANAMNESE}}/g, diagnostico)
-        .replace(/{{PREFERENCIAS}}/g, preferencias)
-        .replace(/{{SENSIBILIDADES}}/g, sensibilidades)
-        .replace(/{{ULTIMAS_SESSOES}}/g, sessoesTexto)
-        .replace(/{{RECURSOS_LISTA}}/g, recursosTexto)
-        .replace(/{{SALAS_LISTA}}/g, salasTexto)
-        .replace(/{{OBJETIVO_PRINCIPAL_PLANO}}/g, objetivoPlano)
+        .replace(/{{DIAGNOSTICO}}/g, anonDiagnostico)
+        .replace(/{{DIAGNOSTICO_E_ANAMNESE}}/g, anonDiagnostico)
+        .replace(/{{PREFERENCIAS}}/g, anonPreferencias)
+        .replace(/{{SENSIBILIDADES}}/g, anonSensibilidades)
+        .replace(/{{ULTIMAS_SESSOES}}/g, anonSessoesTexto)
+        .replace(/{{RECURSOS_LISTA}}/g, recursosTexto) // Resources usually don't have PII
+        .replace(/{{SALAS_LISTA}}/g, salasTexto) // Rooms usually don't have PII
+        .replace(/{{OBJETIVO_PRINCIPAL_PLANO}}/g, anonObjetivoPlano)
 
         // Ludoterapia
-        .replace(/{{JOGOS_DISPONIVEIS}}/g, jogosDisponiveis)
-        .replace(/{{HISTORICO_LUDICO}}/g, historicoLudico)
+        .replace(/{{JOGOS_DISPONIVEIS}}/g, anonJogosDisponiveis)
+        .replace(/{{HISTORICO_LUDICO}}/g, anonHistoricoLudico)
 
-        // Therapist Placeholders
-        .replace(/{{TERAPEUTA_NOME}}/g, terapeutaUser?.nome_completo || 'Terapeuta')
-        .replace(/{{TERAPEUTA_FORMACAO}}/g, curriculo?.formacao || 'Profissional de Saúde')
-        .replace(/{{TERAPEUTA_TECNICAS_PREFERIDAS}}/g, curriculo?.tecnicas_preferidas || 'Não informado')
-        .replace(/{{TERAPEUTA_RECURSOS_PREFERIDOS}}/g, curriculo?.recursos_preferidos || 'Não informado')
-        .replace(/{{TERAPEUTA_ESTILO_CONDUCAO}}/g, curriculo?.estilo_conducao || 'Não informado')
-        .replace(/{{TERAPEUTA_OBSERVACOES}}/g, curriculo?.observacoes_clinicas || 'Não informado')
+        // Therapist Placeholders with CODENAMES
+        .replace(/{{TERAPEUTA_NOME}}/g, 'SAM')
+        .replace(/{{TERAPEUTA_FORMACAO}}/g, anonTerapeutaFormacao)
+        .replace(/{{TERAPEUTA_TECNICAS_PREFERIDAS}}/g, anonTerapeutaTecnicas)
+        .replace(/{{TERAPEUTA_RECURSOS_PREFERIDOS}}/g, anonTerapeutaRecursos)
+        .replace(/{{TERAPEUTA_ESTILO_CONDUCAO}}/g, anonTerapeutaEstilo)
+        .replace(/{{TERAPEUTA_OBSERVACOES}}/g, anonTerapeutaObs)
 
     // 7. Call Gemini API
     try {
@@ -134,7 +204,10 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
         const response = await result.response
         const text = response.text()
 
-        return { success: true, plan: text, promptUsed: promptFinal }
+        // --- DEANONYMIZE RESPONSE ---
+        const finalText = deanonymize(text, anonymizationMap)
+
+        return { success: true, plan: finalText, promptUsed: promptFinal }
     } catch (error: any) {
         console.error('Erro na API Gemini:', error)
         return { success: false, error: 'Erro ao gerar plano com IA: ' + error.message }
@@ -227,7 +300,6 @@ export async function generateSessionReport(promptId: number, pacienteId: number
     const diarioSessao = await getDiarioSessaoTexto(supabase, pacienteId)
     // ---------------------------
 
-    // 6. Replace Placeholders
     const dataSessao = new Date().toLocaleDateString('pt-BR')
     const credencial = `${terapeutaUser?.nome_completo || 'Terapeuta'} - ${curriculo?.registro_profissional || ''}`
 
@@ -246,29 +318,59 @@ export async function generateSessionReport(promptId: number, pacienteId: number
         `- ${new Date(r.created_at).toLocaleDateString()}: Sessão realizada.`
     ).join('\n') || 'Nenhuma sessão anterior.'
 
+    // --- ANONYMIZATION SETUP ---
+    const realPatientName = paciente.nome
+    const realTherapistName = terapeutaUser?.nome_completo || 'Terapeuta'
+
+    const realPatientFirst = realPatientName.split(' ')[0]
+    const realTherapistFirst = realTherapistName.split(' ')[0]
+
+    const anonymizationMap: Record<string, string> = {
+        [realPatientName]: 'HORACE',
+        [realTherapistName]: 'SAM',
+    }
+    if (realPatientFirst.length > 2) anonymizationMap[realPatientFirst] = 'HORACE'
+    if (realTherapistFirst.length > 2 && realTherapistFirst !== realPatientFirst) anonymizationMap[realTherapistFirst] = 'SAM'
+
+    // --- ANONYMIZE FIELDS ---
+    const anonDiagnostico = anonymize(diagnostico, anonymizationMap)
+    const anonRelatoSessao = anonymize(relatoSessao, anonymizationMap)
+    const anonHistoricoRelatorios = anonymize(historicoRelatorios, anonymizationMap)
+    const anonDiarioSessao = anonymize(diarioSessao, anonymizationMap)
+    const anonObjetivoPlano = anonymize(objetivoPlano, anonymizationMap)
+    const anonUltimasSessoes = anonymize(ultimasSessoesResumo, anonymizationMap)
+
+    const anonTerapeutaFormacao = anonymize(curriculo?.formacao || 'Profissional de Saúde', anonymizationMap)
+    const anonTerapeutaTecnicas = anonymize(curriculo?.tecnicas_preferidas || 'Não informado', anonymizationMap)
+    const anonTerapeutaRecursos = anonymize(curriculo?.recursos_preferidos || 'Não informado', anonymizationMap)
+    const anonTerapeutaEstilo = anonymize(curriculo?.estilo_conducao || 'Não informado', anonymizationMap)
+    const anonTerapeutaObs = anonymize(curriculo?.observacoes_clinicas || 'Não informado', anonymizationMap)
+    const anonCredencial = anonymize(credencial, anonymizationMap)
+
+    // 6. Replace Placeholders
     let promptFinal = promptData.prompt_texto
-        .replace(/{{NOME}}/g, paciente.nome)
+        .replace(/{{NOME}}/g, 'HORACE')
         .replace(/{{IDADE}}/g, idade.toString())
-        .replace(/{{DIAGNOSTICO}}/g, diagnostico)
-        .replace(/{{DIAGNOSTICO_E_ANAMNESE}}/g, diagnostico)
-        .replace(/{{RELATO_SESSAO}}/g, relatoSessao)
-        .replace(/{{RELATO_LIVRE_TERAPEUTA}}/g, relatoSessao)
-        .replace(/{{HISTORICO_RELATORIOS}}/g, historicoRelatorios)
+        .replace(/{{DIAGNOSTICO}}/g, anonDiagnostico)
+        .replace(/{{DIAGNOSTICO_E_ANAMNESE}}/g, anonDiagnostico)
+        .replace(/{{RELATO_SESSAO}}/g, anonRelatoSessao)
+        .replace(/{{RELATO_LIVRE_TERAPEUTA}}/g, anonRelatoSessao)
+        .replace(/{{HISTORICO_RELATORIOS}}/g, anonHistoricoRelatorios)
         .replace(/{{DATA_SESSAO}}/g, dataSessao)
-        .replace(/{{OBJETIVO_PRINCIPAL_PLANO}}/g, objetivoPlano)
-        .replace(/{{ULTIMAS_SESSOES}}/g, ultimasSessoesResumo)
+        .replace(/{{OBJETIVO_PRINCIPAL_PLANO}}/g, anonObjetivoPlano)
+        .replace(/{{ULTIMAS_SESSOES}}/g, anonUltimasSessoes)
 
         // Ludoterapia
-        .replace(/{{DIARIO_SESSAO}}/g, diarioSessao)
+        .replace(/{{DIARIO_SESSAO}}/g, anonDiarioSessao)
 
         // Therapist Placeholders
-        .replace(/{{TERAPEUTA_NOME}}/g, terapeutaUser?.nome_completo || 'Terapeuta')
-        .replace(/{{TERAPEUTA_FORMACAO}}/g, curriculo?.formacao || 'Profissional de Saúde')
-        .replace(/{{TERAPEUTA_TECNICAS_PREFERIDAS}}/g, curriculo?.tecnicas_preferidas || 'Não informado')
-        .replace(/{{TERAPEUTA_RECURSOS_PREFERIDOS}}/g, curriculo?.recursos_preferidos || 'Não informado')
-        .replace(/{{TERAPEUTA_ESTILO_CONDUCAO}}/g, curriculo?.estilo_conducao || 'Não informado')
-        .replace(/{{TERAPEUTA_OBSERVACOES}}/g, curriculo?.observacoes_clinicas || 'Não informado')
-        .replace(/{{TERAPEUTA_CREDENCIAL_COM_REGISTRO}}/g, credencial)
+        .replace(/{{TERAPEUTA_NOME}}/g, 'SAM')
+        .replace(/{{TERAPEUTA_FORMACAO}}/g, anonTerapeutaFormacao)
+        .replace(/{{TERAPEUTA_TECNICAS_PREFERIDAS}}/g, anonTerapeutaTecnicas)
+        .replace(/{{TERAPEUTA_RECURSOS_PREFERIDOS}}/g, anonTerapeutaRecursos)
+        .replace(/{{TERAPEUTA_ESTILO_CONDUCAO}}/g, anonTerapeutaEstilo)
+        .replace(/{{TERAPEUTA_OBSERVACOES}}/g, anonTerapeutaObs)
+        .replace(/{{TERAPEUTA_CREDENCIAL_COM_REGISTRO}}/g, anonCredencial)
 
     // 7. Call Gemini API
     try {
@@ -277,7 +379,10 @@ export async function generateSessionReport(promptId: number, pacienteId: number
         const response = await result.response
         const text = response.text()
 
-        return { success: true, report: text, promptUsed: promptFinal }
+        // --- DEANONYMIZE RESPONSE ---
+        const finalText = deanonymize(text, anonymizationMap)
+
+        return { success: true, report: finalText, promptUsed: promptFinal }
     } catch (error: any) {
         console.error('Erro na API Gemini:', error)
         return { success: false, error: 'Erro ao gerar relatório com IA: ' + error.message }

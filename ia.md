@@ -99,3 +99,33 @@ Detalha o padrão visual adotado para as ferramentas de IA:
 - **Código de Cores:**
   - 🟣 **Roxo (Criação):** Usado para "Gerar Plano (IA)". Representa a "magia" da criação criativa.
   - 🟢 **Verde (Registro):** Usado para "Registrar Atendimento (IA)". Representa a "conclusão" e "sucesso" da tarefa.
+
+## 🔒 Privacidade e Segurança (IA)
+
+Para garantir a proteção dos dados sensíveis de pacientes e profissionais, o sistema implementa um rigoroso processo de **Anonimização e Pseudonimização** antes de qualquer interação com a API externa (Google Gemini).
+
+### Processo de Mascaramento de Dados
+
+O sistema atua como um "middleware de privacidade", interceptando os dados sensíveis antes do envio e restaurando-os após o retorno da IA.
+
+#### 1. Pseudonimização (Envio)
+Antes de enviar o prompt para a IA, o sistema substitui automaticamente:
+- **Nome do Paciente** → Substituído por **`HORACE`**
+- **Nome do Terapeuta** → Substituído por **`SAM`**
+
+Essa substituição ocorre de forma abrangente:
+- Em **campos estruturados** (variáveis do sistema).
+- Em **campos de texto livre** (Sessões anteriores, Diários, Observações, Diagnósticos). O sistema varre estes textos e mascara qualquer ocorrência dos nomes reais.
+
+**Por que HORACE e SAM?**
+Utilizamos nomes fictícios (personas) em vez de tokens genéricos para manter a coerência semântica e naturalidade do texto, permitindo que a IA gere respostas mais fluidas e contextualizadas.
+
+#### 2. Processamento Seguro
+A IA processa o pedido ("Gerar plano para Horace...") sem nunca ter acesso aos nomes reais (PII).
+
+#### 3. Deanonimização (Retorno)
+Assim que a resposta da IA é recebida pelo servidor:
+- O sistema reverte **`HORACE`** para o **Nome Real do Paciente**.
+- O sistema reverte **`SAM`** para o **Nome Real do Terapeuta**.
+
+O usuário final vê apenas os nomes corretos, tornando o processo de segurança transparente e invisível na interface.

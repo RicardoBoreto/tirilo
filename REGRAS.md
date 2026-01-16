@@ -11,6 +11,7 @@ O sistema Tirilo possui **4 perfis de usuário** com diferentes níveis de acess
 **Permissões:**
 - ✅ Visualizar e gerenciar **todas as clínicas** cadastradas
 - ✅ Criar, editar e desativar clínicas
+- ✅ Gerenciar **Configurações SaaS** (Dados da Empresa, Logo)
 - ✅ Acessar **Help Desk** de todas as clínicas
 - ✅ Responder chamados de suporte
 - ✅ Fazer **backup completo** do sistema
@@ -126,6 +127,7 @@ O sistema Tirilo possui **4 perfis de usuário** com diferentes níveis de acess
 | **Gestão de Equipe** | ❌ | ✅ | ❌ | ❌ |
 | **Gestão de Salas** | ❌ | ✅ | ❌ | ❌ |
 | **Configurações da Clínica** | ❌ | ✅ | ❌ | ❌ |
+| **Configurações SaaS** | ✅ | ❌ | ❌ | ❌ |
 | **Prompts de IA** | ❌ | ✅ | ❌ | ❌ |
 | **Gerar Plano IA** | ❌ | ✅ | ✅ | ❌ |
 | **Dashboard Recepção** | ❌ | ✅ | ❌ | ✅ |
@@ -247,5 +249,5 @@ CREATE TABLE usuarios (
 
 ---
 
-**Última atualização:** 06/12/2024  
-**Versão:** 1.1
+**Última atualização:** 16/01/2026
+**Versão:** 1.2

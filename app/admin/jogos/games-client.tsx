@@ -299,7 +299,7 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                 </div>
             </div>
 
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
                 <table className="w-full text-sm text-left">
                     <thead className="bg-gray-50 dark:bg-gray-800 border-b">
                         <tr>

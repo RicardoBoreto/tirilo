@@ -107,7 +107,7 @@ export default async function HelpDeskPage({
                         >
                             <div className="flex items-start justify-between gap-4">
                                 <div className="space-y-1">
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex flex-wrap items-center gap-3">
                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors">
                                             #{ticket.id} - {ticket.assunto}
                                         </h3>
@@ -115,30 +115,30 @@ export default async function HelpDeskPage({
                                             {getStatusLabel(ticket.status)}
                                         </Badge>
                                     </div>
-                                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
                                         {ticket.usuario_criador && (
                                             <>
                                                 <span className="flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300">
                                                     👤 {ticket.usuario_criador.nome_completo}
                                                 </span>
-                                                <span>•</span>
+                                                <span className="hidden sm:inline">•</span>
                                             </>
                                         )}
                                         <span className="flex items-center gap-1">
                                             {getPriorityIcon(ticket.prioridade)}
                                             Prioridade {ticket.prioridade.charAt(0).toUpperCase() + ticket.prioridade.slice(1)}
                                         </span>
-                                        <span>•</span>
+                                        <span className="hidden sm:inline">•</span>
                                         <span>{new Date(ticket.created_at).toLocaleDateString('pt-BR')} às {new Date(ticket.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                                         {ticket.clinica && (
                                             <>
-                                                <span>•</span>
+                                                <span className="hidden sm:inline">•</span>
                                                 <span className="font-medium text-primary">{ticket.clinica.nome_fantasia}</span>
                                             </>
                                         )}
                                     </div>
                                 </div>
-                                <div className="text-gray-400 group-hover:text-primary transition-colors">
+                                <div className="text-gray-400 group-hover:text-primary transition-colors shrink-0">
                                     <MessageSquare className="w-5 h-5" />
                                 </div>
                             </div>

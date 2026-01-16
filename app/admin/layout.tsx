@@ -36,6 +36,20 @@ export default async function AdminLayout({
             .eq('id', userProfile.id_clinica)
             .single()
         clinicData = clinic
+    } else {
+        // Super Admin - Fetch SaaS Company Data
+        const { data: saasEmpresa } = await supabase
+            .from('saas_empresa')
+            .select('logo_url, nome_fantasia, razao_social')
+            .limit(1)
+            .single()
+
+        if (saasEmpresa) {
+            clinicData = {
+                ...saasEmpresa,
+                config_cor_primaria: '#3b82f6' // Default Blue for Super Admin
+            }
+        }
     }
 
     return (

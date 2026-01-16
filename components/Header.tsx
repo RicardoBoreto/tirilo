@@ -49,7 +49,7 @@ export default function Header({ user, clinic }: HeaderProps) {
                                 <SheetTitle className="hidden">Menu de Navegação</SheetTitle>
                                 <Sidebar
                                     clinic={clinic}
-                                    userRole={(user as any).tipo_perfil}
+                                    userRole={(user as any).tipo_perfil || 'super_admin'}
                                     userId={user.id}
                                     className="w-full h-full border-none rounded-r-3xl"
                                     onLinkClick={() => setSheetOpen(false)}

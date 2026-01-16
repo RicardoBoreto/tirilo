@@ -271,20 +271,31 @@ export default function NovoAgendamentoForm({ trigger, open, onOpenChange, selec
                         />
                     </div>
 
-                    <Button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full h-12 rounded-xl text-lg font-medium bg-primary hover:bg-primary/90"
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                Salvando...
-                            </>
-                        ) : (
-                            agendamentoToEdit ? 'Salvar Alterações' : 'Confirmar Agendamento'
-                        )}
-                    </Button>
+                    <div className="flex gap-3 pt-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsOpen(false)}
+                            disabled={loading}
+                            className="flex-1 h-12 rounded-xl text-base font-medium"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={loading}
+                            className="flex-[2] h-12 rounded-xl text-base font-medium bg-primary hover:bg-primary/90"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                    Salvando...
+                                </>
+                            ) : (
+                                agendamentoToEdit ? 'Salvar' : 'Confirmar'
+                            )}
+                        </Button>
+                    </div>
                 </form>
             </DialogContent>
         </Dialog>

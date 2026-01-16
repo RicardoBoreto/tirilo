@@ -103,13 +103,13 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                 </Button>
             </div>
 
-            <div className="flex gap-2 w-full sm:w-auto items-center">
-                <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-xl mr-2 flex gap-1">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center justify-end">
+                <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl gap-1 overflow-x-auto max-w-full">
                     <Button
                         variant={viewMode === 'day' ? 'secondary' : 'ghost'}
                         size="sm"
                         onClick={() => setViewMode('day')}
-                        className={cn("rounded-lg h-8", viewMode === 'day' && "bg-white shadow-sm")}
+                        className={cn("rounded-lg h-8 whitespace-nowrap", viewMode === 'day' && "bg-white shadow-sm")}
                     >
                         <LayoutList className="w-4 h-4 mr-2" />
                         Dia
@@ -118,7 +118,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                         variant={viewMode === 'week' ? 'secondary' : 'ghost'}
                         size="sm"
                         onClick={() => setViewMode('week')}
-                        className={cn("rounded-lg h-8", viewMode === 'week' && "bg-white shadow-sm")}
+                        className={cn("rounded-lg h-8 whitespace-nowrap", viewMode === 'week' && "bg-white shadow-sm")}
                     >
                         <CalendarRange className="w-4 h-4 mr-2" />
                         Semana
@@ -127,27 +127,29 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                         variant={viewMode === 'month' ? 'secondary' : 'ghost'}
                         size="sm"
                         onClick={() => setViewMode('month')}
-                        className={cn("rounded-lg h-8", viewMode === 'month' && "bg-white shadow-sm")}
+                        className={cn("rounded-lg h-8 whitespace-nowrap", viewMode === 'month' && "bg-white shadow-sm")}
                     >
                         <CalendarDays className="w-4 h-4 mr-2" />
                         Mês
                     </Button>
                 </div>
 
-                <Button
-                    variant="outline"
-                    className="flex-1 sm:flex-none rounded-xl border-gray-200"
-                    onClick={() => setCurrentDate(new Date())}
-                >
-                    Hoje
-                </Button>
-                <Button
-                    className="flex-1 sm:flex-none rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    onClick={() => setShowNovoAgendamento(true)}
-                >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Novo
-                </Button>
+                <div className="flex gap-2 flex-1 sm:flex-none">
+                    <Button
+                        variant="outline"
+                        className="flex-1 sm:flex-none rounded-xl border-gray-200"
+                        onClick={() => setCurrentDate(new Date())}
+                    >
+                        Hoje
+                    </Button>
+                    <Button
+                        className="flex-1 sm:flex-none rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                        onClick={() => setShowNovoAgendamento(true)}
+                    >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Novo
+                    </Button>
+                </div>
             </div>
         </div>
     )
@@ -222,7 +224,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                             <div
                                 key={day.toString()}
                                 className={cn(
-                                    "p-4 text-center border-r border-gray-100 dark:border-gray-700 last:border-r-0",
+                                    "p-1 sm:p-4 text-center border-r border-gray-100 dark:border-gray-700 last:border-r-0",
                                     isToday
                                         ? "bg-blue-100 dark:bg-blue-900/40"
                                         : isEvenColumn
@@ -230,8 +232,8 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                                             : "bg-white dark:bg-gray-900"
                                 )}
                             >
-                                <p className="text-xs font-bold text-gray-500 uppercase mb-1">
-                                    {format(day, 'EEE', { locale: ptBR })}
+                                <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1 truncate">
+                                    {format(day, 'EEE', { locale: ptBR }).replace('.', '')}
                                 </p>
                                 <div className={cn(
                                     "w-8 h-8 rounded-full flex items-center justify-center mx-auto text-sm font-bold",
