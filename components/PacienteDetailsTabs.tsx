@@ -11,6 +11,7 @@ import PlanosIATab from './AI/PlanosIATab'
 import LudoterapiaTab from './LudoterapiaTab'
 import { Camera, Loader2 } from 'lucide-react'
 import Image from 'next/image'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 type Props = {
     paciente: Paciente
@@ -76,7 +77,32 @@ export default function PacienteDetailsTabs({
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
             {/* Tabs Header */}
             <div className="border-b border-gray-200 dark:border-gray-700">
-                <nav className="flex -mb-px overflow-x-auto">
+                {/* Mobile View: Select Dropdown */}
+                <div className="md:hidden p-4">
+                    <Select value={activeTab} onValueChange={(val: any) => setActiveTab(val)}>
+                        <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600">
+                            <SelectValue>
+                                <span className="flex items-center gap-2">
+                                    <span>{tabs.find(t => t.id === activeTab)?.icon}</span>
+                                    <span>{tabs.find(t => t.id === activeTab)?.label}</span>
+                                </span>
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            {tabs.map((tab) => (
+                                <SelectItem key={tab.id} value={tab.id}>
+                                    <span className="flex items-center gap-2">
+                                        <span>{tab.icon}</span>
+                                        <span>{tab.label}</span>
+                                    </span>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                {/* Desktop View: Tabs List */}
+                <nav className="hidden md:flex -mb-px overflow-x-auto">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
