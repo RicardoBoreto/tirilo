@@ -1,7 +1,60 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
+import { GEMINI_MODEL_VERSION } from '@/lib/constants/ai_models'
+
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '')
+
+export async function extractAnamneseFromImage(formData: FormData) {
+    const file = formData.get('file') as File
+    if (!file) throw new Error('Arquivo não fornecido')
+
+    const arrayBuffer = await file.arrayBuffer()
+    const base64Data = Buffer.from(arrayBuffer).toString('base64')
+
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL_VERSION })
+
+    const prompt = `Analise esta imagem de uma ficha de anamnese ou laudo médico manuscrito ou impresso.
+    Sua missão é extrair os dados clínicos para preenchimento de prontuário.
+    Retorne APENAS um objeto JSON estritamente válido (sem markdown, sem code block) com as chaves exatas abaixo.
+    Se a informação não constar, preencha com string vazia "".
+    
+    Chaves requeridas:
+    - gestacao_intercorrencias
+    - parto_tipo (Ex: Normal, Cesárea, Fórceps)
+    - desenvolvimento_motor
+    - desenvolvimento_linguagem
+    - historico_medico
+    - medicamentos_atuais
+    - alergias
+    - diagnostico_principal
+
+    Se houver texto corrido, resuma os pontos principais para cada campo.`
+
+    try {
+        const result = await model.generateContent([
+            prompt,
+            {
+                inlineData: {
+                    data: base64Data,
+                    mimeType: file.type
+                }
+            }
+        ])
+        const response = await result.response
+        const text = response.text()
+
+        // Limpeza básica para garantir JSON válido
+        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim()
+
+        return JSON.parse(cleanText)
+    } catch (e: any) {
+        console.error('Erro na extração IA:', e)
+        throw new Error('Falha ao processar imagem com IA: ' + e.message)
+    }
+}
 
 export type Paciente = {
     id: number

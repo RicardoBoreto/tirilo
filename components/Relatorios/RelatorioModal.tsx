@@ -61,7 +61,8 @@ export default function RelatorioModal({ agendamento, open, onOpenChange, onSucc
             const result = await generateSessionReport(
                 Number(selectedPromptId),
                 agendamento.id_paciente,
-                textoBruto
+                textoBruto,
+                agendamento.data_hora_inicio
             )
 
             if (result.success && result.report) {

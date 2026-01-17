@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { differenceInYears, parseISO } from 'date-fns'
+import { GEMINI_MODEL_VERSION } from '@/lib/constants/ai_models'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '')
 
@@ -199,7 +200,7 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
 
     // 7. Call Gemini API
     try {
-        const model = genAI.getGenerativeModel({ model: promptData.modelo_gemini || 'gemini-2.5-flash' })
+        const model = genAI.getGenerativeModel({ model: promptData.modelo_gemini || GEMINI_MODEL_VERSION })
         const result = await model.generateContent(promptFinal)
         const response = await result.response
         const text = response.text()
@@ -238,7 +239,7 @@ export async function saveInterventionPlan(pacienteId: number, promptId: number,
     return { success: true }
 }
 
-export async function generateSessionReport(promptId: number, pacienteId: number, relatoSessao: string) {
+export async function generateSessionReport(promptId: number, pacienteId: number, relatoSessao: string, dataSessaoIso?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -272,7 +273,16 @@ export async function generateSessionReport(promptId: number, pacienteId: number
         .eq('id_paciente', pacienteId)
         .eq('status', 'finalizado')
         .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(3)
+
+    // 3b. Fetch Previous Plans (last 2)
+    const { data: ultimosPlanos } = await supabase
+        .from('planos_intervencao_ia')
+        .select('created_at, plano_final, titulo')
+        .eq('id_paciente', pacienteId)
+        .order('created_at', { ascending: false })
+        .limit(2)
 
     // 4. Fetch Therapist Data (Curriculum)
     const { data: terapeutaUser } = await supabase
@@ -296,11 +306,16 @@ export async function generateSessionReport(promptId: number, pacienteId: number
         `--- Relatório de ${new Date(r.created_at).toLocaleDateString()} ---\n${r.relatorio_gerado}`
     ).reverse().join('\n\n') || 'Nenhum relatório anterior.'
 
+    const historicoPlanos = ultimosPlanos?.map(p =>
+        `--- Plano (${p.titulo || 'Plano IA'}) de ${new Date(p.created_at).toLocaleDateString()} ---\n${p.plano_final}`
+    ).join('\n\n') || 'Nenhum plano anterior.'
+
     // --- LUDOTERAPIA: DIARIO ---
     const diarioSessao = await getDiarioSessaoTexto(supabase, pacienteId)
     // ---------------------------
 
-    const dataSessao = new Date().toLocaleDateString('pt-BR')
+    const dataObj = dataSessaoIso ? new Date(dataSessaoIso) : new Date()
+    const dataSessao = dataObj.toLocaleDateString('pt-BR')
     const credencial = `${terapeutaUser?.nome_completo || 'Terapeuta'} - ${curriculo?.registro_profissional || ''}`
 
     // Fetch latest plan objective
@@ -336,6 +351,7 @@ export async function generateSessionReport(promptId: number, pacienteId: number
     const anonDiagnostico = anonymize(diagnostico, anonymizationMap)
     const anonRelatoSessao = anonymize(relatoSessao, anonymizationMap)
     const anonHistoricoRelatorios = anonymize(historicoRelatorios, anonymizationMap)
+    const anonHistoricoPlanos = anonymize(historicoPlanos, anonymizationMap)
     const anonDiarioSessao = anonymize(diarioSessao, anonymizationMap)
     const anonObjetivoPlano = anonymize(objetivoPlano, anonymizationMap)
     const anonUltimasSessoes = anonymize(ultimasSessoesResumo, anonymizationMap)
@@ -356,6 +372,7 @@ export async function generateSessionReport(promptId: number, pacienteId: number
         .replace(/{{RELATO_SESSAO}}/g, anonRelatoSessao)
         .replace(/{{RELATO_LIVRE_TERAPEUTA}}/g, anonRelatoSessao)
         .replace(/{{HISTORICO_RELATORIOS}}/g, anonHistoricoRelatorios)
+        .replace(/{{HISTORICO_PLANOS}}/g, anonHistoricoPlanos)
         .replace(/{{DATA_SESSAO}}/g, dataSessao)
         .replace(/{{OBJETIVO_PRINCIPAL_PLANO}}/g, anonObjetivoPlano)
         .replace(/{{ULTIMAS_SESSOES}}/g, anonUltimasSessoes)
@@ -374,7 +391,7 @@ export async function generateSessionReport(promptId: number, pacienteId: number
 
     // 7. Call Gemini API
     try {
-        const model = genAI.getGenerativeModel({ model: promptData.modelo_gemini || 'gemini-2.5-flash' })
+        const model = genAI.getGenerativeModel({ model: promptData.modelo_gemini || GEMINI_MODEL_VERSION })
         const result = await model.generateContent(promptFinal)
         const response = await result.response
         const text = response.text()
@@ -392,28 +409,54 @@ export async function generateSessionReport(promptId: number, pacienteId: number
 export async function getPlanosIAByPaciente(pacienteId: number) {
     const supabase = await createClient()
 
-    const { data: planos, error } = await supabase
+    // Tentar selecionar com a coluna 'titulo' (nova)
+    let { data: planos, error } = await supabase
         .from('planos_intervencao_ia')
         .select(`
             id,
             created_at,
             plano_final,
+            modelo_ia,
+            titulo,
             prompt:prompts_ia(nome_prompt),
             terapeuta:usuarios(nome_completo)
         `)
         .eq('id_paciente', pacienteId)
         .order('created_at', { ascending: false })
 
-    if (error) {
-        console.error('Erro ao buscar planos IA:', JSON.stringify(error, null, 2))
+    // Se erro de coluna inexistente (42703), tenta sem 'titulo' e sem 'modelo_ia' (fallback legado seguro)
+    if (error && error.code === '42703') {
+        console.warn('Coluna titulo ou modelo_ia nao encontrada em planos_intervencao_ia. Usando fallback minimo.')
+        const fallback = await supabase
+            .from('planos_intervencao_ia')
+            .select(`
+            id,
+            created_at,
+            plano_final,
+            prompt:prompts_ia(nome_prompt),
+            terapeuta:usuarios(nome_completo)
+        `)
+            .eq('id_paciente', pacienteId)
+            .order('created_at', { ascending: false })
+
+        if (fallback.error) {
+            console.error('Erro ao buscar planos IA (fallback):', fallback.error)
+            return []
+        }
+        planos = fallback.data
+    } else if (error) {
+        console.error('Erro ao buscar planos IA:', error)
         return []
     }
 
-    return planos.map((p: any) => ({
-        ...p,
-        titulo: p.prompt?.nome_prompt || 'Plano Sem Título',
-        modelo_ia: 'IA' // Default since column is missing
-    }))
+    return planos?.map((p: any) => ({
+        id: p.id,
+        created_at: p.created_at,
+        plano_final: p.plano_final,
+        modelo_ia: p.modelo_ia || 'IA',
+        terapeuta: p.terapeuta,
+        titulo: p.titulo || p.prompt?.nome_prompt || 'Plano de Intervenção' // Usa a nova coluna, ou prompt, ou default
+    })) || []
 }
 
 // --- Helpers de Ludoterapia ---

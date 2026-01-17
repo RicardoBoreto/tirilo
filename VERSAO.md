@@ -9,6 +9,38 @@ Cada versão segue o formato:
   - ✨ Novos Recursos
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
+  - 🐛 Correções de Bugs
+## [1.8.0] - 17/01/2026
+
+### 🤖 Gestão Avançada de IA (Prompts e Relatórios)
+
+#### Templates de Clínica e Clonagem
+- **Prompts Compartilhados:** Prompts criados por Administradores funcionam automaticamente como "Templates da Clínica", visíveis para todos os terapeutas.
+- **Permissões Inteligentes:** Terapeutas podem *ver* e *usar* templates, mas não podem *editar* ou *excluir* os originais.
+- **Clonagem com Edição:** Botão "Clonar" inteligente que abre imediatamente o formulário de edição com os dados copiados, permitindo que o terapeuta personalize um template e salve como seu.
+- **Templates Institucionais:** Administradores podem salvar prompts explicitamente como "Template da Clínica" (propriedade do Admin) ao clonar prompts de outros terapeutas.
+- **Filtro de Admin:** Adicionada opção rápida para filtrar "Meus Prompts (Admin)" na lista de gestão.
+
+#### Relatórios Assistidos 2.0
+- **Contexto Histórico Automático:** A IA agora recebe os últimos 3 relatórios e 2 planos de intervenção como contexto, permitindo maior precisão na análise de evolução.
+- **Fidelidade Garantida:** Ajustes nos prompts para garantir fidelidade estrita às anotações brutas (sem "alucinações" de instrumentos).
+- **Data da Sessão:** A data do relatório gerado agora reflete a data real do *Agendamento*, e não a data atual.
+- **Persona Dinâmica:** O prompt se adapta automaticamente ao cargo do terapeuta (ex: Musicoterapeuta) com base no cadastro.
+
+### 🐛 Correções
+- **RLS de Prompts:** Ajuste nas políticas de segurança do banco para permitir visibilidade compartilhada de templates na mesma clínica.
+
+## [1.7.5] - 17/01/2026
+
+### 🔧 Atualizações de Infraestrutura
+- **Gemini 2.5:** Migração completa dos modelos de IA para a família `gemini-2.5-flash`, devido à descontinuação das versões 1.5. Isso garante maior velocidade e qualidade nas respostas.
+
+## [1.7.4] - 17/01/2026
+
+### 🧠 Importação Inteligente (IA)
+- **Anamnese por Foto:** Preenchimento automático da ficha de anamnese a partir de fotos ou PDFs de documentos físicos, usando Visão Computacional AI.
+- **Digitalização de Histórico:** Importação de relatórios de atendimento antigos (legado). O sistema lê a data e o conteúdo do papel e cria registros digitais retroativos, integrando o passado do paciente à base de conhecimento da IA.
+
 ## [1.7.3] - 16/01/2026
 
 ### 🔒 Segurança e Privacidade (IA)

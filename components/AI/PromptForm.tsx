@@ -17,13 +17,29 @@ interface PromptFormProps {
     onSuccess?: () => void
     terapeutas?: any[]
     isAdmin?: boolean
+    readOnly?: boolean
+    initialData?: Partial<PromptIA>
+    currentUserId?: string
 }
 
-export default function PromptForm({ trigger, promptToEdit, onSuccess, terapeutas = [], isAdmin = false }: PromptFormProps) {
+export default function PromptForm({
+    trigger,
+    promptToEdit,
+    onSuccess,
+    terapeutas = [],
+    isAdmin = false,
+    readOnly = false,
+    initialData,
+    currentUserId
+}: PromptFormProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
 
+    // Data source priority: Edit > Initial/Clone > Empty
+    const data = promptToEdit || initialData || {}
+
     async function handleSubmit(formData: FormData) {
+        if (readOnly) return
         setLoading(true)
         try {
             let result
@@ -60,7 +76,7 @@ export default function PromptForm({ trigger, promptToEdit, onSuccess, terapeuta
             <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                        {promptToEdit ? 'Editar Prompt IA' : 'Novo Prompt IA'}
+                        {readOnly ? 'Visualizar Prompt' : (promptToEdit ? 'Editar Prompt IA' : (initialData ? 'Clonar Prompt IA' : 'Novo Prompt IA'))}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -68,12 +84,13 @@ export default function PromptForm({ trigger, promptToEdit, onSuccess, terapeuta
                     {isAdmin && (
                         <div className="space-y-2">
                             <Label>Terapeuta Dono</Label>
-                            <Select name="terapeuta_id" defaultValue={promptToEdit?.terapeuta_id || ''}>
+                            <Select name="terapeuta_id" defaultValue={data?.terapeuta_id || currentUserId || ''} disabled={readOnly}>
                                 <SelectTrigger className="rounded-xl">
                                     <SelectValue placeholder="Selecione um terapeuta (ou deixe vazio para você)" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {terapeutas.map((t: any) => (
+                                    <SelectItem value={currentUserId || 'me'} className="font-bold text-purple-600">Eu (Admin - Template da Clínica)</SelectItem>
+                                    {terapeutas.filter((t: any) => t.id !== currentUserId).map((t: any) => (
                                         <SelectItem key={t.id} value={t.id}>{t.nome_completo || t.nome}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -86,15 +103,16 @@ export default function PromptForm({ trigger, promptToEdit, onSuccess, terapeuta
                             <Label>Nome do Prompt</Label>
                             <Input
                                 name="nome_prompt"
-                                defaultValue={promptToEdit?.nome_prompt}
+                                defaultValue={initialData ? `Cópia de ${data.nome_prompt}` : data.nome_prompt}
                                 placeholder="Ex: Dra. Clara - Plano 50min"
                                 required
                                 className="rounded-xl"
+                                readOnly={readOnly}
                             />
                         </div>
                         <div className="space-y-2">
                             <Label>Categoria</Label>
-                            <Select name="categoria" defaultValue={promptToEdit?.categoria || 'plano'}>
+                            <Select name="categoria" defaultValue={data.categoria || 'plano'} disabled={readOnly}>
                                 <SelectTrigger className="rounded-xl">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -108,7 +126,7 @@ export default function PromptForm({ trigger, promptToEdit, onSuccess, terapeuta
 
                     <div className="space-y-2">
                         <Label>Modelo Gemini</Label>
-                        <Select name="modelo_gemini" defaultValue={promptToEdit?.modelo_gemini || 'gemini-2.5-flash'}>
+                        <Select name="modelo_gemini" defaultValue={data.modelo_gemini || 'gemini-2.5-flash'} disabled={readOnly}>
                             <SelectTrigger className="rounded-xl">
                                 <SelectValue />
                             </SelectTrigger>
@@ -123,9 +141,10 @@ export default function PromptForm({ trigger, promptToEdit, onSuccess, terapeuta
                         <Label>Descrição Curta</Label>
                         <Input
                             name="descricao"
-                            defaultValue={promptToEdit?.descricao || ''}
+                            defaultValue={data.descricao || ''}
                             placeholder="Ex: Focado em crianças com TEA leve"
                             className="rounded-xl"
+                            readOnly={readOnly}
                         />
                     </div>
 
@@ -136,10 +155,11 @@ export default function PromptForm({ trigger, promptToEdit, onSuccess, terapeuta
                         </Label>
                         <Textarea
                             name="prompt_texto"
-                            defaultValue={promptToEdit?.prompt_texto}
+                            defaultValue={data.prompt_texto}
                             placeholder="Você é um especialista..."
                             required
                             className="min-h-[300px] font-mono text-sm rounded-xl resize-y"
+                            readOnly={readOnly}
                         />
                     </div>
 
@@ -205,15 +225,16 @@ export default function PromptForm({ trigger, promptToEdit, onSuccess, terapeuta
                                 step="0.1"
                                 min="0"
                                 max="1"
-                                defaultValue={promptToEdit?.temperatura || 0.7}
+                                defaultValue={data.temperatura || 0.7}
                                 className="rounded-xl"
+                                readOnly={readOnly}
                             />
                         </div>
                     </div>
 
-                    {promptToEdit && (
+                    {!readOnly && (promptToEdit || initialData) && (
                         <div className="flex items-center gap-2">
-                            <Switch name="ativo" defaultChecked={promptToEdit.ativo} value="true" />
+                            <Switch name="ativo" defaultChecked={data.ativo !== false} value="true" />
                             <Label>Prompt Ativo</Label>
                         </div>
                     )}
@@ -222,14 +243,16 @@ export default function PromptForm({ trigger, promptToEdit, onSuccess, terapeuta
                         <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-xl">
                             Cancelar
                         </Button>
-                        <Button
-                            type="submit"
-                            disabled={loading}
-                            className="rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white"
-                        >
-                            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            Salvar Prompt
-                        </Button>
+                        {!readOnly && (
+                            <Button
+                                type="submit"
+                                disabled={loading}
+                                className="rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white"
+                            >
+                                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                {initialData ? 'Clonar Prompt' : 'Salvar Prompt'}
+                            </Button>
+                        )}
                     </div>
                 </form>
             </DialogContent>

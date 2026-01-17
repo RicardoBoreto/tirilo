@@ -176,7 +176,7 @@ CREATE TABLE public.agendamentos (
     data_hora_inicio TIMESTAMPTZ NOT NULL,
     data_hora_fim TIMESTAMPTZ NOT NULL,
     
-    tipo_sessao TEXT, -- Terapia, Avaliação, Ludoterapia
+    tipo_sessao TEXT, -- Terapia, Avaliação, Ludoterapia, Histórico
     status status_agendamento_enum DEFAULT 'AGENDADO',
     observacoes TEXT,
     
@@ -347,4 +347,54 @@ CREATE TABLE public.comandos_robo (
     status TEXT DEFAULT 'PENDENTE',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     executed_at TIMESTAMPTZ
+);
+
+-- ----------------------------------------------------------------------------
+-- 7. IA GENERATIVA & RELATÓRIOS (V1.7.5)
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE public.prompts_ia (
+    id SERIAL PRIMARY KEY,
+    id_clinica INTEGER REFERENCES public.saas_clinicas(id),
+    terapeuta_id UUID REFERENCES public.usuarios(id),
+    nome_prompt TEXT NOT NULL,
+    descricao TEXT,
+    prompt_texto TEXT NOT NULL,
+    modelo_gemini TEXT DEFAULT 'gemini-2.5-flash',
+    temperatura NUMERIC DEFAULT 0.7,
+    ativo BOOLEAN DEFAULT TRUE,
+    categoria TEXT, -- 'avaliacao', 'plano', 'relatorio'
+    criado_por TEXT, -- Nome do criador
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE public.planos_intervencao_ia (
+    id SERIAL PRIMARY KEY,
+    id_paciente INTEGER REFERENCES public.pacientes(id),
+    id_terapeuta UUID REFERENCES public.usuarios(id),
+    id_prompt_ia INTEGER REFERENCES public.prompts_ia(id), -- Pode ser NULL
+    
+    titulo TEXT, -- Título do plano (Adicionado V1.7.5)
+    plano_final TEXT, -- Texto gerado/importado
+    plano_original TEXT, -- Texto raw da IA
+    modelo_ia TEXT, -- Versão do modelo usado
+    
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE public.relatorios_atendimento (
+    id SERIAL PRIMARY KEY,
+    id_agendamento INTEGER REFERENCES public.agendamentos(id),
+    id_paciente INTEGER REFERENCES public.pacientes(id),
+    id_terapeuta UUID REFERENCES public.usuarios(id),
+    id_clinica INTEGER REFERENCES public.saas_clinicas(id),
+    id_prompt_ia INTEGER REFERENCES public.prompts_ia(id),
+
+    texto_bruto TEXT, -- Notas originais do terapeuta
+    relatorio_gerado TEXT, -- Texto final melhorado pela IA
+    status TEXT DEFAULT 'rascunho', -- 'rascunho', 'finalizado'
+    
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );

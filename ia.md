@@ -87,9 +87,12 @@ Este próprio arquivo, que detalha o funcionamento funcional e arquitetural do m
 - **Categorização:**
   - **Plano de Intervenção:** Prompts focados em criar estratégias futuras. Aparecem no modal "Gerar Plano (IA)".
   - **Relatório de Atendimento:** Prompts focados em resumir o passado (sessão). Aparecem no modal "Registrar Atendimento (IA)".
-- **Visibilidade e Templates:**
-  - Terapeutas veem seus próprios prompts **E** prompts criados por Administradores (Templates da Clínica).
-  - Terapeutas podem ter prompts com o mesmo nome de outros colegas (Unicidade por Terapeuta).
+- **Visibilidade e Templates (Gestão 2.0):**
+  - **Templates da Clínica:** Prompts criados por `admins` são visíveis para todos os terapeutas da clínica (Leitura).
+  - **Permissões:** Terapeutas só editam/excluem seus próprios prompts. Templates são protegidos ("Read-Only" para terapeutas).
+  - **Clonagem:** Qualquer usuário pode clonar um prompt (pessoal ou template). A clonagem abre imediatamente a tela de edição para personalização.
+  - **Role Dinâmica:** O prompt adapta automaticamente a "persona" da IA (Ex: "Atue como Musicoterapeuta") baseando-se no cadastro profissional do usuário.
+  - **Contexto Avançado:** A IA recebe automaticamente histórico de relatórios e planos anteriores para maior precisão e continuidade do tratamento.
 - **Estrutura de Dados:** Detalha as tabelas `prompts_ia` e `planos_intervencao_ia`.
 - **Funcionalidades:** Cobre a geração de planos (modal) e a visualização do histórico (aba Planos IA) com TTS.
 
@@ -129,3 +132,19 @@ Assim que a resposta da IA é recebida pelo servidor:
 - O sistema reverte **`SAM`** para o **Nome Real do Terapeuta**.
 
 O usuário final vê apenas os nomes corretos, tornando o processo de segurança transparente e invisível na interface.
+
+## 🤖 Modelos e Capacidades (IA)
+
+### Modelos Utilizados
+**ATENÇÃO:** O sistema está configurado para usar estritamente a versão `gemini-2.5-flash` (definida em `lib/constants/ai_models.ts`). Não faça downgrade para versões 1.5, pois foram descontinuadas ou substituídas.
+
+O sistema utiliza a família de modelos **Google Gemini** através da API Vertex AI / Google AI Studio.
+- **Geração de Texto:** `gemini-2.5-flash` (Alta velocidade e baixo custo para planos e relatórios).
+- **Visão Computacional (OCR Inteligente):** `gemini-2.5-flash` (Multimodal). Capaz de analisar imagens de documentos (JPG, PNG) e PDFs para extrair dados estruturados.
+
+### Capacidades de Importação
+Além de gerar conteúdo novo, a IA atua como agente de digitalização para legados:
+1.  **Anamnese por Foto:** O usuário tira foto da ficha de papel → IA extrai campos médicos e histórico → Preenche o formulário digital.
+2.  **Histórico de Atendimentos:** O usuário tira foto de relatórios antigos/manuscritos → IA extrai Data e Texto → Sistema cria registros retroativos na linha do tempo do paciente.
+
+Isso permite migrar acervos físicos inteiros para o sistema digital de forma rápida, enriquecendo o contexto para futuras gerações de planos.

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { saveAnamnese, uploadLaudo, getLaudoSignedUrl, type Anamnese } from '@/lib/actions/pacientes'
+import { saveAnamnese, uploadLaudo, getLaudoSignedUrl, extractAnamneseFromImage, type Anamnese } from '@/lib/actions/pacientes'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Confetti } from '@/components/ui/Confetti'
-import { Loader2, Upload, FileText, Music, Activity, Printer } from 'lucide-react'
+import { Loader2, Upload, FileText, Music, Activity, Printer, Sparkles } from 'lucide-react'
 
 type Props = {
     pacienteId: number
@@ -24,8 +24,10 @@ export default function AnamneseTab({ pacienteId, anamnese, pacienteNome, clinic
     const [activeSubTab, setActiveSubTab] = useState<'desenvolvimento' | 'laudo' | 'musicoterapia'>('desenvolvimento')
     const [loading, setLoading] = useState(false)
     const [uploadingLaudo, setUploadingLaudo] = useState(false)
+    const [importingAI, setImportingAI] = useState(false) // New state
     const [showConfetti, setShowConfetti] = useState(false)
 
+    // ... existing states ...
     const [formData, setFormData] = useState({
         gestacao_intercorrencias: anamnese?.gestacao_intercorrencias || '',
         parto_tipo: anamnese?.parto_tipo || '',
@@ -51,6 +53,47 @@ export default function AnamneseTab({ pacienteId, anamnese, pacienteNome, clinic
         setTimeout(() => setShowConfetti(false), 5000)
     }
 
+    async function handleImportFromAI(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        if (!confirm('Isso irá substituir os campos atuais pelos dados extraídos da imagem. Deseja continuar?')) {
+            e.target.value = '' // Reset input
+            return
+        }
+
+        setImportingAI(true)
+        try {
+            const formDataUpload = new FormData()
+            formDataUpload.append('file', file)
+
+            const extractedData = await extractAnamneseFromImage(formDataUpload)
+
+            // Merge extracted data into form state
+            setFormData(prev => ({
+                ...prev,
+                gestacao_intercorrencias: extractedData.gestacao_intercorrencias || prev.gestacao_intercorrencias,
+                parto_tipo: extractedData.parto_tipo || prev.parto_tipo,
+                desenvolvimento_motor: extractedData.desenvolvimento_motor || prev.desenvolvimento_motor,
+                desenvolvimento_linguagem: extractedData.desenvolvimento_linguagem || prev.desenvolvimento_linguagem,
+                historico_medico: extractedData.historico_medico || prev.historico_medico,
+                medicamentos_atuais: extractedData.medicamentos_atuais || prev.medicamentos_atuais,
+                alergias: extractedData.alergias || prev.alergias,
+                diagnostico_principal: extractedData.diagnostico_principal || prev.diagnostico_principal,
+            }))
+
+            alert('Dados extraídos com sucesso! Por favor, revise e salve.')
+            setActiveSubTab('desenvolvimento') // Switch to main tab to see changes
+        } catch (error) {
+            console.error('Erro na importação IA:', error)
+            alert('Erro ao processar imagem. Tente novamente com uma foto mais nítida.')
+        } finally {
+            setImportingAI(false)
+            e.target.value = ''
+        }
+    }
+
+    // ... existing functions ...
     async function handleSaveDesenvolvimento() {
         setLoading(true)
         try {
@@ -288,10 +331,33 @@ export default function AnamneseTab({ pacienteId, anamnese, pacienteNome, clinic
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                     Anamnese Completa
                 </h2>
-                <Button variant="outline" onClick={handlePrint} className="gap-2">
-                    <Printer className="w-4 h-4" />
-                    Imprimir Ficha
-                </Button>
+                <div className="flex gap-2">
+                    <label className="cursor-pointer">
+                        <Button
+                            variant="secondary"
+                            className="gap-2 bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800"
+                            disabled={importingAI}
+                            asChild
+                        >
+                            <span>
+                                {importingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                                Importar Foto (IA)
+                            </span>
+                        </Button>
+                        <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*,application/pdf"
+                            onChange={handleImportFromAI}
+                            disabled={importingAI}
+                        />
+                    </label>
+
+                    <Button variant="outline" onClick={handlePrint} className="gap-2">
+                        <Printer className="w-4 h-4" />
+                        Imprimir Ficha
+                    </Button>
+                </div>
             </div>
 
             {/* Sub-tabs */}

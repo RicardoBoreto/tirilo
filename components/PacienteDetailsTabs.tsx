@@ -252,7 +252,7 @@ export default function PacienteDetailsTabs({
                 )}
 
                 {activeTab === 'relatorios' && (
-                    <RelatoriosTab relatorios={relatorios} pacienteNome={paciente.nome} />
+                    <RelatoriosTab relatorios={relatorios} pacienteNome={paciente.nome} pacienteId={paciente.id} />
                 )}
 
                 {activeTab === 'ludoterapia' && (
@@ -260,7 +260,7 @@ export default function PacienteDetailsTabs({
                 )}
 
                 {activeTab === 'planos_ia' && (
-                    <PlanosIATab planos={planosIA} />
+                    <PlanosIATab planos={planosIA} pacienteId={paciente.id} />
                 )}
             </div>
         </div>
