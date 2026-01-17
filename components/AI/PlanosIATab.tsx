@@ -98,7 +98,7 @@ export default function PlanosIATab({ planos, pacienteId }: Props) {
             if (result.success) {
                 setSelectedPlano({
                     ...selectedPlano,
-                    plano_final: result.plano,
+                    plano_final: result.plano || '',
                     historico_chat: result.historico
                 })
                 setChatInput('')
@@ -422,7 +422,7 @@ export default function PlanosIATab({ planos, pacienteId }: Props) {
                                 </Popover>
 
                                 <Button
-                                    onClick={() => selectedPlano && handlePlayPause(selectedPlano.plano_final)}
+                                    onClick={() => selectedPlano && handlePlayPause(selectedPlano.plano_final || '')}
                                     variant={isPlaying ? "destructive" : "default"}
                                     size="sm"
                                     className="gap-2"
@@ -469,8 +469,8 @@ export default function PlanosIATab({ planos, pacienteId }: Props) {
                                         {selectedPlano?.historico_chat?.map((msg: any, idx: number) => (
                                             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                                 <div className={`max-w-[85%] rounded-2xl p-3 px-4 shadow-sm ${msg.role === 'user'
-                                                        ? 'bg-purple-600 text-white rounded-tr-none'
-                                                        : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-none border border-gray-100 dark:border-gray-600'
+                                                    ? 'bg-purple-600 text-white rounded-tr-none'
+                                                    : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-none border border-gray-100 dark:border-gray-600'
                                                     }`}>
                                                     <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                                                 </div>
