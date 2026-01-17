@@ -95,6 +95,7 @@ Este próprio arquivo, que detalha o funcionamento funcional e arquitetural do m
   - **Contexto Avançado:** A IA recebe automaticamente histórico de relatórios e planos anteriores para maior precisão e continuidade do tratamento.
 - **Estrutura de Dados:** Detalha as tabelas `prompts_ia` e `planos_intervencao_ia`.
 - **Funcionalidades:** Cobre a geração de planos (modal) e a visualização do histórico (aba Planos IA) com TTS.
+  - **Refinamento Conversacional:** Interface de chat integrada que permite "conversar com o documento". O terapeuta envia feedbacks para a IA (ex: "Foque mais em coordenação motora"), e o sistema regenera o plano mantendo o contexto histórico.
 
 ### 🎨 Padrões de Interface (UI)
 Detalha o padrão visual adotado para as ferramentas de IA:

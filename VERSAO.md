@@ -27,6 +27,10 @@ Cada versão segue o formato:
 - **Data da Sessão:** A data do relatório gerado agora reflete a data real do *Agendamento*, e não a data atual.
 - **Persona Dinâmica:** O prompt se adapta automaticamente ao cargo do terapeuta (ex: Musicoterapeuta) com base no cadastro.
 
+#### Planos de Intervenção Interativos
+- **Refinamento Conversacional:** Nova interface de chat que permite ao terapeuta "conversar" com a IA para ajustar e refinar o plano gerado em tempo real. O histórico da conversa é salvo automaticamente.
+- **Mobile First:** Melhorias na navegação (menu dropdown) e na leitura de voz (TTS Chunking) para garantir funcionamento perfeito em celulares.
+
 ### 🐛 Correções
 - **RLS de Prompts:** Ajuste nas políticas de segurança do banco para permitir visibilidade compartilhada de templates na mesma clínica.
 
