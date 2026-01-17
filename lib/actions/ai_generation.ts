@@ -443,7 +443,7 @@ export async function getPlanosIAByPaciente(pacienteId: number) {
             console.error('Erro ao buscar planos IA (fallback):', fallback.error)
             return []
         }
-        planos = fallback.data
+        planos = fallback.data as any
     } else if (error) {
         console.error('Erro ao buscar planos IA:', error)
         return []
