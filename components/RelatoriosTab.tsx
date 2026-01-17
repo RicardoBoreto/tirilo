@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { FileText, Eye, User, Calendar, Printer, FileDown, Upload, Loader2, Sparkles, Trash2, Play, Pause, Settings2 } from 'lucide-react'
@@ -15,6 +15,49 @@ import jsPDF from 'jspdf'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Slider } from '@/components/ui/slider'
+
+// Helper para dividir texto em chunks seguros para Mobile TTS
+function splitText(text: string, maxLength: number = 250): string[] {
+    // 1. Limpa markdown
+    const clean = stripMarkdown(text)
+
+    // 2. Divide em sentenças
+    const sentences = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [clean]
+
+    const chunks: string[] = []
+    let currentChunk = ''
+
+    for (const sentence of sentences) {
+        // Se a sentença sozinha já for gigante (raro), quebra ela por palavras
+        if (sentence.length > maxLength) {
+            if (currentChunk) {
+                chunks.push(currentChunk.trim())
+                currentChunk = ''
+            }
+            const words = sentence.split(' ')
+            for (const word of words) {
+                if ((currentChunk + ' ' + word).length <= maxLength) {
+                    currentChunk += (currentChunk ? ' ' : '') + word
+                } else {
+                    chunks.push(currentChunk.trim())
+                    currentChunk = word
+                }
+            }
+            continue
+        }
+
+        // Acumula sentenças até o limite
+        if ((currentChunk + ' ' + sentence).length <= maxLength) {
+            currentChunk += (currentChunk ? ' ' : '') + sentence
+        } else {
+            chunks.push(currentChunk.trim())
+            currentChunk = sentence
+        }
+    }
+    if (currentChunk) chunks.push(currentChunk.trim())
+
+    return chunks
+}
 
 function stripMarkdown(text: string): string {
     return text
@@ -53,10 +96,15 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
 
     // TTS States
     const [isPlaying, setIsPlaying] = useState(false)
-    const [speechSynthesisInstance, setSpeechSynthesisInstance] = useState<SpeechSynthesisUtterance | null>(null)
+    const [speechSynthesisInstance, setSpeechSynthesisInstance] = useState<SpeechSynthesisUtterance | null>(null) // Mantido para compatibilidade, mas agora usamos chunks
     const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
     const [selectedVoice, setSelectedVoice] = useState<string>('')
     const [rate, setRate] = useState([1.0])
+
+    // Refs para controle de playback sequencial (Chunking)
+    const chunksRef = useRef<string[]>([])
+    const currentChunkIndexRef = useRef(0)
+    const isPlayingRef = useRef(false) // Ref para acesso síncrono nos callbacks
 
     // Import Modal States
     const [isImportModalOpen, setIsImportModalOpen] = useState(false)
@@ -77,6 +125,64 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
         return () => { window.speechSynthesis.onvoiceschanged = null }
     }, [])
 
+    // Função recursiva para tocar chunks
+    const speakNextChunk = () => {
+        if (!isPlayingRef.current) return
+
+        if (currentChunkIndexRef.current >= chunksRef.current.length) {
+            setIsPlaying(false)
+            isPlayingRef.current = false
+            currentChunkIndexRef.current = 0
+            return
+        }
+
+        const chunkText = chunksRef.current[currentChunkIndexRef.current]
+        const utterance = new SpeechSynthesisUtterance(chunkText)
+
+        // Configuração de Voz (Mesma lógica robusta)
+        utterance.lang = 'pt-BR'
+        utterance.rate = rate[0]
+
+        // Tentar recarregar vozes se necessário
+        let currentVoices = voices
+        if (currentVoices.length === 0) {
+            currentVoices = window.speechSynthesis.getVoices()
+        }
+
+        if (selectedVoice) {
+            const voice = currentVoices.find(v => v.name === selectedVoice)
+            if (voice) utterance.voice = voice
+        } else if (currentVoices.length > 0) {
+            const ptVoice = currentVoices.find(v => v.lang.includes('pt-BR')) || currentVoices.find(v => v.lang.includes('pt'))
+            if (ptVoice) utterance.voice = ptVoice
+        }
+
+        utterance.onend = () => {
+            if (isPlayingRef.current) {
+                currentChunkIndexRef.current++
+                speakNextChunk()
+            }
+        }
+
+        utterance.onerror = (e) => {
+            console.error('TTS Chunk Error:', e)
+            // Tenta pular para o próximo chunk se der erro em um
+            if (e.error !== 'interrupted' && e.error !== 'canceled') {
+                if (isPlayingRef.current) {
+                    currentChunkIndexRef.current++
+                    setTimeout(speakNextChunk, 100) // Pequeno delay para recuperar engine
+                }
+            } else {
+                setIsPlaying(false)
+                isPlayingRef.current = false
+            }
+        }
+
+        window.speechSynthesis.speak(utterance)
+        // Atualiza instância global apenas para referência (cancelamento geral)
+        setSpeechSynthesisInstance(utterance)
+    }
+
     const handlePlayPause = (text: string) => {
         if (!window.speechSynthesis) {
             alert('Seu navegador não suporta leitura de texto (TTS).')
@@ -84,58 +190,24 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
         }
 
         if (isPlaying) {
+            // Parar
             window.speechSynthesis.cancel()
             setIsPlaying(false)
+            isPlayingRef.current = false
+            currentChunkIndexRef.current = 0
             setSpeechSynthesisInstance(null)
         } else {
-            // Mobile Fix: Cancelar qualquer áudio pendente antes de começar
-            window.speechSynthesis.cancel()
+            // Tocar
+            window.speechSynthesis.cancel() // Limpa fila
 
-            // Tentar recarregar vozes se necessário (Mobile às vezes perde o cache)
-            let currentVoices = voices
-            if (currentVoices.length === 0) {
-                const available = window.speechSynthesis.getVoices()
-                if (available.length > 0) {
-                    setVoices(available)
-                    currentVoices = available
-                }
-            }
-
-            const cleanText = stripMarkdown(text)
-            // Mobile Fix: Textos muito longos podem falhar no Android. Dividir se necessário seria ideal, mas por enquanto vamos confiar no SO.
-            const utterance = new SpeechSynthesisUtterance(cleanText)
-
-            // Tentar forçar pt-BR, mas aceitar qualquer se falhar
-            utterance.lang = 'pt-BR'
-            utterance.rate = rate[0]
-
-            // Seleção de voz robusta
-            if (selectedVoice) {
-                const voice = currentVoices.find(v => v.name === selectedVoice)
-                if (voice) utterance.voice = voice
-            } else if (currentVoices.length > 0) {
-                // Tentar achar uma voz PT automaticamente com mais afinco
-                const ptVoice = currentVoices.find(v => v.lang.includes('pt-BR')) || currentVoices.find(v => v.lang.includes('pt'))
-                if (ptVoice) utterance.voice = ptVoice
-            }
-
-            utterance.onend = () => {
-                setIsPlaying(false)
-                setSpeechSynthesisInstance(null)
-            }
-
-            utterance.onerror = (e) => {
-                console.error('TTS Error:', e)
-                setIsPlaying(false)
-                // Opcional: alertar usuário se não for cancelamento manual
-                if (e.error !== 'interrupted' && e.error !== 'canceled') {
-                    // alert('Erro ao reproduzir áudio: ' + e.error)
-                }
-            }
-
-            window.speechSynthesis.speak(utterance)
-            setSpeechSynthesisInstance(utterance)
+            // Prepara chunks
+            chunksRef.current = splitText(text)
+            currentChunkIndexRef.current = 0
+            isPlayingRef.current = true
             setIsPlaying(true)
+
+            // Inicia playback
+            speakNextChunk()
         }
     }
 
