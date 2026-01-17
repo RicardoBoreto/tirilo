@@ -102,7 +102,7 @@ export default function PlanosIATab({ planos, pacienteId }: Props) {
                     historico_chat: result.historico
                 })
                 setChatInput('')
-                // Alerta sucesso?
+                router.refresh()
             } else {
                 alert('Erro ao refinar: ' + result.error)
             }

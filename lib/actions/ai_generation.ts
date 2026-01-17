@@ -455,7 +455,8 @@ export async function getPlanosIAByPaciente(pacienteId: number) {
         plano_final: p.plano_final,
         modelo_ia: p.modelo_ia || 'IA',
         terapeuta: p.terapeuta,
-        titulo: p.titulo || p.prompt?.nome_prompt || 'Plano de Intervenção' // Usa a nova coluna, ou prompt, ou default
+        titulo: p.titulo || p.prompt?.nome_prompt || 'Plano de Intervenção',
+        historico_chat: p.historico_chat || [] // Agora incluído
     })) || []
 }
 
