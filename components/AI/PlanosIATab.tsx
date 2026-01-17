@@ -24,6 +24,8 @@ import { useRouter } from 'next/navigation'
 import jsPDF from 'jspdf'
 
 import { extractPlanoFromImage, importarPlanoLegado, deletePlanoIA } from '@/lib/actions/planos'
+import { refineInterventionPlan } from '@/lib/actions/ai_generation'
+import { Send, MessageSquare } from 'lucide-react'
 
 // Helper to strip markdown for TTS and PDF
 function stripMarkdown(text: string): string {
@@ -46,6 +48,7 @@ type PlanoIA = {
     terapeuta?: {
         nome_completo: string
     }
+    historico_chat?: any[]
 }
 
 type Props = {
@@ -75,6 +78,41 @@ export default function PlanosIATab({ planos, pacienteId }: Props) {
     const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
     const [selectedVoice, setSelectedVoice] = useState<string>('')
     const [rate, setRate] = useState([1.0])
+
+    // Chat & Refinement States
+    const [chatMode, setChatMode] = useState(false)
+    const [chatInput, setChatInput] = useState('')
+    const [isRefining, setIsRefining] = useState(false)
+
+    const handleRefine = async () => {
+        if (!selectedPlano || !chatInput.trim()) return
+
+        setIsRefining(true)
+        try {
+            // Optimistic Update (UI Only) - Adiciona msg do usuário
+            const currentHistory = selectedPlano.historico_chat || []
+            // Não vamos atualizar o estado optimisticamente complexo, vamos esperar a IA.
+
+            const result = await refineInterventionPlan(selectedPlano.id, chatInput)
+
+            if (result.success) {
+                setSelectedPlano({
+                    ...selectedPlano,
+                    plano_final: result.plano,
+                    historico_chat: result.historico
+                })
+                setChatInput('')
+                // Alerta sucesso?
+            } else {
+                alert('Erro ao refinar: ' + result.error)
+            }
+        } catch (error) {
+            console.error(error)
+            alert('Erro ao comunicar com a IA')
+        } finally {
+            setIsRefining(false)
+        }
+    }
 
     useEffect(() => {
         const loadVoices = () => {
@@ -119,6 +157,7 @@ export default function PlanosIATab({ planos, pacienteId }: Props) {
     const handleOpenChange = (open: boolean) => {
         if (!open) {
             setSelectedPlano(null)
+            setChatMode(false)
             if (isPlaying) {
                 window.speechSynthesis.cancel()
                 setIsPlaying(false)
@@ -294,120 +333,187 @@ export default function PlanosIATab({ planos, pacienteId }: Props) {
             ) : (
                 <div className="grid gap-4">
                     {planos.map((plano) => (
-                        <div key={plano.id} className="relative group">
-                            <Dialog onOpenChange={handleOpenChange} open={selectedPlano?.id === plano.id}>
-                                <DialogTrigger asChild>
-                                    <div
-                                        onClick={() => setSelectedPlano(plano)}
-                                        className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-900 transition-all cursor-pointer shadow-sm hover:shadow-md group"
+                        <div
+                            key={plano.id}
+                            onClick={() => { setSelectedPlano(plano); setChatMode(false); }}
+                            className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-900 transition-all cursor-pointer shadow-sm hover:shadow-md group relative"
+                        >
+                            <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-semibold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                    {plano.titulo}
+                                </h4>
+                                <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs font-normal">
+                                        {plano.modelo_ia}
+                                    </Badge>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-gray-400 hover:text-red-500 -mt-1 -mr-2"
+                                        onClick={(e) => handleDelete(e, plano.id)}
+                                        disabled={isDeleting === plano.id}
                                     >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h4 className="font-semibold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                                                {plano.titulo}
-                                            </h4>
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant="outline" className="text-xs font-normal">
-                                                    {plano.modelo_ia}
-                                                </Badge>
-                                                {/* Delete Button */}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6 text-gray-400 hover:text-red-500 -mt-1 -mr-2"
-                                                    onClick={(e) => handleDelete(e, plano.id)}
-                                                    disabled={isDeleting === plano.id}
-                                                >
-                                                    {isDeleting === plano.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                                            <span className="flex items-center gap-1">
-                                                <Clock className="w-4 h-4" />
-                                                {format(new Date(plano.created_at), "dd 'de' MMM, yyyy", { locale: ptBR })}
-                                            </span>
-                                            {plano.terapeuta && (
-                                                <span className="flex items-center gap-1">
-                                                    <CheckCircle className="w-4 h-4 text-green-500" />
-                                                    {plano.terapeuta.nome_completo}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-                                            {stripMarkdown(plano.plano_final)}
-                                        </p>
-                                    </div>
-                                </DialogTrigger>
-
-                                <DialogContent className="max-w-3xl h-[85vh] flex flex-col">
-                                    <DialogHeader>
-                                        <DialogTitle className="flex items-center justify-between mr-8">
-                                            <span>{plano.titulo}</span>
-                                        </DialogTitle>
-                                        <div className="text-sm text-gray-500 flex gap-4 mt-1">
-                                            <span>Gerado em {format(new Date(plano.created_at), "dd/MM/yyyy HH:mm")}</span>
-                                        </div>
-                                    </DialogHeader>
-
-                                    <div className="flex-1 overflow-hidden flex flex-col gap-4 min-h-0">
-                                        <div className="flex justify-between items-center gap-4 border-b pb-4">
-                                            <div className="flex gap-2">
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <Button variant="outline" size="sm" className="gap-2">
-                                                            <Settings2 className="w-4 h-4" />
-                                                            Voz
-                                                        </Button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-80">
-                                                        <div className="grid gap-4">
-                                                            <div className="space-y-2">
-                                                                <h4 className="font-medium leading-none">Voz e Velocidade</h4>
-                                                            </div>
-                                                            <div className="grid gap-2">
-                                                                <Label htmlFor="voice">Voz</Label>
-                                                                <Select onValueChange={setSelectedVoice} value={selectedVoice}>
-                                                                    <SelectTrigger id="voice" className="h-8"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {voices.map((v) => <SelectItem key={v.name} value={v.name}>{v.name}</SelectItem>)}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                            <div className="grid gap-2">
-                                                                <Label htmlFor="rate">Velocidade: {rate[0]}x</Label>
-                                                                <Slider id="rate" max={2} min={0.5} step={0.1} value={rate} onValueChange={setRate} />
-                                                            </div>
-                                                        </div>
-                                                    </PopoverContent>
-                                                </Popover>
-
-                                                <Button
-                                                    onClick={() => handlePlayPause(plano.plano_final)}
-                                                    variant={isPlaying ? "destructive" : "default"}
-                                                    size="sm"
-                                                    className="gap-2"
-                                                >
-                                                    {isPlaying ? <><Pause className="w-4 h-4" /> Parar</> : <><Play className="w-4 h-4" /> Ler</>}
-                                                </Button>
-                                            </div>
-
-                                            <Button variant="outline" size="sm" onClick={handleGeneratePDF} className="gap-2">
-                                                <FileDown className="w-4 h-4" /> PDF
-                                            </Button>
-                                        </div>
-
-                                        <div className="flex-1 overflow-y-auto border rounded-md p-4 bg-gray-50 dark:bg-gray-900">
-                                            <div className="prose dark:prose-invert max-w-none text-justify">
-                                                <ReactMarkdown>{plano.plano_final}</ReactMarkdown>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
+                                        {isDeleting === plano.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                                    </Button>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                                <span className="flex items-center gap-1">
+                                    <Clock className="w-4 h-4" />
+                                    {format(new Date(plano.created_at), "dd 'de' MMM, yyyy", { locale: ptBR })}
+                                </span>
+                                {plano.terapeuta && (
+                                    <span className="flex items-center gap-1">
+                                        <CheckCircle className="w-4 h-4 text-green-500" />
+                                        {plano.terapeuta.nome_completo}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-3 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                                {stripMarkdown(plano.plano_final)}
+                            </p>
                         </div>
                     ))}
                 </div>
             )}
+
+            {/* Single Dialog Instance for View/Edit */}
+            <Dialog open={!!selectedPlano} onOpenChange={handleOpenChange}>
+                <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center justify-between mr-8">
+                            <span>{selectedPlano?.titulo}</span>
+                        </DialogTitle>
+                        <div className="text-sm text-gray-500 flex gap-4 mt-1">
+                            <span>Gerado em {selectedPlano && format(new Date(selectedPlano.created_at), "dd/MM/yyyy HH:mm")}</span>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-hidden flex flex-col gap-4 min-h-0">
+                        <div className="flex justify-between items-center gap-4 border-b pb-4">
+                            <div className="flex gap-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="sm" className="gap-2">
+                                            <Settings2 className="w-4 h-4" />
+                                            Voz
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80">
+                                        <div className="grid gap-4">
+                                            <div className="space-y-2">
+                                                <h4 className="font-medium leading-none">Voz e Velocidade</h4>
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="voice">Voz</Label>
+                                                <Select onValueChange={setSelectedVoice} value={selectedVoice}>
+                                                    <SelectTrigger id="voice" className="h-8"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {voices.map((v) => <SelectItem key={v.name} value={v.name}>{v.name}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="rate">Velocidade: {rate[0]}x</Label>
+                                                <Slider id="rate" max={2} min={0.5} step={0.1} value={rate} onValueChange={setRate} />
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+
+                                <Button
+                                    onClick={() => selectedPlano && handlePlayPause(selectedPlano.plano_final)}
+                                    variant={isPlaying ? "destructive" : "default"}
+                                    size="sm"
+                                    className="gap-2"
+                                >
+                                    {isPlaying ? <><Pause className="w-4 h-4" /> Parar</> : <><Play className="w-4 h-4" /> Ler</>}
+                                </Button>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <Button
+                                    variant={chatMode ? "secondary" : "outline"}
+                                    size="sm"
+                                    onClick={() => setChatMode(!chatMode)}
+                                    className="gap-2 border-purple-200 text-purple-700 hover:bg-purple-50"
+                                >
+                                    <MessageSquare className="w-4 h-4" />
+                                    {chatMode ? 'Ver Documento' : 'Refinar com IA'}
+                                </Button>
+
+                                <Button variant="outline" size="sm" onClick={handleGeneratePDF} className="gap-2">
+                                    <FileDown className="w-4 h-4" /> PDF
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-hidden relative border rounded-md bg-gray-50 dark:bg-gray-900 flex">
+                            {!chatMode ? (
+                                <div className="flex-1 overflow-y-auto p-6 md:p-8">
+                                    <div className="prose dark:prose-invert max-w-none text-justify">
+                                        <ReactMarkdown>{selectedPlano?.plano_final || ''}</ReactMarkdown>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-800">
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900/50">
+                                        {(!selectedPlano?.historico_chat || selectedPlano.historico_chat.length === 0) && (
+                                            <div className="text-center text-gray-500 py-8">
+                                                <Sparkles className="w-8 h-8 mx-auto mb-2 text-purple-300" />
+                                                <p>Este plano foi gerado pela IA.</p>
+                                                <p className="text-sm">Envie instruções abaixo para refinar ou alterar o conteúdo.</p>
+                                            </div>
+                                        )}
+
+                                        {selectedPlano?.historico_chat?.map((msg: any, idx: number) => (
+                                            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[85%] rounded-2xl p-3 px-4 shadow-sm ${msg.role === 'user'
+                                                        ? 'bg-purple-600 text-white rounded-tr-none'
+                                                        : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-none border border-gray-100 dark:border-gray-600'
+                                                    }`}>
+                                                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {isRefining && (
+                                            <div className="flex justify-start">
+                                                <div className="bg-white dark:bg-gray-800 border rounded-2xl p-3 flex items-center gap-3 shadow-sm">
+                                                    <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                                                    <span className="text-sm text-gray-500">Reescrevendo plano...</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="p-4 border-t bg-white dark:bg-gray-800 flex gap-2">
+                                        <Textarea
+                                            value={chatInput}
+                                            onChange={(e) => setChatInput(e.target.value)}
+                                            placeholder="O que você gostaria de mudar neste plano?"
+                                            className="min-h-[50px] max-h-[120px] resize-none focus-visible:ring-purple-500"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault()
+                                                    handleRefine()
+                                                }
+                                            }}
+                                        />
+                                        <Button
+                                            onClick={handleRefine}
+                                            disabled={isRefining || !chatInput.trim()}
+                                            className="h-full px-6 bg-purple-600 hover:bg-purple-700"
+                                        >
+                                            {isRefining ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Import Modal */}
             <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>

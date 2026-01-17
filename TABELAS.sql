@@ -379,6 +379,7 @@ CREATE TABLE public.planos_intervencao_ia (
     plano_final TEXT, -- Texto gerado/importado
     plano_original TEXT, -- Texto raw da IA
     modelo_ia TEXT, -- Versão do modelo usado
+    historico_chat JSONB DEFAULT '[]'::jsonb, -- Histórico de conversa para refinamento
     
     created_at TIMESTAMPTZ DEFAULT NOW()
 );

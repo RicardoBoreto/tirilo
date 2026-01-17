@@ -557,3 +557,110 @@ async function getDiarioSessaoTexto(supabase: any, pacienteId: number) {
         return `${prefixo} ${hora}: ${l.texto_transcrito}`
     }).join('\n')
 }
+
+export async function refineInterventionPlan(planoId: number, feedbackUsuario: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { success: false, error: 'Usuário não autenticado' }
+
+    // 1. Buscar Plano Atual
+    const { data: planoRecord, error } = await supabase
+        .from('planos_intervencao_ia')
+        .select('*')
+        .eq('id', planoId)
+        .single()
+
+    if (error || !planoRecord) return { success: false, error: 'Plano não encontrado' }
+
+    // 2. Buscar Entidades para Anonimização
+    const { data: paciente } = await supabase
+        .from('pacientes')
+        .select('nome')
+        .eq('id', planoRecord.id_paciente)
+        .single()
+
+    const { data: terapeuta } = await supabase
+        .from('usuarios')
+        .select('nome_completo')
+        .eq('id', planoRecord.id_terapeuta)
+        .single()
+
+    if (!paciente || !terapeuta) return { success: false, error: 'Dados vinculados não encontrados' }
+
+    // 3. Preparar Anonimização
+    const mapRealToFake = {
+        [paciente.nome]: 'HORACE',
+        [terapeuta.nome_completo]: 'SAM'
+    }
+    const mapFakeToReal = {
+        'HORACE': paciente.nome,
+        'SAM': terapeuta.nome_completo
+    }
+
+    const planoAtualAnon = anonymize(planoRecord.plano_final, mapRealToFake)
+    const feedbackAnon = anonymize(feedbackUsuario, mapRealToFake)
+
+    // 4. Configurar IA
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL_VERSION })
+
+    const promptRefinamento = `
+    ATUAÇÃO: Você é um supervisor clínico especialista em ABA e Terapias Multidisciplinares.
+    TAREFA: Refinar um Plano de Intervenção existente com base no feedback do terapeuta responsável (SAM).
+    
+    DADOS:
+    - Paciente: HORACE
+    - Plano Atual:
+    """
+    ${planoAtualAnon}
+    """
+    
+    FEEDBACK DO TERAPEUTA (O que precisa mudar):
+    "${feedbackAnon}"
+    
+    INSTRUÇÕES:
+    1. Reescreva o plano completo incorporando as alterações solicitadas.
+    2. Mantenha a estrutura e o tom profissional.
+    3. Não adicione comentários ou conversas, retorne APENAS O TEXTO DO NOVO PLANO.
+    4. Se o feedback for uma pergunta, responda inserindo a resposta de forma coerente no contexto do plano ou criando uma seção "Notas Clínicas".
+    `
+
+    try {
+        const result = await model.generateContent(promptRefinamento)
+        const responseText = result.response.text()
+
+        // 5. Deanonimizar
+        const novoplano = deanonymize(responseText, mapFakeToReal)
+
+        // 6. Atualizar Histórico e Plano
+        const novoHistorico = [
+            ...(planoRecord.historico_chat || []), // Existing history
+            {
+                role: 'user',
+                text: feedbackUsuario,
+                timestamp: new Date().toISOString()
+            },
+            {
+                role: 'system',
+                text: 'Plano refinado pela IA.',
+                timestamp: new Date().toISOString()
+            }
+        ]
+
+        const { error: updateError } = await supabase
+            .from('planos_intervencao_ia')
+            .update({
+                plano_final: novoplano,
+                historico_chat: novoHistorico
+            })
+            .eq('id', planoId)
+
+        if (updateError) throw updateError
+
+        return { success: true, plano: novoplano, historico: novoHistorico }
+
+    } catch (e: any) {
+        console.error('Erro ao refinar plano:', e)
+        return { success: false, error: e.message || 'Erro ao comunicar com a IA' }
+    }
+}
