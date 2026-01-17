@@ -593,10 +593,6 @@ export async function refineInterventionPlan(planoId: number, feedbackUsuario: s
         [paciente.nome]: 'HORACE',
         [terapeuta.nome_completo]: 'SAM'
     }
-    const mapFakeToReal = {
-        'HORACE': paciente.nome,
-        'SAM': terapeuta.nome_completo
-    }
 
     const planoAtualAnon = anonymize(planoRecord.plano_final, mapRealToFake)
     const feedbackAnon = anonymize(feedbackUsuario, mapRealToFake)
@@ -605,24 +601,24 @@ export async function refineInterventionPlan(planoId: number, feedbackUsuario: s
     const model = genAI.getGenerativeModel({ model: GEMINI_MODEL_VERSION })
 
     const promptRefinamento = `
-    ATUAÇÃO: Você é um supervisor clínico especialista em ABA e Terapias Multidisciplinares.
-    TAREFA: Refinar um Plano de Intervenção existente com base no feedback do terapeuta responsável (SAM).
+    ATUAÇÃO: Você é um supervisor clínico rigoroso especialista em ABA.
+    OBJETIVO: MODIFICAR o plano atual seguindo ESTRITAMENTE o feedback recebido.
     
     DADOS:
-    - Paciente: HORACE
+    - Paciente (Fictício): HORACE
     - Plano Atual:
     """
     ${planoAtualAnon}
     """
     
-    FEEDBACK DO TERAPEUTA (O que precisa mudar):
+    FEEDBACK DO TERAPEUTA (Alterações obrigatórias):
     "${feedbackAnon}"
     
     INSTRUÇÕES:
-    1. Reescreva o plano completo incorporando as alterações solicitadas.
-    2. Mantenha a estrutura e o tom profissional.
-    3. Não adicione comentários ou conversas, retorne APENAS O TEXTO DO NOVO PLANO.
-    4. Se o feedback for uma pergunta, responda inserindo a resposta de forma coerente no contexto do plano ou criando uma seção "Notas Clínicas".
+    1. Reescreva o plano completo aplicando as mudanças.
+    2. NÃO IGNORE O FEEDBACK. Se o terapeuta pediu para remover algo, REMOVA. Se pediu para adicionar, ADICIONE.
+    3. Mantenha o tom profissional clínico.
+    4. IMPORTANTE: Retorne apenas o texto do plano revisado, sem introduções ou explicações.
     `
 
     try {
@@ -630,7 +626,7 @@ export async function refineInterventionPlan(planoId: number, feedbackUsuario: s
         const responseText = result.response.text()
 
         // 5. Deanonimizar
-        const novoplano = deanonymize(responseText, mapFakeToReal)
+        const novoplano = deanonymize(responseText, mapRealToFake)
 
         // 6. Atualizar Histórico e Plano
         const novoHistorico = [
