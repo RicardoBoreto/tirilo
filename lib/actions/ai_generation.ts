@@ -418,6 +418,7 @@ export async function getPlanosIAByPaciente(pacienteId: number) {
             plano_final,
             modelo_ia,
             titulo,
+            historico_chat,
             prompt:prompts_ia(nome_prompt),
             terapeuta:usuarios(nome_completo)
         `)

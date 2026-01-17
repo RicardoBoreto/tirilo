@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Play, Pause, FileText, CheckCircle, Clock, Settings2, Upload, Loader2, Sparkles, Trash2, Printer, FileDown } from 'lucide-react'
+import { Play, Pause, FileText, CheckCircle, Clock, Settings2, Upload, Loader2, Sparkles, Trash2, Printer, FileDown, Edit, Save } from 'lucide-react'
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter
 } from '@/components/ui/dialog'
@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useRouter } from 'next/navigation'
 import jsPDF from 'jspdf'
 
-import { extractPlanoFromImage, importarPlanoLegado, deletePlanoIA } from '@/lib/actions/planos'
+import { extractPlanoFromImage, importarPlanoLegado, deletePlanoIA, updatePlanoIA } from '@/lib/actions/planos'
 import { refineInterventionPlan } from '@/lib/actions/ai_generation'
 import { Send, MessageSquare } from 'lucide-react'
 
@@ -83,6 +83,33 @@ export default function PlanosIATab({ planos, pacienteId }: Props) {
     const [chatMode, setChatMode] = useState(false)
     const [chatInput, setChatInput] = useState('')
     const [isRefining, setIsRefining] = useState(false)
+    const [isManualEditing, setIsManualEditing] = useState(false)
+    const [manualText, setManualText] = useState('')
+    const [isSavingManual, setIsSavingManual] = useState(false)
+
+    useEffect(() => {
+        if (selectedPlano) {
+            setManualText(selectedPlano.plano_final || '')
+            setIsManualEditing(false)
+        }
+    }, [selectedPlano])
+
+    const handleSaveManual = async () => {
+        if (!selectedPlano) return
+        setIsSavingManual(true)
+        try {
+            await updatePlanoIA(selectedPlano.id, manualText, pacienteId)
+            setSelectedPlano({ ...selectedPlano, plano_final: manualText })
+            setIsManualEditing(false)
+            router.refresh()
+            alert('Texto atualizado com sucesso!')
+        } catch (error) {
+            console.error(error)
+            alert('Erro ao salvar edição')
+        } finally {
+            setIsSavingManual(false)
+        }
+    }
 
     const handleRefine = async () => {
         if (!selectedPlano || !chatInput.trim()) return
@@ -445,15 +472,42 @@ export default function PlanosIATab({ planos, pacienteId }: Props) {
                                 <Button variant="outline" size="sm" onClick={handleGeneratePDF} className="gap-2">
                                     <FileDown className="w-4 h-4" /> PDF
                                 </Button>
+
+                                <Button
+                                    variant={isManualEditing ? "secondary" : "outline"}
+                                    size="sm"
+                                    className="gap-2"
+                                    onClick={() => setIsManualEditing(!isManualEditing)}
+                                    disabled={chatMode}
+                                >
+                                    <Edit className="w-4 h-4" />
+                                    {isManualEditing ? 'Cancelar' : 'Editar'}
+                                </Button>
+
+                                {isManualEditing && (
+                                    <Button size="sm" onClick={handleSaveManual} disabled={isSavingManual} className="bg-green-600 hover:bg-green-700 text-white">
+                                        {isSavingManual ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                                        Salvar
+                                    </Button>
+                                )}
                             </div>
                         </div>
 
                         <div className="flex-1 overflow-hidden relative border rounded-md bg-gray-50 dark:bg-gray-900 flex">
                             {!chatMode ? (
                                 <div className="flex-1 overflow-y-auto p-6 md:p-8">
-                                    <div className="prose dark:prose-invert max-w-none text-justify">
-                                        <ReactMarkdown>{selectedPlano?.plano_final || ''}</ReactMarkdown>
-                                    </div>
+                                    {isManualEditing ? (
+                                        <Textarea
+                                            value={manualText}
+                                            onChange={(e) => setManualText(e.target.value)}
+                                            className="min-h-full font-mono text-sm leading-relaxed p-4 border-none focus-visible:ring-0 resize-none shadow-none"
+                                            placeholder="Edite o texto do plano aqui..."
+                                        />
+                                    ) : (
+                                        <div className="prose dark:prose-invert max-w-none text-justify">
+                                            <ReactMarkdown>{selectedPlano?.plano_final || ''}</ReactMarkdown>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-800">

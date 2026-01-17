@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Loader2, Sparkles, Save, MessageSquare, RefreshCw } from 'lucide-react'
+import { Loader2, Sparkles, Save, MessageSquare, RefreshCw, FileText, Edit } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { Textarea } from '@/components/ui/textarea'
 
@@ -25,8 +25,7 @@ export default function GerarPlanoModal({ pacienteId, trigger }: GerarPlanoModal
     const [loading, setLoading] = useState(false)
     const [generatedPlan, setGeneratedPlan] = useState<string | null>(null)
     const [originalPlan, setOriginalPlan] = useState<string | null>(null)
-    const [chatMode, setChatMode] = useState(false)
-    const [chatInput, setChatInput] = useState('')
+    const [isEditingMode, setIsEditingMode] = useState(false)
     const router = useRouter()
 
     const [error, setError] = useState<string | null>(null)
@@ -134,11 +133,20 @@ export default function GerarPlanoModal({ pacienteId, trigger }: GerarPlanoModal
                             <p className="animate-pulse font-medium">A IA está analisando o prontuário e criando o plano...</p>
                         </div>
                     ) : generatedPlan ? (
+
                         <div className="flex-1 flex flex-col h-full">
                             <ScrollArea className="flex-1 p-8">
-                                <div className="prose prose-purple max-w-none dark:prose-invert">
-                                    <ReactMarkdown>{generatedPlan}</ReactMarkdown>
-                                </div>
+                                {isEditingMode ? (
+                                    <Textarea
+                                        value={generatedPlan}
+                                        onChange={(e) => setGeneratedPlan(e.target.value)}
+                                        className="h-full min-h-[500px] font-mono text-sm leading-relaxed p-4"
+                                    />
+                                ) : (
+                                    <div className="prose prose-purple max-w-none dark:prose-invert">
+                                        <ReactMarkdown>{generatedPlan}</ReactMarkdown>
+                                    </div>
+                                )}
                             </ScrollArea>
 
                             <div className="p-4 border-t border-gray-100 bg-white flex justify-between items-center gap-4">
@@ -147,9 +155,13 @@ export default function GerarPlanoModal({ pacienteId, trigger }: GerarPlanoModal
                                         <RefreshCw className="w-4 h-4 mr-2" />
                                         Gerar Novamente
                                     </Button>
-                                    <Button variant="outline" className="rounded-xl" onClick={() => alert('Chat em breve!')}>
-                                        <MessageSquare className="w-4 h-4 mr-2" />
-                                        Conversar com a IA
+                                    <Button
+                                        variant={isEditingMode ? "secondary" : "outline"}
+                                        className="rounded-xl"
+                                        onClick={() => setIsEditingMode(!isEditingMode)}
+                                    >
+                                        {isEditingMode ? <FileText className="w-4 h-4 mr-2" /> : <Edit className="w-4 h-4 mr-2" />}
+                                        {isEditingMode ? 'Ver Preview' : 'Editar Texto'}
                                     </Button>
                                 </div>
                                 <Button onClick={handleSave} className="rounded-xl bg-green-600 hover:bg-green-700 text-white shadow-md">

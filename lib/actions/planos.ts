@@ -92,3 +92,19 @@ export async function deletePlanoIA(id: number, pacienteId: number) {
     revalidatePath(`/admin/pacientes/${pacienteId}`)
     return { success: true }
 }
+
+export async function updatePlanoIA(id: number, texto: string, pacienteId: number) {
+    const supabase = await createClient()
+    const { error } = await supabase
+        .from('planos_intervencao_ia')
+        .update({ plano_final: texto })
+        .eq('id', id)
+
+    if (error) {
+        console.error('Erro ao atualizar plano:', error)
+        throw new Error('Erro ao atualizar plano')
+    }
+
+    revalidatePath(`/admin/pacientes/${pacienteId}`)
+    return { success: true }
+}
