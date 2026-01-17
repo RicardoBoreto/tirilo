@@ -82,23 +82,57 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
             alert('Seu navegador não suporta leitura de texto (TTS).')
             return
         }
+
         if (isPlaying) {
             window.speechSynthesis.cancel()
             setIsPlaying(false)
             setSpeechSynthesisInstance(null)
         } else {
+            // Mobile Fix: Cancelar qualquer áudio pendente antes de começar
+            window.speechSynthesis.cancel()
+
+            // Tentar recarregar vozes se necessário (Mobile às vezes perde o cache)
+            let currentVoices = voices
+            if (currentVoices.length === 0) {
+                const available = window.speechSynthesis.getVoices()
+                if (available.length > 0) {
+                    setVoices(available)
+                    currentVoices = available
+                }
+            }
+
             const cleanText = stripMarkdown(text)
+            // Mobile Fix: Textos muito longos podem falhar no Android. Dividir se necessário seria ideal, mas por enquanto vamos confiar no SO.
             const utterance = new SpeechSynthesisUtterance(cleanText)
+
+            // Tentar forçar pt-BR, mas aceitar qualquer se falhar
             utterance.lang = 'pt-BR'
             utterance.rate = rate[0]
+
+            // Seleção de voz robusta
             if (selectedVoice) {
-                const voice = voices.find(v => v.name === selectedVoice)
+                const voice = currentVoices.find(v => v.name === selectedVoice)
                 if (voice) utterance.voice = voice
+            } else if (currentVoices.length > 0) {
+                // Tentar achar uma voz PT automaticamente com mais afinco
+                const ptVoice = currentVoices.find(v => v.lang.includes('pt-BR')) || currentVoices.find(v => v.lang.includes('pt'))
+                if (ptVoice) utterance.voice = ptVoice
             }
+
             utterance.onend = () => {
                 setIsPlaying(false)
                 setSpeechSynthesisInstance(null)
             }
+
+            utterance.onerror = (e) => {
+                console.error('TTS Error:', e)
+                setIsPlaying(false)
+                // Opcional: alertar usuário se não for cancelamento manual
+                if (e.error !== 'interrupted' && e.error !== 'canceled') {
+                    // alert('Erro ao reproduzir áudio: ' + e.error)
+                }
+            }
+
             window.speechSynthesis.speak(utterance)
             setSpeechSynthesisInstance(utterance)
             setIsPlaying(true)
