@@ -84,7 +84,8 @@ export default function LoginPage() {
                 <CardContent className="p-8">
                     <div className="text-center mb-8 flex flex-col items-center">
                         <div className="mb-4 animate-bounce">
-                            <CuteRobot className="w-16 h-16" color="#4F46E5" />
+                            {/* <CuteRobot className="w-16 h-16" color="#4F46E5" /> */}
+                            <img src="/logo.svg" alt="Logo Tirilo" className="w-24 h-24 object-contain" />
                         </div>
                         <h1 className="text-3xl font-heading font-bold text-gray-900 dark:text-white mb-2">
                             SaaS Tirilo

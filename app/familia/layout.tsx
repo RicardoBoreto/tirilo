@@ -71,8 +71,8 @@ export default async function FamilyLayout({
                                 />
                             </div>
                         ) : (
-                            <div className="bg-primary/10 p-2 rounded-full">
-                                <CuteRobot className="w-8 h-8 text-primary" />
+                            <div className="bg-white/50 p-1 rounded-full">
+                                <img src="/logo.svg" alt="Tirilo" className="w-8 h-8 object-contain" />
                             </div>
                         )}
                         <div className="flex flex-col">
