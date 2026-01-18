@@ -24,7 +24,19 @@ type Props = {
         email?: string
         logo_url?: string
         config_cor_primaria?: string
+        end_logradouro?: string
+        end_numero?: string
+        end_complemento?: string
+        end_bairro?: string
+        end_cidade?: string
+        end_estado?: string
+        end_cep?: string
     } | null
+}
+
+function formatCNPJ(value: string) {
+    return value.replace(/\D/g, '')
+        .replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
 }
 
 export default function InsuranceGuideModal({ isOpen, onClose, appointments, clinica }: Props) {
@@ -93,12 +105,15 @@ export default function InsuranceGuideModal({ isOpen, onClose, appointments, cli
                                                 {clinica?.nome_fantasia || 'Sua Clínica'}
                                             </h1>
                                             <p className="text-sm text-gray-600">
-                                                {clinica?.endereco || 'Endereço não cadastrado'}
+                                                {clinica?.end_logradouro
+                                                    ? `${clinica.end_logradouro}, ${clinica.end_numero || ''} ${clinica.end_complemento ? `- ${clinica.end_complemento}` : ''} - ${clinica.end_bairro || ''}, ${clinica.end_cidade || ''} - ${clinica.end_estado || ''}`
+                                                    : clinica?.endereco || 'Endereço não cadastrado'
+                                                }
                                             </p>
                                             <p className="text-sm text-gray-600">
                                                 {clinica?.telefone} {clinica?.email ? `• ${clinica.email}` : ''}
                                             </p>
-                                            {clinica?.cnpj && <p className="text-sm text-gray-600">CNPJ: {clinica.cnpj}</p>}
+                                            {clinica?.cnpj && <p className="text-sm text-gray-600">CNPJ: {formatCNPJ(clinica.cnpj)}</p>}
                                         </div>
                                     </div>
                                     <div className="text-right">
