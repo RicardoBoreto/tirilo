@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import { Loader2, Sparkles, Save, CheckCircle, MessageSquare } from 'lucide-react'
+import { Loader2, Sparkles, Save, CheckCircle, MessageSquare, Mic } from 'lucide-react'
 import { getActivePrompts, PromptIA } from '@/lib/actions/ai_prompts'
 import { generateSessionReport } from '@/lib/actions/ai_generation'
 import { saveRelatorio, getRelatorioByAgendamento } from '@/lib/actions/relatorios'
@@ -29,6 +29,58 @@ export default function RelatorioModal({ agendamento, open, onOpenChange, onSucc
     const [relatorioGerado, setRelatorioGerado] = useState('')
     const [ajusteIA, setAjusteIA] = useState('')
     const [status, setStatus] = useState<'rascunho' | 'finalizado'>('rascunho')
+
+    // Speech Recognition State
+    const [isListening, setIsListening] = useState(false)
+    const [recognitionRef, setRecognitionRef] = useState<any>(null)
+
+    const toggleDictation = () => {
+        if (isListening) {
+            if (recognitionRef) recognitionRef.stop()
+            setIsListening(false)
+            return
+        }
+
+        if (typeof window !== 'undefined') {
+            const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+            if (!SpeechRecognition) {
+                alert('Seu navegador não suporta ditado de voz. Tente usar o Google Chrome.')
+                return
+            }
+
+            const recognition = new SpeechRecognition()
+            recognition.lang = 'pt-BR'
+            recognition.continuous = true
+            recognition.interimResults = false
+
+            recognition.onstart = () => setIsListening(true)
+            recognition.onend = () => setIsListening(false)
+            recognition.onerror = (e: any) => {
+                console.error('Erro detalhes:', e)
+                if (e.error === 'not-allowed') {
+                    alert('Permissão de microfone negada. Verifique se o site tem permissão ou se está usando HTTPS.')
+                } else if (e.error === 'network') {
+                    alert('Erro de rede. O reconhecimento de voz requer conexão com a internet (e HTTPS em redes externas).')
+                } else if (e.error === 'no-speech') {
+                    // Ignore, just stop listening
+                } else {
+                    alert(`Erro no reconhecimento de voz: ${e.error}`)
+                }
+                setIsListening(false)
+            }
+
+            recognition.onresult = (event: any) => {
+                const transcript = event.results[event.results.length - 1][0].transcript
+                setTextoBruto(prev => {
+                    const spacer = prev.length > 0 && !prev.endsWith(' ') ? ' ' : ''
+                    return prev + spacer + transcript
+                })
+            }
+
+            recognition.start()
+            setRecognitionRef(recognition)
+        }
+    }
 
     useEffect(() => {
         if (open) {
@@ -152,7 +204,19 @@ export default function RelatorioModal({ agendamento, open, onOpenChange, onSucc
                         </div>
 
                         <div className="space-y-2 flex-1 flex flex-col">
-                            <Label>Anotações da Sessão (O que aconteceu?)</Label>
+                            <div className="flex justify-between items-center">
+                                <Label>Anotações da Sessão (O que aconteceu?)</Label>
+                                <Button
+                                    type="button"
+                                    onClick={toggleDictation}
+                                    variant={isListening ? "destructive" : "outline"}
+                                    size="sm"
+                                    className={`h-7 text-xs ${isListening ? 'animate-pulse' : ''}`}
+                                >
+                                    <Mic className="w-3 h-3 mr-1" />
+                                    {isListening ? 'Ouvindo... (Parar)' : 'Ditar'}
+                                </Button>
+                            </div>
                             <Textarea
                                 value={textoBruto}
                                 onChange={e => setTextoBruto(e.target.value)}
