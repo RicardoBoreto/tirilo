@@ -136,7 +136,7 @@ export default function AdminLayoutWrapper({
             */}
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                <Header user={{ ...user, ...userProfile, nome: userProfile?.nome_completo }} clinic={clinicData} />
+                <Header user={{ ...user, ...userProfile, nome: userProfile?.nome_completo }} clinic={clinicData} userRole={userProfile?.tipo_perfil} />
                 <main className="flex-1 overflow-y-auto p-6">
                     {children}
                 </main>

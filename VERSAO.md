@@ -10,6 +10,28 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
   - 🐛 Correções de Bugs
+## [1.10.0] - 18/01/2026
+
+### 💰 Financeiro & Convênios (Major Update)
+
+#### Gestão de Operadoras e Convênios
+- **Cadastro Completo:** Novo módulo para gerenciamento de convênios/operadoras de saúde.
+  - Dados detalhados: Razão Social, CNPJ mascarado, Endereço de Faturamento e Contato Financeiro.
+- **Vínculo com Pacientes:** Prontuário do paciente atualizado para incluir dados do plano de saúde (Operadora, Carteirinha, Validade).
+- **Guias TISS/Convênio:** Geração automática de guias de atendimento (SADT/Consulta) personalizadas com os dados da operadora e do paciente.
+
+#### Contas a Receber (Financeiro)
+- **Baixa Interativa:** Novo modal de quitação de títulos.
+  - Seleção da data real do pagamento.
+  - Seleção da forma de pagamento (PIX, Dinheiro, Cartão, etc.).
+  - **Upload de Comprovante:** Anexo de arquivos (PDF/Imagem) diretamente no lançamento.
+- **Estorno:** Funcionalidade de desfazer baixa (retornar para pendente) com um clique, para correção de erros.
+- **Banco de Dados:** Atualização na tabela `financeiro_lancamentos` para suportar auditoria de pagamentos (`comprovante_url`, `forma_pagamento`).
+
+### 📱 Interface e Navegação
+- **Menu Unificado:** O item "Convênios" foi adicionado à barra lateral principal e mobile.
+- **Correção Mobile:** Ajuste no menu lateral (Sidebar) em dispositivos móveis para permitir rolagem quando há muitos itens, evitando cortes em telas menores.
+
 ## [1.9.0] - 18/01/2026
 
 ### 👨‍👩‍👧‍👦 Portal da Família (Relatórios e UX)

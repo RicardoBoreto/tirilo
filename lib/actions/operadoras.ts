@@ -11,6 +11,16 @@ export type Operadora = {
     cnpj: string | null
     registro_ans: string | null
     prazo_pagamento_dias: number | null
+    endereco_logradouro: string | null
+    endereco_numero: string | null
+    endereco_complemento: string | null
+    endereco_bairro: string | null
+    endereco_cidade: string | null
+    endereco_estado: string | null
+    endereco_cep: string | null
+    telefone: string | null
+    contato_nome: string | null
+    contato_cargo: string | null
     ativo: boolean
     created_at: string
 }
@@ -78,6 +88,16 @@ export async function saveOperadora(formData: FormData) {
         cnpj: (formData.get('cnpj') as string)?.replace(/\D/g, '') || null,
         registro_ans: formData.get('registro_ans') as string || null,
         prazo_pagamento_dias: formData.get('prazo_pagamento_dias') ? Number(formData.get('prazo_pagamento_dias')) : 30,
+        endereco_logradouro: formData.get('endereco_logradouro') as string || null,
+        endereco_numero: formData.get('endereco_numero') as string || null,
+        endereco_complemento: formData.get('endereco_complemento') as string || null,
+        endereco_bairro: formData.get('endereco_bairro') as string || null,
+        endereco_cidade: formData.get('endereco_cidade') as string || null,
+        endereco_estado: formData.get('endereco_estado') as string || null,
+        endereco_cep: formData.get('endereco_cep') as string || null,
+        telefone: formData.get('telefone') as string || null,
+        contato_nome: formData.get('contato_nome') as string || null,
+        contato_cargo: formData.get('contato_cargo') as string || null,
         ativo: true
     }
 

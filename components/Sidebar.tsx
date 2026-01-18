@@ -54,7 +54,7 @@ export default function Sidebar({ clinic, userRole, userId, className, onLinkCli
                     )}
                 </div>
 
-                <nav className={`flex-1 space-y-3 ${collapsed ? 'p-2' : 'p-6'}`}>
+                <nav className={`flex-1 space-y-3 overflow-y-auto ${collapsed ? 'p-2' : 'p-6'}`}>
                     {links.map((link) => {
                         const isActive = pathname.startsWith(link.href)
                         return (

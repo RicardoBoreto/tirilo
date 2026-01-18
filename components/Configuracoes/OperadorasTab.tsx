@@ -5,6 +5,13 @@ import { getOperadoras, saveOperadora, deleteOperadora, Operadora } from '@/lib/
 import { Plus, Edit2, Trash2, X, Building2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
+
+function formatCNPJ(value: string) {
+    if (!value) return ''
+    return value.replace(/\D/g, '')
+        .replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
+}
+
 export default function OperadorasTab() {
     const [operadoras, setOperadoras] = useState<Operadora[]>([])
     const [loading, setLoading] = useState(true)
@@ -118,7 +125,7 @@ export default function OperadorasTab() {
                         <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400 border-t pt-3 dark:border-gray-700">
                             <div className="flex justify-between">
                                 <span>CNPJ:</span>
-                                <span className="font-mono text-gray-700 dark:text-gray-300">{op.cnpj || '-'}</span>
+                                <span className="font-mono text-gray-700 dark:text-gray-300">{op.cnpj ? formatCNPJ(op.cnpj) : '-'}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span>ANS:</span>
@@ -135,8 +142,8 @@ export default function OperadorasTab() {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-lg shadow-2xl animate-in fade-in zoom-in duration-200">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-3xl shadow-2xl animate-in fade-in zoom-in duration-200 my-8">
                         <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-gray-800">
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                                 {editingOp ? 'Editar Convênio' : 'Novo Convênio'}
@@ -146,27 +153,30 @@ export default function OperadorasTab() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome Fantasia *</label>
-                                <input
-                                    name="nome_fantasia"
-                                    defaultValue={editingOp?.nome_fantasia}
-                                    required
-                                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
-                                    placeholder="Ex: Unimed"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razão Social</label>
-                                <input
-                                    name="razao_social"
-                                    defaultValue={editingOp?.razao_social || ''}
-                                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
-                                    placeholder="Ex: Unimed Rio Cooperativa..."
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
+                        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="col-span-1 md:col-span-2">
+                                    <h4 className="font-semibold text-gray-900 dark:text-white border-b pb-2 mb-4">Dados da Empresa</h4>
+                                </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome Fantasia *</label>
+                                    <input
+                                        name="nome_fantasia"
+                                        defaultValue={editingOp?.nome_fantasia}
+                                        required
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                        placeholder="Ex: Unimed"
+                                    />
+                                </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razão Social</label>
+                                    <input
+                                        name="razao_social"
+                                        defaultValue={editingOp?.razao_social || ''}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                        placeholder="Ex: Unimed Rio Cooperativa..."
+                                    />
+                                </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CNPJ</label>
                                     <input
@@ -185,17 +195,112 @@ export default function OperadorasTab() {
                                         placeholder="Ex: 123456"
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Prazo Pagto (Dias)
+                                    </label>
+                                    <input
+                                        name="prazo_pagamento_dias"
+                                        type="number"
+                                        defaultValue={editingOp?.prazo_pagamento_dias || 30}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Prazo de Recebimento Padrão (Dias)
-                                </label>
-                                <input
-                                    name="prazo_pagamento_dias"
-                                    type="number"
-                                    defaultValue={editingOp?.prazo_pagamento_dias || 30}
-                                    className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
-                                />
+
+                            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                                <div className="col-span-1 md:col-span-6">
+                                    <h4 className="font-semibold text-gray-900 dark:text-white border-b pb-2 mb-4 mt-2">Endereço de Faturamento</h4>
+                                </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CEP</label>
+                                    <input
+                                        name="endereco_cep"
+                                        defaultValue={editingOp?.endereco_cep || ''}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                    />
+                                </div>
+                                <div className="col-span-1 md:col-span-4">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logradouro</label>
+                                    <input
+                                        name="endereco_logradouro"
+                                        defaultValue={editingOp?.endereco_logradouro || ''}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                    />
+                                </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número</label>
+                                    <input
+                                        name="endereco_numero"
+                                        defaultValue={editingOp?.endereco_numero || ''}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                    />
+                                </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Complemento</label>
+                                    <input
+                                        name="endereco_complemento"
+                                        defaultValue={editingOp?.endereco_complemento || ''}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                    />
+                                </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bairro</label>
+                                    <input
+                                        name="endereco_bairro"
+                                        defaultValue={editingOp?.endereco_bairro || ''}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                    />
+                                </div>
+                                <div className="col-span-1 md:col-span-3">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cidade</label>
+                                    <input
+                                        name="endereco_cidade"
+                                        defaultValue={editingOp?.endereco_cidade || ''}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                    />
+                                </div>
+                                <div className="col-span-1 md:col-span-3">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado (UF)</label>
+                                    <input
+                                        name="endereco_estado"
+                                        defaultValue={editingOp?.endereco_estado || ''}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="col-span-1 md:col-span-2">
+                                    <h4 className="font-semibold text-gray-900 dark:text-white border-b pb-2 mb-4 mt-2">Contato Financeiro</h4>
+                                </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome do Contato</label>
+                                    <input
+                                        name="contato_nome"
+                                        defaultValue={editingOp?.contato_nome || ''}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                        placeholder="Ex: João Silva (Financeiro)"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cargo</label>
+                                    <input
+                                        name="contato_cargo"
+                                        defaultValue={editingOp?.contato_cargo || ''}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                        placeholder="Ex: Analista Financeiro"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefone / WhatsApp</label>
+                                    <input
+                                        name="telefone"
+                                        defaultValue={editingOp?.telefone || ''}
+                                        className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
+                                        placeholder="(00) 00000-0000"
+                                    />
+                                </div>
                             </div>
 
                             <div className="flex justify-end gap-3 pt-4">

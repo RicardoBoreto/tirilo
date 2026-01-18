@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { getLancamentos, baixarLancamento, FinanceiroLancamento } from '@/lib/actions/financeiro'
+import { getLancamentos, estornarLancamento, FinanceiroLancamento } from '@/lib/actions/financeiro'
 import { getDetalhesFatura } from '@/lib/actions/financeiro_fatura'
 import { getTerapeutas } from '@/lib/actions/equipe'
-import { CheckCheck, Clock, Search, Filter, Printer } from 'lucide-react'
+import { CheckCheck, Clock, Search, Filter, Printer, RotateCcw } from 'lucide-react'
 import FaturaModal from './FaturaModal'
+import BaixaModal from './BaixaModal'
 
 export default function LancamentosTable({ tipo }: { tipo: 'receita' | 'despesa' }) {
     const [lancamentos, setLancamentos] = useState<any[]>([])
@@ -20,6 +21,10 @@ export default function LancamentosTable({ tipo }: { tipo: 'receita' | 'despesa'
     const [showInvoiceModal, setShowInvoiceModal] = useState(false)
     const [invoiceData, setInvoiceData] = useState<any>(null)
     const [loadingInvoice, setLoadingInvoice] = useState(false)
+
+    // Baixa Modal
+    const [showBaixaModal, setShowBaixaModal] = useState(false)
+    const [selectedLancamento, setSelectedLancamento] = useState<any>(null)
 
     const [isLocked, setIsLocked] = useState(false)
 
@@ -57,14 +62,18 @@ export default function LancamentosTable({ tipo }: { tipo: 'receita' | 'despesa'
         }
     }
 
-    async function handleBaixa(id: number) {
-        if (!confirm('Confirmar recebimento/pagamento desta conta?')) return
+    function openBaixaModal(item: any) {
+        setSelectedLancamento(item)
+        setShowBaixaModal(true)
+    }
 
+    async function handleEstorno(id: number) {
+        if (!confirm('Tem certeza que deseja estornar este recebimento? O status voltará para Pendente.')) return
         try {
-            await baixarLancamento(id, new Date().toISOString(), 'pix')
+            await estornarLancamento(id)
             loadData()
         } catch (err) {
-            alert('Erro ao baixar')
+            alert('Erro ao estornar')
         }
     }
 
@@ -96,6 +105,15 @@ export default function LancamentosTable({ tipo }: { tipo: 'receita' | 'despesa'
                 isOpen={showInvoiceModal}
                 onClose={() => setShowInvoiceModal(false)}
                 dados={invoiceData}
+            />
+
+            <BaixaModal
+                isOpen={showBaixaModal}
+                onClose={() => {
+                    setShowBaixaModal(false)
+                    loadData() // Reload to update status
+                }}
+                lancamento={selectedLancamento}
             />
 
             <div className="flex justify-between items-center">
@@ -181,10 +199,19 @@ export default function LancamentosTable({ tipo }: { tipo: 'receita' | 'despesa'
 
                                         {item.status === 'pendente' && (
                                             <button
-                                                onClick={() => handleBaixa(item.id)}
+                                                onClick={() => openBaixaModal(item)}
                                                 className="text-xs font-medium bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
                                             >
                                                 Quitar
+                                            </button>
+                                        )}
+                                        {item.status === 'pago' && (
+                                            <button
+                                                onClick={() => handleEstorno(item.id)}
+                                                className="text-gray-400 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 transition-colors"
+                                                title="Estornar Lançamento"
+                                            >
+                                                <RotateCcw size={16} />
                                             </button>
                                         )}
                                     </td>

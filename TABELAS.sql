@@ -73,6 +73,31 @@ CREATE TABLE public.clinicas_salas (
     ativo BOOLEAN DEFAULT TRUE
 );
 
+CREATE TABLE public.saas_operadoras (
+    id SERIAL PRIMARY KEY,
+    clinica_id INTEGER REFERENCES public.saas_clinicas(id),
+    nome_fantasia TEXT NOT NULL,
+    razao_social TEXT,
+    cnpj TEXT,
+    registro_ans TEXT,
+    
+    -- Endereço e Contato (Adicionado 1.10.0)
+    endereco_logradouro TEXT,
+    endereco_numero TEXT,
+    endereco_complemento TEXT,
+    endereco_bairro TEXT,
+    endereco_cidade TEXT,
+    endereco_estado TEXT,
+    endereco_cep TEXT,
+    
+    telefone TEXT,
+    contato_nome TEXT,
+    contato_cargo TEXT,
+    
+    ativo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ----------------------------------------------------------------------------
 -- 2. USUÁRIOS & PERMISSÕES
 -- ----------------------------------------------------------------------------
@@ -111,6 +136,9 @@ CREATE TABLE public.pacientes (
     contato_responsavel TEXT, -- Legado/Simples
     foto_url TEXT,
     endereco TEXT,
+    operadora_id INTEGER REFERENCES public.saas_operadoras(id), -- Adicionado 1.10.0
+    carteirinha_planodesaude TEXT,
+    validade_planodesaude DATE, -- Adicionado 1.10.0
     status TEXT DEFAULT 'ATIVO', -- ATIVO, INATIVO, ALTA
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -184,7 +212,7 @@ CREATE TABLE public.agendamentos (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE public.lancamentos_financeiros (
+CREATE TABLE public.financeiro_lancamentos (
     id SERIAL PRIMARY KEY,
     clinica_id INTEGER REFERENCES public.saas_clinicas(id),
     tipo TEXT CHECK (tipo IN ('RECEITA', 'DESPESA')),
@@ -194,6 +222,9 @@ CREATE TABLE public.lancamentos_financeiros (
     data_pagamento DATE,
     status TEXT DEFAULT 'PENDENTE', -- PENDENTE, PAGO, ATRASADO
     categoria TEXT,
+    
+    forma_pagamento TEXT, -- Adicionado 1.10.0
+    comprovante_url TEXT, -- Adicionado 1.10.0
     
     -- Vínculos
     id_paciente INTEGER REFERENCES public.pacientes(id),

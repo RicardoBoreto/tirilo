@@ -34,6 +34,7 @@ export type FinanceiroLancamento = {
     id_responsavel: number | null
     id_categoria: number | null
     forma_pagamento: string | null
+    comprovante_url: string | null
     created_at: string
 }
 
@@ -273,7 +274,81 @@ export async function baixarLancamento(id: number, dataPagamento: string, formaP
     }
 
     revalidatePath('/admin/financeiro')
+    revalidatePath('/admin/financeiro')
     return data
+}
+
+export async function baixarLancamentoComComprovante(formData: FormData) {
+    const supabase = await createClient()
+    const id = Number(formData.get('id'))
+    const dataPagamento = formData.get('data_pagamento') as string
+    const formaPagamento = formData.get('forma_pagamento') as string
+    const file = formData.get('comprovante') as File | null
+
+    let comprovanteUrl = null
+
+    if (file && file.size > 0) {
+        // Upload logic
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${id}_${Date.now()}.${fileExt}`
+        const filePath = `${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+            .from('comprovantes')
+            .upload(filePath, file)
+
+        if (uploadError) throw new Error('Erro ao fazer upload do comprovante')
+        comprovanteUrl = filePath
+    }
+
+    const { data, error } = await supabase
+        .from('financeiro_lancamentos')
+        .update({
+            status: 'pago',
+            data_pagamento: dataPagamento,
+            forma_pagamento: formaPagamento,
+            comprovante_url: comprovanteUrl
+        })
+        .eq('id', id)
+        .select()
+        .single()
+
+    if (error) {
+        console.error('Erro ao baixar:', error)
+        throw new Error('Erro ao registrar pagamento')
+    }
+
+    revalidatePath('/admin/financeiro')
+    return data
+}
+
+export async function estornarLancamento(id: number) {
+    const supabase = await createClient()
+
+    // Opcional: Deletar arquivo antigo? Por segurança, mantemos no bucket, apenas desligamos do registro.
+
+    const { error } = await supabase
+        .from('financeiro_lancamentos')
+        .update({
+            status: 'pendente',
+            data_pagamento: null,
+            forma_pagamento: null,
+            comprovante_url: null
+        })
+        .eq('id', id)
+
+    if (error) throw new Error('Erro ao estornar')
+
+    revalidatePath('/admin/financeiro')
+}
+
+export async function getComprovanteUrl(path: string) {
+    const supabase = await createClient()
+    const { data } = await supabase.storage
+        .from('comprovantes')
+        .createSignedUrl(path, 60 * 60) // 1 hora
+
+    return data?.signedUrl
 }
 
 // ============================================
