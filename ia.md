@@ -149,3 +149,11 @@ Além de gerar conteúdo novo, a IA atua como agente de digitalização para leg
 2.  **Histórico de Atendimentos:** O usuário tira foto de relatórios antigos/manuscritos → IA extrai Data e Texto → Sistema cria registros retroativos na linha do tempo do paciente.
 
 Isso permite migrar acervos físicos inteiros para o sistema digital de forma rápida, enriquecendo o contexto para futuras gerações de planos.
+
+### Recursos e Materiais
+A IA também auxilia na gestão do inventário terapêutico da clínica:
+- **Catalogação Inteligente:** Ao cadastrar um novo material, o usuário pode enviar uma foto. A IA analisa a imagem (Visão Computacional) e preenche automaticamente:
+  - **Nome:** Sugestão do nome do brinquedo/recurso.
+  - **Descrição:** Breve explicação funcional (para que serve).
+  - **Objetivos Terapêuticos:** Lista de habilidades (ABA/Denver) que podem ser trabalhadas com aquele item (ex: "Coordenação Motora Fina", "Pareamento").
+- **Integração com Planos:** Os materiais cadastrados enriquecem a geração de planos. A chave `{{RECURSOS_LISTA}}` agora fornece à IA não apenas nomes, mas descrições e objetivos de cada item disponível, permitindo sugestões de atividades muito mais assertivas e personalizadas.

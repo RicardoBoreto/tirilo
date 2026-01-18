@@ -304,6 +304,18 @@ export default function EditTerapeutaForm({ terapeuta, curriculo }: EditTerapeut
                                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                             />
                         </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Chave PIX
+                            </label>
+                            <input
+                                type="text"
+                                name="chave_pix"
+                                defaultValue={curriculo?.chave_pix || ''}
+                                placeholder="CPF, Email, Telefone ou Aleatória"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

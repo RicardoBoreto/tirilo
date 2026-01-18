@@ -13,6 +13,7 @@ export type Recurso = {
     quantidade: number
     objetivos_terapeuticos: string[] | null
     status_conservacao: 'Excelente' | 'Bom' | 'Necessita reparo' | 'Fora de uso'
+    descricao: string | null
 }
 
 export async function getRecursos() {
@@ -66,7 +67,19 @@ export async function createRecurso(formData: FormData) {
 
     if (!userProfile?.id_clinica) throw new Error('Usuário sem clínica vinculada')
 
-    const objetivos = formData.get('objetivos_terapeuticos')?.toString().split(',').filter(Boolean) || []
+    let objetivos: string[] = []
+    try {
+        const raw = formData.get('objetivos_terapeuticos')?.toString()
+        if (raw) {
+            if (raw.startsWith('[')) {
+                objetivos = JSON.parse(raw)
+            } else {
+                objetivos = raw.split(',').filter(Boolean)
+            }
+        }
+    } catch (e) {
+        objetivos = []
+    }
 
     const recursoData = {
         id_clinica: userProfile.id_clinica,
@@ -76,6 +89,7 @@ export async function createRecurso(formData: FormData) {
         quantidade: Number(formData.get('quantidade')),
         objetivos_terapeuticos: objetivos,
         status_conservacao: formData.get('status_conservacao') as string,
+        descricao: formData.get('descricao') as string || null,
     }
 
     const { error } = await supabase
@@ -93,7 +107,19 @@ export async function createRecurso(formData: FormData) {
 export async function updateRecurso(id: number, formData: FormData) {
     const supabase = await createClient()
 
-    const objetivos = formData.get('objetivos_terapeuticos')?.toString().split(',').filter(Boolean) || []
+    let objetivos: string[] = []
+    try {
+        const raw = formData.get('objetivos_terapeuticos')?.toString()
+        if (raw) {
+            if (raw.startsWith('[')) {
+                objetivos = JSON.parse(raw)
+            } else {
+                objetivos = raw.split(',').filter(Boolean)
+            }
+        }
+    } catch (e) {
+        objetivos = []
+    }
 
     const recursoData = {
         nome_item: formData.get('nome_item') as string,
@@ -102,6 +128,7 @@ export async function updateRecurso(id: number, formData: FormData) {
         quantidade: Number(formData.get('quantidade')),
         objetivos_terapeuticos: objetivos,
         status_conservacao: formData.get('status_conservacao') as string,
+        descricao: formData.get('descricao') as string || null,
     }
 
     const { error } = await supabase

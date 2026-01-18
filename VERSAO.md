@@ -10,6 +10,18 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
   - 🐛 Correções de Bugs
+## [1.8.1] - 18/01/2026
+
+### 🤖 IA para Recursos Terapêuticos
+- **Análise Visual:** Novo botão "Identificar com IA" no cadastro de materiais. O sistema analisa a foto do brinquedo/recurso e sugere Nome, Descrição e Objetivos Terapêuticos (ABA/Denver).
+- **Enriquecimento de Dados:** Campo "Descrição" adicionado aos recursos, preenchido automaticamente pela IA.
+- **Integração com Planos:** A IA agora utiliza os detalhes completos dos materiais (descrição e objetivos) ao gerar planos de intervenção através da chave `{{RECURSOS_LISTA}}`.
+
+### ✨ Melhorias de Interface (UI/UX)
+- **Visualização Rápida (Quick View):** Clicar no card de um material abre um modal detalhado com foto ampliada e descrição completa, facilitando a consulta sem entrar em modo de edição.
+- **Tooltips:** Descrições longas na listagem agora exibem o texto completo ao passar o mouse.
+- **Imagens:** Ajuste na exibição de fotos (`object-contain`) para garantir que o objeto seja visualizado por inteiro sem cortes.
+
 ## [1.8.0] - 17/01/2026
 
 ### 🤖 Gestão Avançada de IA (Prompts e Relatórios)

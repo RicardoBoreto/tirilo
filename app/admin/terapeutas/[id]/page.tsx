@@ -141,6 +141,34 @@ export default async function TerapeutaDetailPage({ params }: { params: Promise<
                         <p className="text-gray-900 dark:text-white whitespace-pre-wrap">{curriculo.bio}</p>
                     </div>
                 )}
+
+                {(curriculo?.valor_hora_padrao || curriculo?.porcentagem_repasse || curriculo?.chave_pix) && (
+                    <div className="mt-6 border-t pt-4 dark:border-gray-700">
+                        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-4">
+                            Dados Financeiros
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <h4 className="text-xs text-gray-400 uppercase mb-1">Valor Hora</h4>
+                                <p className="font-medium text-gray-900 dark:text-white">
+                                    {curriculo.valor_hora_padrao ? `R$ ${Number(curriculo.valor_hora_padrao).toFixed(2)}` : '-'}
+                                </p>
+                            </div>
+                            <div>
+                                <h4 className="text-xs text-gray-400 uppercase mb-1">Repasse</h4>
+                                <p className="font-medium text-gray-900 dark:text-white">
+                                    {curriculo.porcentagem_repasse ? `${curriculo.porcentagem_repasse}%` : '-'}
+                                </p>
+                            </div>
+                            <div>
+                                <h4 className="text-xs text-gray-400 uppercase mb-1">Chave PIX</h4>
+                                <p className="font-medium font-mono text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded inline-block">
+                                    {curriculo.chave_pix || '-'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )

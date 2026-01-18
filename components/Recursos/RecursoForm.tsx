@@ -2,12 +2,14 @@
 
 import { useState, useRef } from 'react'
 import { createRecurso, updateRecurso, uploadRecursoFoto, Recurso } from '@/lib/actions/recursos'
+import { analyzeMaterialImage } from '@/lib/actions/ai_materiais'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Upload, X, Camera } from 'lucide-react'
+import { Loader2, Upload, X, Camera, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 
@@ -46,11 +48,14 @@ interface RecursoFormProps {
 export default function RecursoForm({ recurso, trigger, open, onOpenChange }: RecursoFormProps) {
     const [loading, setLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
+    const [analyzingAI, setAnalyzingAI] = useState(false)
     const [internalOpen, setInternalOpen] = useState(false)
+    const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Form state
     const [nome, setNome] = useState(recurso?.nome_item || '')
+    const [descricao, setDescricao] = useState(recurso?.descricao || '')
     const [fotoUrl, setFotoUrl] = useState(recurso?.foto_url || '')
     const [quantidade, setQuantidade] = useState(recurso?.quantidade?.toString() || '1')
     const [localizacao, setLocalizacao] = useState(recurso?.localizacao || '')
@@ -66,6 +71,7 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
         const file = e.target.files?.[0]
         if (!file) return
 
+        setSelectedFile(file)
         setUploading(true)
         try {
             const formData = new FormData()
@@ -101,11 +107,12 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
 
         const formData = new FormData()
         formData.append('nome_item', nome)
+        formData.append('descricao', descricao)
         formData.append('foto_url', fotoUrl)
         formData.append('quantidade', quantidade)
         formData.append('localizacao', localizacao)
         formData.append('status_conservacao', status)
-        formData.append('objetivos_terapeuticos', objetivos.join(','))
+        formData.append('objetivos_terapeuticos', JSON.stringify(objetivos))
 
         try {
             if (recurso) {
@@ -116,11 +123,13 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
             setIsOpen(false)
             if (!recurso) {
                 setNome('')
+                setDescricao('')
                 setFotoUrl('')
                 setQuantidade('1')
                 setLocalizacao('')
                 setStatus('Excelente')
                 setObjetivos([])
+                setSelectedFile(null)
             }
         } catch (error) {
             console.error(error)
@@ -135,7 +144,7 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
             {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto rounded-3xl">
                 <DialogHeader>
-                    <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white flex items-center justify-between">
                         {recurso ? 'Editar Recurso' : 'Novo Recurso'}
                     </DialogTitle>
                 </DialogHeader>
@@ -149,7 +158,7 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
                         >
                             {fotoUrl ? (
                                 <>
-                                    <Image src={fotoUrl} alt="Preview" fill className="object-cover" />
+                                    <Image src={fotoUrl} alt="Preview" fill className="object-contain p-2" />
                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                         <Camera className="w-8 h-8 text-white" />
                                     </div>
@@ -176,6 +185,52 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
                         </div>
                     </div>
 
+
+                    {(selectedFile || fotoUrl) && !analyzingAI && (
+                        <div className="flex justify-center -mt-2">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={async () => {
+                                    if (!selectedFile && !fotoUrl) return
+                                    setAnalyzingAI(true)
+                                    try {
+                                        const formData = new FormData()
+                                        if (selectedFile) {
+                                            formData.append('file', selectedFile)
+                                        } else {
+                                            formData.append('imageUrl', fotoUrl)
+                                        }
+                                        const result = await analyzeMaterialImage(formData)
+
+                                        if (result.nome && !nome) setNome(result.nome)
+                                        if (result.descricao && !descricao) setDescricao(result.descricao)
+                                        if (result.objetivos && Array.isArray(result.objetivos)) {
+                                            const novos = result.objetivos.filter((o: string) => !objetivos.includes(o))
+                                            setObjetivos([...objetivos, ...novos])
+                                        }
+                                        alert('Análise concluída! Nome, descrição e objetivos foram sugeridos.')
+                                    } catch (error: any) {
+                                        console.error(error)
+                                        alert('Erro na análise IA: ' + error.message)
+                                    } finally {
+                                        setAnalyzingAI(false)
+                                    }
+                                }}
+                                className="gap-2 bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                Identificar com IA
+                            </Button>
+                        </div>
+                    )}
+
+                    {analyzingAI && (
+                        <div className="flex justify-center -mt-2 text-sm text-purple-600 animate-pulse items-center gap-2">
+                            <Sparkles className="w-4 h-4" /> Analisando imagem...
+                        </div>
+                    )}
+
                     <div className="space-y-2">
                         <Label htmlFor="nome">Nome do Item *</Label>
                         <Input
@@ -185,6 +240,17 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
                             required
                             placeholder="Ex: Bola Sensorial"
                             className="rounded-xl"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="descricao">Descrição</Label>
+                        <Textarea
+                            id="descricao"
+                            value={descricao}
+                            onChange={(e) => setDescricao(e.target.value)}
+                            placeholder="Breve descrição do item, para que serve..."
+                            className="rounded-xl min-h-[80px]"
                         />
                     </div>
 
@@ -330,6 +396,6 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
                     </Button>
                 </form>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     )
 }

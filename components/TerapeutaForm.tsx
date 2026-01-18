@@ -186,6 +186,62 @@ export default function TerapeutaForm() {
                 </div>
             </div>
 
+
+            {/* Financeiro */}
+            <div>
+                <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4 border-b pb-2 pt-6">
+                    Dados Financeiros
+                </h3>
+                <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    <div className="sm:col-span-3">
+                        <label htmlFor="valor_hora_padrao" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Valor Hora Padrão (R$)
+                        </label>
+                        <div className="mt-1">
+                            <input
+                                type="number"
+                                step="0.01"
+                                name="valor_hora_padrao"
+                                id="valor_hora_padrao"
+                                placeholder="0.00"
+                                className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="sm:col-span-3">
+                        <label htmlFor="porcentagem_repasse" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Porcentagem de Repasse (%)
+                        </label>
+                        <div className="mt-1">
+                            <input
+                                type="number"
+                                step="0.1"
+                                name="porcentagem_repasse"
+                                id="porcentagem_repasse"
+                                placeholder="Ex: 50"
+                                className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="sm:col-span-6">
+                        <label htmlFor="chave_pix" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Chave PIX
+                        </label>
+                        <div className="mt-1">
+                            <input
+                                type="text"
+                                name="chave_pix"
+                                id="chave_pix"
+                                placeholder="CPF, Email, Telefone ou Aleatória"
+                                className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div className="flex justify-end gap-4">
                 <Link
                     href="/admin/terapeutas"
@@ -201,6 +257,6 @@ export default function TerapeutaForm() {
                     {isLoading ? 'Salvando...' : 'Salvar Terapeuta'}
                 </button>
             </div>
-        </form>
+        </form >
     )
 }

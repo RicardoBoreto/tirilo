@@ -81,7 +81,7 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
         .limit(3)
 
     // 4. Fetch Resources and Rooms
-    const { data: recursos } = await supabase.from('recursos').select('nome_item')
+    const { data: recursos } = await supabase.from('recursos').select('nome_item, descricao, objetivos_terapeuticos')
     const { data: salas } = await supabase.from('salas_recursos').select('nome')
 
     // 5. Fetch Therapist Data (Curriculum)
@@ -137,7 +137,13 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
         `- ${new Date(s.data_hora_inicio).toLocaleDateString()}: ${s.observacoes || 'Sem observações'}`
     ).join('\n') || 'Nenhuma sessão anterior registrada.'
 
-    const recursosTexto = recursos?.map(r => r.nome_item).join(', ') || 'Nenhum recurso cadastrado.'
+    const recursosTexto = recursos?.map(r => {
+        const desc = r.descricao ? ` (${r.descricao})` : ''
+        const objs = (r.objetivos_terapeuticos && Array.isArray(r.objetivos_terapeuticos))
+            ? ` [Uso: ${r.objetivos_terapeuticos.join(', ')}]`
+            : ''
+        return `- ${r.nome_item}${desc}${objs}`
+    }).join('\n') || 'Nenhum recurso cadastrado.'
     const salasTexto = salas?.map(s => s.nome).join(', ') || 'Nenhuma sala cadastrada.'
 
     // --- ANONYMIZATION SETUP ---

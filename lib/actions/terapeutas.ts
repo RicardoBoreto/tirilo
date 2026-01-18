@@ -21,6 +21,7 @@ const TerapeutaSchema = z.object({
     observacoes_clinicas: z.string().optional(),
     valor_hora_padrao: z.string().optional(),
     porcentagem_repasse: z.string().optional(),
+    chave_pix: z.string().optional(),
 })
 
 
@@ -155,6 +156,7 @@ export async function createTerapeuta(formData: FormData) {
         observacoes_clinicas: formData.get('observacoes_clinicas'),
         valor_hora_padrao: formData.get('valor_hora_padrao'),
         porcentagem_repasse: formData.get('porcentagem_repasse'),
+        chave_pix: formData.get('chave_pix'),
     }
 
     const validated = TerapeutaSchema.parse(rawData)
@@ -249,6 +251,7 @@ export async function createTerapeuta(formData: FormData) {
             observacoes_clinicas: validated.observacoes_clinicas || null,
             valor_hora_padrao: validated.valor_hora_padrao ? Number(validated.valor_hora_padrao) : null,
             porcentagem_repasse: validated.porcentagem_repasse ? Number(validated.porcentagem_repasse) : null,
+            chave_pix: validated.chave_pix || null,
         })
 
     if (curriculoError) {
@@ -287,6 +290,7 @@ export async function updateTerapeuta(formData: FormData) {
         observacoes_clinicas: formData.get('observacoes_clinicas'),
         valor_hora_padrao: formData.get('valor_hora_padrao'),
         porcentagem_repasse: formData.get('porcentagem_repasse'),
+        chave_pix: formData.get('chave_pix'),
     }
 
     const validated = TerapeutaSchema.parse(rawData)
@@ -349,6 +353,7 @@ export async function updateTerapeuta(formData: FormData) {
         observacoes_clinicas: validated.observacoes_clinicas || null,
         valor_hora_padrao: validated.valor_hora_padrao ? Number(validated.valor_hora_padrao) : null,
         porcentagem_repasse: validated.porcentagem_repasse ? Number(validated.porcentagem_repasse) : null,
+        chave_pix: validated.chave_pix || null,
     }
 
     // Check if curriculum exists
