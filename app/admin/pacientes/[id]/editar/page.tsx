@@ -15,6 +15,11 @@ export default function EditarPacientePage({ params }: { params: Promise<{ id: s
         data_nascimento: '',
         foto_url: '',
         observacoes: '',
+        convenio_nome: '',
+        convenio_numero_carteirinha: '',
+        convenio_validade: '',
+        valor_sessao_padrao: '',
+        dia_vencimento_padrao: '',
     })
 
     useEffect(() => {
@@ -27,6 +32,11 @@ export default function EditarPacientePage({ params }: { params: Promise<{ id: s
                         data_nascimento: paciente.data_nascimento,
                         foto_url: paciente.foto_url || '',
                         observacoes: paciente.observacoes || '',
+                        convenio_nome: paciente.convenio_nome || '',
+                        convenio_numero_carteirinha: paciente.convenio_numero_carteirinha || '',
+                        convenio_validade: paciente.convenio_validade || '',
+                        valor_sessao_padrao: paciente.valor_sessao_padrao?.toString() || '',
+                        dia_vencimento_padrao: paciente.dia_vencimento_padrao?.toString() || '',
                     })
                 }
             } catch (err) {
@@ -110,6 +120,87 @@ export default function EditarPacientePage({ params }: { params: Promise<{ id: s
                         onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                     />
+                </div>
+
+                <div className="col-span-2 space-y-4">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                        Configurações Financeiras (Padrão)
+                    </h3>
+                    <div className="grid grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Valor da Sessão (R$)
+                            </label>
+                            <input
+                                name="valor_sessao_padrao"
+                                type="number"
+                                step="0.01"
+                                value={formData.valor_sessao_padrao}
+                                onChange={(e) => setFormData({ ...formData, valor_sessao_padrao: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                placeholder="0.00"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Dia de Vencimento
+                            </label>
+                            <input
+                                name="dia_vencimento_padrao"
+                                type="number"
+                                min="1"
+                                max="31"
+                                value={formData.dia_vencimento_padrao}
+                                onChange={(e) => setFormData({ ...formData, dia_vencimento_padrao: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                placeholder="Ex: 10"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-span-2 space-y-4">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                        Convênio / Plano de Saúde
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Nome do Convênio
+                            </label>
+                            <input
+                                name="convenio_nome"
+                                value={formData.convenio_nome}
+                                onChange={(e) => setFormData({ ...formData, convenio_nome: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                placeholder="Ex: Unimed"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Nº da Carteirinha
+                            </label>
+                            <input
+                                name="convenio_numero_carteirinha"
+                                value={formData.convenio_numero_carteirinha}
+                                onChange={(e) => setFormData({ ...formData, convenio_numero_carteirinha: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                placeholder="Número identificador"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Validade
+                            </label>
+                            <input
+                                name="convenio_validade"
+                                type="date"
+                                value={formData.convenio_validade}
+                                onChange={(e) => setFormData({ ...formData, convenio_validade: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 <div>
