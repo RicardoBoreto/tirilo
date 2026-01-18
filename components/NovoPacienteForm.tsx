@@ -1,12 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createPaciente } from '@/lib/actions/pacientes'
+import { getOperadoras, Operadora } from '@/lib/actions/operadoras'
 import { useRouter } from 'next/navigation'
 
 export default function NovoPacienteForm({ clinicaId }: { clinicaId: number }) {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
+    const [operadoras, setOperadoras] = useState<Operadora[]>([])
+
+    useEffect(() => {
+        getOperadoras().then(setOperadoras)
+    }, [])
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -94,10 +100,19 @@ export default function NovoPacienteForm({ clinicaId }: { clinicaId: number }) {
                                 Nome do Convênio (ex: Unimed)
                             </label>
                             <input
-                                name="convenio_nome"
-                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                                 placeholder="Nome do plano"
+                                name="convenio_nome_legacy"
+                                className="hidden"
                             />
+                            <select
+                                name="operadora_id"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                            >
+                                <option value="">Particular / Outro</option>
+                                {operadoras.map(op => (
+                                    <option key={op.id} value={op.id}>{op.nome_fantasia}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">

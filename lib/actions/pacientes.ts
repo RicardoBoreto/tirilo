@@ -71,6 +71,8 @@ export type Paciente = {
     convenio_nome: string | null
     convenio_numero_carteirinha: string | null
     convenio_validade: string | null
+    operadora_id: number | null
+    operadora?: { nome_fantasia: string; registro_ans?: string }
 }
 
 export type Responsavel = {
@@ -145,6 +147,7 @@ export async function getPacientes(clinicaId?: number) {
         .from('pacientes')
         .select(`
             *,
+            operadora:saas_operadoras(nome_fantasia, registro_ans),
             pacientes_responsaveis!left (
                 responsavel:responsaveis (*)
             )
@@ -176,7 +179,10 @@ export async function getPaciente(id: number) {
 
     const { data, error } = await supabase
         .from('pacientes')
-        .select('*')
+        .select(`
+            *,
+            operadora:saas_operadoras(nome_fantasia, registro_ans)
+        `)
         .eq('id', id)
         .single()
 
@@ -202,6 +208,7 @@ export async function createPaciente(formData: FormData) {
         convenio_nome: formData.get('convenio_nome') as string || null,
         convenio_numero_carteirinha: formData.get('convenio_numero_carteirinha') as string || null,
         convenio_validade: formData.get('convenio_validade') as string || null,
+        operadora_id: formData.get('operadora_id') ? Number(formData.get('operadora_id')) : null,
     }
 
     const { data, error } = await supabase
@@ -232,6 +239,7 @@ export async function updatePaciente(id: number, formData: FormData) {
         convenio_nome: formData.get('convenio_nome') as string || null,
         convenio_numero_carteirinha: formData.get('convenio_numero_carteirinha') as string || null,
         convenio_validade: formData.get('convenio_validade') as string || null,
+        operadora_id: formData.get('operadora_id') ? Number(formData.get('operadora_id')) : null,
     }
 
     const { data, error } = await supabase

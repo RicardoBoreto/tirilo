@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { getPaciente, updatePaciente } from '@/lib/actions/pacientes'
+import { getOperadoras, Operadora } from '@/lib/actions/operadoras'
 
 export default function EditarPacientePage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter()
@@ -20,7 +21,13 @@ export default function EditarPacientePage({ params }: { params: Promise<{ id: s
         convenio_validade: '',
         valor_sessao_padrao: '',
         dia_vencimento_padrao: '',
+        operadora_id: '',
     })
+    const [operadoras, setOperadoras] = useState<Operadora[]>([])
+
+    useEffect(() => {
+        getOperadoras().then(setOperadoras)
+    }, [])
 
     useEffect(() => {
         async function loadPaciente() {
@@ -37,6 +44,7 @@ export default function EditarPacientePage({ params }: { params: Promise<{ id: s
                         convenio_validade: paciente.convenio_validade || '',
                         valor_sessao_padrao: paciente.valor_sessao_padrao?.toString() || '',
                         dia_vencimento_padrao: paciente.dia_vencimento_padrao?.toString() || '',
+                        operadora_id: paciente.operadora_id?.toString() || '',
                     })
                 }
             } catch (err) {
@@ -169,12 +177,22 @@ export default function EditarPacientePage({ params }: { params: Promise<{ id: s
                                 Nome do Convênio
                             </label>
                             <input
-                                name="convenio_nome"
+                                name="convenio_nome_legacy"
                                 value={formData.convenio_nome}
                                 onChange={(e) => setFormData({ ...formData, convenio_nome: e.target.value })}
-                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                                placeholder="Ex: Unimed"
+                                className="hidden"
                             />
+                            <select
+                                name="operadora_id"
+                                value={formData.operadora_id}
+                                onChange={(e) => setFormData({ ...formData, operadora_id: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                            >
+                                <option value="">Particular / Outro</option>
+                                {operadoras.map(op => (
+                                    <option key={op.id} value={op.id}>{op.nome_fantasia}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

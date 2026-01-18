@@ -2,6 +2,9 @@ import { getClinica } from '@/lib/actions/clinica'
 import ClinicaSettingsForm from '@/components/ClinicaSettingsForm'
 import { CuteSettings } from '@/components/icons/CuteIcons'
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import OperadorasTab from "@/components/Configuracoes/OperadorasTab"
+
 export default async function ConfiguracoesPage() {
     const clinic = await getClinica()
 
@@ -23,12 +26,25 @@ export default async function ConfiguracoesPage() {
                         Configurações
                     </h1>
                     <p className="text-lg text-muted-foreground ml-1">
-                        Gerencie a identidade visual e dados da sua clínica
+                        Gerencie a identidade visual, dados da clínica e convênios.
                     </p>
                 </div>
             </div>
 
-            <ClinicaSettingsForm clinic={clinic} />
+            <Tabs defaultValue="clinica" className="w-full">
+                <TabsList className="mb-4">
+                    <TabsTrigger value="clinica">Dados da Clínica</TabsTrigger>
+                    <TabsTrigger value="convenios">Convênios e Operadoras</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="clinica">
+                    <ClinicaSettingsForm clinic={clinic} />
+                </TabsContent>
+
+                <TabsContent value="convenios">
+                    <OperadorasTab />
+                </TabsContent>
+            </Tabs>
         </div>
     )
 }

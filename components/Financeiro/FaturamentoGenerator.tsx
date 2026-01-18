@@ -54,7 +54,7 @@ export default function FaturamentoGenerator() {
             .from('agendamentos')
             .select(`
                 id, data_hora_inicio, 
-                paciente:pacientes(nome, convenio_nome, convenio_numero_carteirinha),
+                paciente:pacientes(nome, convenio_nome, convenio_numero_carteirinha, operadora:saas_operadoras(nome_fantasia)),
                 terapeuta:usuarios(nome_completo)
             `)
             .eq('status', 'concluido')
@@ -185,9 +185,9 @@ export default function FaturamentoGenerator() {
                                     </td>
                                     <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
                                         {item.paciente?.nome}
-                                        {item.paciente?.convenio_nome && (
+                                        {(item.paciente?.operadora?.nome_fantasia || item.paciente?.convenio_nome) && (
                                             <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                                {item.paciente.convenio_nome}
+                                                {item.paciente.operadora?.nome_fantasia || item.paciente.convenio_nome}
                                             </span>
                                         )}
                                     </td>

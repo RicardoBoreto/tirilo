@@ -7,7 +7,7 @@ import { useReactToPrint } from 'react-to-print'
 type Appointment = {
     id: number
     data_hora_inicio: string
-    paciente: { nome: string; convenio_nome?: string; convenio_numero_carteirinha?: string }
+    paciente: { nome: string; convenio_nome?: string; convenio_numero_carteirinha?: string; operadora?: { nome_fantasia: string } }
     terapeuta: { nome_completo: string }
 }
 
@@ -137,7 +137,7 @@ export default function InsuranceGuideModal({ isOpen, onClose, appointments, cli
                                         </div>
                                         <div>
                                             <p className="text-xs font-bold text-gray-500 uppercase">Convênio</p>
-                                            <p>{appts[0].paciente.convenio_nome || 'Particular / Outro'}</p>
+                                            <p>{appts[0].paciente.operadora?.nome_fantasia || appts[0].paciente.convenio_nome || 'Particular / Outro'}</p>
                                         </div>
                                         <div>
                                             <p className="text-xs font-bold text-gray-500 uppercase">Mês/Ano</p>
