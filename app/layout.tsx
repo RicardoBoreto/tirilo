@@ -17,11 +17,6 @@ const inter = Inter({
 export const metadata: Metadata = {
     title: "SaaS Tirilo - Admin",
     description: "Sistema de gestão de clínicas",
-    icons: {
-        icon: '/icon',
-        shortcut: '/icon',
-        apple: '/icon',
-    }
 };
 
 export default function RootLayout({
