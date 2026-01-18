@@ -161,3 +161,99 @@ export async function getAgendaPaciente(pacienteId: number) {
 
     return agendamentos
 }
+
+export async function updateResponsavelPassword(responsavelId: number, newPassword: string) {
+    const supabase = await createClient()
+    const { createAdminClient } = await import('@/lib/supabase/admin')
+    const supabaseAdmin = createAdminClient()
+
+    // 1. Get user_id from responsavel
+    const { data: responsavel, error: respError } = await supabase
+        .from('responsaveis')
+        .select('user_id')
+        .eq('id', responsavelId)
+        .single()
+
+    if (respError || !responsavel) {
+        throw new Error('Responsável não encontrado.')
+    }
+
+    if (!responsavel.user_id) {
+        throw new Error('Este responsável não tem acesso habilitado.')
+    }
+
+    // 2. Update password
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        responsavel.user_id,
+        { password: newPassword }
+    )
+
+    if (updateError) {
+        console.error('Erro ao atualizar senha:', updateError)
+        throw new Error('Erro ao atualizar senha: ' + updateError.message)
+    }
+
+    return { success: true, message: 'Senha atualizada com sucesso.' }
+}
+
+export async function unlinkResponsavelAccess(responsavelId: number) {
+    const supabase = await createClient()
+    const { error } = await supabase
+        .from('responsaveis')
+        .update({ user_id: null })
+        .eq('id', responsavelId)
+
+    if (error) {
+        console.error('Erro ao desvincular acesso:', error)
+        throw new Error('Erro ao desvincular acesso.')
+    }
+    return { success: true, message: 'Acesso desvinculado. Agora você pode habilitar novamente.' }
+}
+
+export async function getRelatoriosPacienteFamilia(pacienteId: number) {
+    const supabase = await createClient()
+
+    // 1. Get Logged User
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
+    // 2. Check Permission (Responsavel -> Paciente)
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const adminDb = await createAdminClient()
+
+    const { data: responsavel } = await adminDb
+        .from('responsaveis')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+    if (!responsavel) return []
+
+    const { data: vinculo } = await adminDb
+        .from('pacientes_responsaveis')
+        .select('*')
+        .eq('responsavel_id', responsavel.id)
+        .eq('paciente_id', pacienteId)
+        .single()
+
+    if (!vinculo) return []
+
+    // 3. Get Relatorios Visible
+    const { data: relatorios, error } = await adminDb
+        .from('relatorios_atendimento')
+        .select(`
+            *,
+            terapeuta:usuarios(nome_completo),
+            agendamento:agendamentos(data_hora_inicio)
+        `)
+        .eq('id_paciente', pacienteId)
+        .eq('visivel_familia', true)
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        console.error('Erro ao buscar relatórios família:', error)
+        return []
+    }
+
+    return relatorios
+}

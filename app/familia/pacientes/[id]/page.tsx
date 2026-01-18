@@ -6,7 +6,8 @@ import { ArrowLeft } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { getSessoesLudicas } from '@/lib/actions/ludoterapia'
-import { getAgendaPaciente } from '@/lib/actions/familia'
+import { getAgendaPaciente, getRelatoriosPacienteFamilia } from '@/lib/actions/familia'
+import FamiliaRelatoriosTab from '@/components/FamiliaRelatoriosTab'
 import LudoterapiaTab from '@/components/LudoterapiaTab'
 import AgendaTab from '@/components/AgendaTab'
 
@@ -75,6 +76,9 @@ export default async function FamilyPacientePage({
     // Fetch Agenda
     const agenda = await getAgendaPaciente(pacienteId)
 
+    // Fetch Relatorios
+    const relatorios = await getRelatoriosPacienteFamilia(pacienteId)
+
     return (
         <div className="space-y-6">
             <Link
@@ -118,17 +122,20 @@ export default async function FamilyPacientePage({
 
             {/* Content Tabs */}
             <Tabs defaultValue="agenda" className="w-full">
-                <TabsList className="w-full justify-start h-auto p-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mb-6 overflow-x-auto flex-nowrap">
-                    <TabsTrigger value="agenda" className="flex-1 min-w-[150px] py-3 rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-300 gap-2">
+                <TabsList className="w-full h-auto p-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mb-6 flex flex-wrap md:flex-nowrap gap-2">
+                    <TabsTrigger value="agenda" className="w-[calc(50%-4px)] md:w-auto md:flex-1 py-3 rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-300 gap-2">
                         <span>📅</span> Agenda
                     </TabsTrigger>
-                    <TabsTrigger value="ludoterapia" className="flex-1 min-w-[150px] py-3 rounded-lg data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/20 dark:data-[state=active]:text-purple-300 gap-2">
-                        <span>🤖</span> Aventuras com Tirilo
+                    <TabsTrigger value="relatorios" className="w-[calc(50%-4px)] md:w-auto md:flex-1 py-3 rounded-lg data-[state=active]:bg-green-50 data-[state=active]:text-green-700 dark:data-[state=active]:bg-green-900/20 dark:data-[state=active]:text-green-300 gap-2">
+                        <span>📝</span> Relatórios
                     </TabsTrigger>
-                    <TabsTrigger value="anamnese" className="flex-1 min-w-[120px] py-3 rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-300">
+                    <TabsTrigger value="ludoterapia" className="w-full md:w-auto md:flex-1 py-3 rounded-lg data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/20 dark:data-[state=active]:text-purple-300 gap-2">
+                        <span>🤖</span> Aventura com Tirilo
+                    </TabsTrigger>
+                    <TabsTrigger value="anamnese" className="w-[calc(50%-4px)] md:w-auto md:flex-1 py-3 rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-300">
                         Histórico
                     </TabsTrigger>
-                    <TabsTrigger value="terapeutas" className="flex-1 min-w-[120px] py-3 rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-300">
+                    <TabsTrigger value="terapeutas" className="w-[calc(50%-4px)] md:w-auto md:flex-1 py-3 rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-300">
                         Equipe
                     </TabsTrigger>
                 </TabsList>
@@ -137,6 +144,10 @@ export default async function FamilyPacientePage({
                     <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
                         <AgendaTab agendamentos={agenda} />
                     </div>
+                </TabsContent>
+
+                <TabsContent value="relatorios">
+                    <FamiliaRelatoriosTab relatorios={relatorios} />
                 </TabsContent>
 
                 <TabsContent value="ludoterapia">

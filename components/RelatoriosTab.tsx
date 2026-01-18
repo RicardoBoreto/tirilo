@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { extractRelatorioFromImage, importarRelatorioLegado, deleteRelatorio } from '@/lib/actions/relatorios'
+import { Switch } from '@/components/ui/switch'
+import { extractRelatorioFromImage, importarRelatorioLegado, deleteRelatorio, toggleVisibilidadeRelatorio } from '@/lib/actions/relatorios'
 import { useRouter } from 'next/navigation'
 import jsPDF from 'jspdf'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -75,6 +76,7 @@ interface Relatorio {
     created_at: string
     relatorio_gerado: string
     status: string
+    visivel_familia?: boolean
     terapeuta?: {
         nome_completo: string
     }
@@ -231,6 +233,16 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
             alert('Erro ao excluir relatório')
         } finally {
             setIsDeleting(null)
+        }
+    }
+
+    const handleToggleVisibility = async (id: number, current: boolean) => {
+        try {
+            await toggleVisibilidadeRelatorio(id, !current)
+            router.refresh()
+        } catch (error) {
+            console.error(error)
+            alert('Erro ao alterar visibilidade')
         }
     }
 
@@ -481,6 +493,12 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
                                             }`}>
                                             {relatorio.status === 'finalizado' ? 'Finalizado' : 'Rascunho'}
                                         </span>
+                                        {relatorio.visivel_familia && (
+                                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 flex items-center gap-1">
+                                                <Eye className="w-3 h-3" />
+                                                Família
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
@@ -576,15 +594,32 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
                                 </Button>
                             </div>
 
-                            <div className="flex gap-2">
-                                <Button variant="outline" size="sm" onClick={handleGeneratePDF} className="gap-2">
-                                    <FileDown className="w-4 h-4" />
-                                    PDF
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
-                                    <Printer className="w-4 h-4" />
-                                    Imprimir
-                                </Button>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2 border-r pr-4 border-gray-200 dark:border-gray-700">
+                                    <Label htmlFor="visibilidade" className="text-sm font-medium cursor-pointer">
+                                        Liberar Família
+                                    </Label>
+                                    <Switch
+                                        id="visibilidade"
+                                        checked={selectedRelatorio?.visivel_familia || false}
+                                        onCheckedChange={(c) => {
+                                            if (selectedRelatorio) {
+                                                handleToggleVisibility(selectedRelatorio.id, selectedRelatorio.visivel_familia || false)
+                                                setSelectedRelatorio({ ...selectedRelatorio, visivel_familia: c })
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" onClick={handleGeneratePDF} className="gap-2">
+                                        <FileDown className="w-4 h-4" />
+                                        PDF
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+                                        <Printer className="w-4 h-4" />
+                                        Imprimir
+                                    </Button>
+                                </div>
                             </div>
                         </div>
 

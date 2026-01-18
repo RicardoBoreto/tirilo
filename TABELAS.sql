@@ -395,6 +395,8 @@ CREATE TABLE public.relatorios_atendimento (
     texto_bruto TEXT, -- Notas originais do terapeuta
     relatorio_gerado TEXT, -- Texto final melhorado pela IA
     status TEXT DEFAULT 'rascunho', -- 'rascunho', 'finalizado'
+    visivel_familia BOOLEAN DEFAULT FALSE, -- Controle de visibilidade para o Portal da Família
+
     
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW()

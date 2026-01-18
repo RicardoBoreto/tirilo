@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { addResponsavel, removeResponsavel } from '@/lib/actions/pacientes'
 import { updateResponsavel } from '@/lib/actions/pacientes_fix'
-import { enableResponsavelAccess } from '@/lib/actions/familia'
+import { enableResponsavelAccess, updateResponsavelPassword, unlinkResponsavelAccess } from '@/lib/actions/familia'
 import { useRouter } from 'next/navigation'
 
 type Props = {
@@ -24,6 +24,8 @@ export default function ResponsaveisTab({ pacienteId, responsaveis }: Props) {
         grau_parentesco: '',
         responsavel_principal: false,
     })
+    const [passwordModal, setPasswordModal] = useState<{ open: boolean, id: number | null, nome: string }>({ open: false, id: null, nome: '' })
+    const [newPassword, setNewPassword] = useState('')
 
     function handleEdit(rel: any) {
         setEditingId(rel.responsavel_id)
@@ -95,6 +97,33 @@ export default function ResponsaveisTab({ pacienteId, responsaveis }: Props) {
             alert(error.message || 'Erro ao habilitar acesso')
         }
     }
+
+    async function handleChangePasswordSubmit(e: React.FormEvent) {
+        e.preventDefault()
+        if (!passwordModal.id) return
+        if (newPassword.length < 6) return alert('Senha deve ter pelo menos 6 caracteres')
+
+        try {
+            await updateResponsavelPassword(passwordModal.id, newPassword)
+            alert('Senha alterada com sucesso!')
+            setPasswordModal({ open: false, id: null, nome: '' })
+            setNewPassword('')
+        } catch (err: any) {
+            alert(err.message)
+        }
+    }
+
+    async function handleUnlinkAccess(responsavelId: number) {
+        if (!confirm('Isso irá remover o vínculo de login atual (útil se o usuário não existir mais). Você poderá criar um novo em seguida. Continuar?')) return
+        try {
+            await unlinkResponsavelAccess(responsavelId)
+            router.refresh()
+        } catch (err: any) {
+            alert(err.message)
+        }
+    }
+
+
 
     return (
         <div className="space-y-6">
@@ -287,9 +316,74 @@ export default function ResponsaveisTab({ pacienteId, responsaveis }: Props) {
                                         Habilitar Acesso
                                     </button>
                                 )}
+                                {rel.responsavel.user_id && (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                setNewPassword('')
+                                                setPasswordModal({ open: true, id: rel.responsavel_id, nome: rel.responsavel.nome })
+                                            }}
+                                            className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 text-sm font-medium"
+                                        >
+                                            Alterar Senha
+                                        </button>
+                                        <button
+                                            onClick={() => handleUnlinkAccess(rel.responsavel_id)}
+                                            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs font-medium"
+                                            title="Clique aqui se o login estiver com problemas (usuário não encontrado)"
+                                        >
+                                            Resetar Login
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+
+            {passwordModal.open && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                            Alterar Senha de {passwordModal.nome}
+                        </h3>
+                        <form onSubmit={handleChangePasswordSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Nova Senha
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    minLength={6}
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    placeholder="Mínimo 6 caracteres"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Digite a nova senha para o responsável.
+                                </p>
+                            </div>
+                            <div className="flex gap-2 justify-end pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setPasswordModal({ open: false, id: null, nome: '' })}
+                                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                >
+                                    Salvar Senha
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
         </div>

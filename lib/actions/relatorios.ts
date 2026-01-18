@@ -267,3 +267,26 @@ export async function deleteRelatorio(id: number, pacienteId: number) {
     revalidatePath(`/admin/pacientes/${pacienteId}`)
     return { success: true }
 }
+
+export async function toggleVisibilidadeRelatorio(id: number, visivel: boolean) {
+    const supabase = await createClient()
+
+    // Get pacienteId for revalidation
+    const { data: relatorio } = await supabase
+        .from('relatorios_atendimento')
+        .select('id_paciente')
+        .eq('id', id)
+        .single()
+
+    const { error } = await supabase
+        .from('relatorios_atendimento')
+        .update({ visivel_familia: visivel })
+        .eq('id', id)
+
+    if (error) throw new Error('Erro ao atualizar visibilidade')
+
+    if (relatorio) {
+        revalidatePath(`/admin/pacientes/${relatorio.id_paciente}`)
+    }
+    return { success: true }
+}

@@ -10,6 +10,22 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
   - 🐛 Correções de Bugs
+## [1.9.0] - 18/01/2026
+
+### 👨‍👩‍👧‍👦 Portal da Família (Relatórios e UX)
+- **Visibilidade de Relatórios:** Agora os terapeutas podem liberar relatórios de atendimento específicos para visualização dos pais.
+  - **Terapeutas:** Novo controle "Liberar Família" na visualização do relatório.
+  - **Família:** Nova aba "Relatórios" no perfil da criança no Portal da Família.
+  - **Banco de Dados:** Nova coluna `visivel_familia` na tabela `relatorios_atendimento`.
+- **Experiência do Usuário (UX):**
+  - **Identidade Visual:** O cabeçalho do portal agora exibe o **Logo e Nome da Clínica** do paciente.
+  - **Mobile:** Menu de navegação ajustado para formato de "Grade" em celulares, garantindo que todas as opções (Agenda, Relatórios, etc.) fiquem visíveis sem rolagem horizontal.
+  - **Padronização:** Botão "Sair" atualizado para seguir o padrão visual do sistema (vermelho).
+
+### 🔧 Administração e Acesso
+- **Reset de Login (Responsáveis):** Adicionado botão **"Resetar Login"** na gestão de responsáveis.
+  - Permite desvincular um usuário de acesso (email) para corrigir problemas de login ou recadastrar senha, habilitando o botão "Habilitar Acesso" novamente.
+
 ## [1.8.1] - 18/01/2026
 
 ### 🤖 IA para Recursos Terapêuticos
