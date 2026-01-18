@@ -113,16 +113,16 @@ export default function FaturamentoGenerator() {
                 clinica={clinica}
             />
 
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h3 className="font-semibold text-lg text-gray-700 dark:text-white">
                     Faturamento Pendente
                 </h3>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3 w-full md:w-auto">
                     <select
                         value={selectedTerapeuta}
                         onChange={(e) => setSelectedTerapeuta(e.target.value)}
                         disabled={isLocked}
-                        className={`border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:border-gray-700 min-w-[200px] ${isLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+                        className={`flex-1 md:flex-none border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:border-gray-700 min-w-[200px] ${isLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
                         {!isLocked && <option value="todos">Todos os Terapeutas</option>}
                         {terapeutas.map(t => (
@@ -132,7 +132,7 @@ export default function FaturamentoGenerator() {
                     <button
                         onClick={() => setShowGuideModal(true)}
                         disabled={selected.length === 0}
-                        className="flex items-center gap-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 md:flex-none flex justify-center items-center gap-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Printer size={18} />
                         Gerar Guia
@@ -140,7 +140,7 @@ export default function FaturamentoGenerator() {
                     <button
                         onClick={handleGerar}
                         disabled={selected.length === 0 || processing}
-                        className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-2 rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 md:flex-none flex justify-center items-center gap-2 bg-indigo-600 text-white px-6 py-2 rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Wand2 size={18} />
                         {processing ? 'Gerando...' : `Gerar Fatura (${selected.length})`}
@@ -149,56 +149,58 @@ export default function FaturamentoGenerator() {
             </div >
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-800/50">
-                        <tr>
-                            <th className="w-12 px-6 py-4">
-                                <span className="sr-only">Select</span>
-                            </th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Data</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Paciente</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Terapeuta</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {pendentes.length === 0 ? (
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[600px]">
+                        <thead className="bg-gray-50 dark:bg-gray-800/50">
                             <tr>
-                                <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
-                                    Todos os atendimentos concluídos já foram faturados.
-                                </td>
+                                <th className="w-12 px-6 py-4">
+                                    <span className="sr-only">Select</span>
+                                </th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Data</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Paciente</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Terapeuta</th>
                             </tr>
-                        ) : (
-                            pendentes.map((item) => (
-                                <tr
-                                    key={item.id}
-                                    className={`hover:bg-gray-50/50 dark:hover:bg-gray-700/50 cursor-pointer ${selected.includes(item.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}
-                                    onClick={() => toggleSelect(item.id)}
-                                >
-                                    <td className="px-6 py-4">
-                                        {selected.includes(item.id) ?
-                                            <CheckSquare className="text-indigo-600" size={20} /> :
-                                            <Square className="text-gray-300" size={20} />
-                                        }
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                        {new Date(item.data_hora_inicio).toLocaleDateString('pt-BR')}
-                                    </td>
-                                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                                        {item.paciente?.nome}
-                                        {(item.paciente?.operadora?.nome_fantasia || item.paciente?.convenio_nome) && (
-                                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                                {item.paciente.operadora?.nome_fantasia || item.paciente.convenio_nome}
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">
-                                        {item.terapeuta?.nome_completo}
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                            {pendentes.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
+                                        Todos os atendimentos concluídos já foram faturados.
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ) : (
+                                pendentes.map((item) => (
+                                    <tr
+                                        key={item.id}
+                                        className={`hover:bg-gray-50/50 dark:hover:bg-gray-700/50 cursor-pointer ${selected.includes(item.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}
+                                        onClick={() => toggleSelect(item.id)}
+                                    >
+                                        <td className="px-6 py-4">
+                                            {selected.includes(item.id) ?
+                                                <CheckSquare className="text-indigo-600" size={20} /> :
+                                                <Square className="text-gray-300" size={20} />
+                                            }
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                            {new Date(item.data_hora_inicio).toLocaleDateString('pt-BR')}
+                                        </td>
+                                        <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                                            {item.paciente?.nome}
+                                            {(item.paciente?.operadora?.nome_fantasia || item.paciente?.convenio_nome) && (
+                                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                    {item.paciente.operadora?.nome_fantasia || item.paciente.convenio_nome}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                            {item.terapeuta?.nome_completo}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div >
     )

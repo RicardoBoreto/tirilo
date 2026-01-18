@@ -116,16 +116,16 @@ export default function LancamentosTable({ tipo }: { tipo: 'receita' | 'despesa'
                 lancamento={selectedLancamento}
             />
 
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h3 className="font-semibold text-lg text-gray-700 dark:text-white">
                     {tipo === 'receita' ? 'Contas a Receber' : 'Contas a Pagar'}
                 </h3>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 w-full md:w-auto">
                     <select
                         value={selectedTerapeuta}
                         onChange={(e) => setSelectedTerapeuta(e.target.value)}
                         disabled={isLocked}
-                        className={`border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:border-gray-700 max-w-[200px] ${isLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+                        className={`flex-1 md:flex-none border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:border-gray-700 max-w-[200px] ${isLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
                         {!isLocked && <option value="todos">Todos os Terapeutas</option>}
                         {terapeutas.map(t => (
@@ -136,7 +136,7 @@ export default function LancamentosTable({ tipo }: { tipo: 'receita' | 'despesa'
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:border-gray-700"
+                        className="flex-1 md:flex-none border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:border-gray-700"
                     >
                         <option value="todos">Todos os Status</option>
                         <option value="pendente">Pendentes</option>
@@ -146,80 +146,82 @@ export default function LancamentosTable({ tipo }: { tipo: 'receita' | 'despesa'
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
-                        <tr>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Vencimento</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Descrição/Paciente</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Categoria</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Valor</th>
-                            <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase">Status</th>
-                            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {filtered.length === 0 ? (
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[800px]">
+                        <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
                             <tr>
-                                <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
-                                    Nenhum lançamento encontrado
-                                </td>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Vencimento</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Descrição/Paciente</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Categoria</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Valor</th>
+                                <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase">Status</th>
+                                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Ações</th>
                             </tr>
-                        ) : (
-                            filtered.map((item) => (
-                                <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors">
-                                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                        {new Date(item.data_vencimento).toLocaleDateString('pt-BR')}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-col">
-                                            <span className="font-medium text-gray-900 dark:text-white">{item.descricao}</span>
-                                            {item.paciente && (
-                                                <span className="text-xs text-gray-500">Pct: {item.paciente.nome}</span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">
-                                        {item.categoria?.nome || '-'}
-                                    </td>
-                                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.valor)}
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <StatusBadge status={item.status} />
-                                    </td>
-                                    <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
-                                        <button
-                                            onClick={() => handleViewInvoice(item.id)}
-                                            className="text-gray-500 hover:text-indigo-600 p-1.5 rounded-md hover:bg-indigo-50 transition-colors"
-                                            title="Visualizar Fatura"
-                                            disabled={loadingInvoice}
-                                        >
-                                            <Printer size={16} />
-                                        </button>
-
-                                        {item.status === 'pendente' && (
-                                            <button
-                                                onClick={() => openBaixaModal(item)}
-                                                className="text-xs font-medium bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
-                                            >
-                                                Quitar
-                                            </button>
-                                        )}
-                                        {item.status === 'pago' && (
-                                            <button
-                                                onClick={() => handleEstorno(item.id)}
-                                                className="text-gray-400 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 transition-colors"
-                                                title="Estornar Lançamento"
-                                            >
-                                                <RotateCcw size={16} />
-                                            </button>
-                                        )}
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                            {filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                                        Nenhum lançamento encontrado
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ) : (
+                                filtered.map((item) => (
+                                    <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors">
+                                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                            {new Date(item.data_vencimento).toLocaleDateString('pt-BR')}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="font-medium text-gray-900 dark:text-white">{item.descricao}</span>
+                                                {item.paciente && (
+                                                    <span className="text-xs text-gray-500">Pct: {item.paciente.nome}</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                            {item.categoria?.nome || '-'}
+                                        </td>
+                                        <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.valor)}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <StatusBadge status={item.status} />
+                                        </td>
+                                        <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                                            <button
+                                                onClick={() => handleViewInvoice(item.id)}
+                                                className="text-gray-500 hover:text-indigo-600 p-1.5 rounded-md hover:bg-indigo-50 transition-colors"
+                                                title="Visualizar Fatura"
+                                                disabled={loadingInvoice}
+                                            >
+                                                <Printer size={16} />
+                                            </button>
+
+                                            {item.status === 'pendente' && (
+                                                <button
+                                                    onClick={() => openBaixaModal(item)}
+                                                    className="text-xs font-medium bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
+                                                >
+                                                    Quitar
+                                                </button>
+                                            )}
+                                            {item.status === 'pago' && (
+                                                <button
+                                                    onClick={() => handleEstorno(item.id)}
+                                                    className="text-gray-400 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 transition-colors"
+                                                    title="Estornar Lançamento"
+                                                >
+                                                    <RotateCcw size={16} />
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     )

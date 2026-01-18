@@ -10,6 +10,15 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
   - 🐛 Correções de Bugs
+## [1.10.1] - 18/01/2026
+
+### 🐛 Correções (Mobile & Layout)
+
+#### Financeiro (Responsividade)
+- **Contas a Receber:** Adicionada rolagem horizontal na tabela de lançamentos para evitar cortes em telas pequenas. Ajuste no cabeçalho (filtros) para empilhar verticalmente em celulares.
+- **Faturamento:** Tabela de "Faturamento Pendente" agora possui rolagem horizontal. Botões "Gerar Guia" e "Gerar Fatura" ajustados para ocupar largura total no mobile, melhorando a área de toque.
+- **Visualização de Guia:** Modal de pré-visualização da guia de assinatura ajustado para permitir rolagem horizontal do documento A4, evitando distorções ou cortes laterais em dispositivos móveis.
+
 ## [1.10.0] - 18/01/2026
 
 ### 💰 Financeiro & Convênios (Major Update)

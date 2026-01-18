@@ -85,8 +85,8 @@ export default function InsuranceGuideModal({ isOpen, onClose, appointments, cli
                 </div>
 
                 {/* Preview Content */}
-                <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-950 p-8">
-                    <div ref={componentRef} className="bg-white text-black p-8 max-w-3xl mx-auto shadow-sm min-h-[29.7cm] print:shadow-none">
+                <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-950 p-4 md:p-8">
+                    <div ref={componentRef} className="bg-white text-black p-8 max-w-3xl mx-auto shadow-sm min-h-[29.7cm] min-w-[700px] print:shadow-none print:min-w-0">
                         {/* Printable Area - Iterate Patients */}
                         {Object.entries(byPatient).map(([patientName, appts], index) => (
                             <div key={patientName} className={index > 0 ? "page-break-before mt-10 print:mt-0" : ""}>
