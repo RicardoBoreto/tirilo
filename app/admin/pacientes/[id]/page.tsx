@@ -57,7 +57,7 @@ export default async function PacienteDetailsPage({
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row items-center gap-6 bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 relative">
                 {canGenerateAI && (
-                    <div className="absolute top-4 right-4 md:top-8 md:right-8">
+                    <div className="w-full flex justify-center md:justify-end md:absolute md:top-8 md:right-8 mb-6 md:mb-0 z-10">
                         <GerarPlanoModal pacienteId={pacienteId} />
                     </div>
                 )}

@@ -50,6 +50,7 @@ Ferramentas para o dia a dia dos terapeutas, focadas em produtividade e qualidad
 *   **Relatórios de Atendimento (Evolução):**
     *   Registro detalhado de cada sessão.
     *   **Assistente de Escrita (IA):** Gera o texto técnico baseado em tópicos brutos inseridos pelo terapeuta.
+    *   **Ditado por Voz:** Recurso de transcrição automática (fala-para-texto) para agilizar a entrada de anotações.
     *   **Contexto Histórico:** A IA analisa os últimos 3 relatórios para sugerir continuidade.
     *   **Liberação para Família:** Controle granular de quais relatórios os pais podem ver.
     *   Geração de PDF do relatório.
@@ -156,6 +157,9 @@ Cada versão segue o formato:
 - **Contas a Receber:** Adicionada rolagem horizontal na tabela de lançamentos para evitar cortes em telas pequenas. Ajuste no cabeçalho (filtros) para empilhar verticalmente em celulares.
 - **Faturamento:** Tabela de "Faturamento Pendente" agora possui rolagem horizontal. Botões "Gerar Guia" e "Gerar Fatura" ajustados para ocupar largura total no mobile, melhorando a área de toque.
 - **Visualização de Guia:** Modal de pré-visualização da guia de assinatura ajustado para permitir rolagem horizontal do documento A4, evitando distorções ou cortes laterais em dispositivos móveis.
+
+#### Prontuário e Relatórios
+- **Ditado por Voz:** Novo recurso de transcrição de áudio para texto (Speech-to-Text). Permite que o terapeuta dite as observações da sessão diretamente no navegador (celular ou PC), agilizando o preenchimento do relatório.
 
 ## [1.10.0] - 18/01/2026
 

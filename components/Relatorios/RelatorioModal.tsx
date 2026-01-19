@@ -50,27 +50,22 @@ export default function RelatorioModal({ agendamento, open, onOpenChange, onSucc
 
             const recognition = new SpeechRecognition()
             recognition.lang = 'pt-BR'
-            recognition.continuous = true
+            recognition.continuous = false // Changed to false for better reliability
             recognition.interimResults = false
 
             recognition.onstart = () => setIsListening(true)
             recognition.onend = () => setIsListening(false)
             recognition.onerror = (e: any) => {
                 console.error('Erro detalhes:', e)
-                if (e.error === 'not-allowed') {
-                    alert('Permissão de microfone negada. Verifique se o site tem permissão ou se está usando HTTPS.')
-                } else if (e.error === 'network') {
-                    alert('Erro de rede. O reconhecimento de voz requer conexão com a internet (e HTTPS em redes externas).')
-                } else if (e.error === 'no-speech') {
-                    // Ignore, just stop listening
-                } else {
-                    alert(`Erro no reconhecimento de voz: ${e.error}`)
+                if (e.error !== 'no-speech') {
+                    // Alert only helpful errors
+                    // alert('Erro: ' + e.error) 
                 }
                 setIsListening(false)
             }
 
             recognition.onresult = (event: any) => {
-                const transcript = event.results[event.results.length - 1][0].transcript
+                const transcript = event.results[0][0].transcript
                 setTextoBruto(prev => {
                     const spacer = prev.length > 0 && !prev.endsWith(' ') ? ' ' : ''
                     return prev + spacer + transcript

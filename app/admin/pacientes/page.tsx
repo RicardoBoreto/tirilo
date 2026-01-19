@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CuteUsers } from '@/components/icons/CuteIcons'
 import { Plus } from 'lucide-react'
+import PacienteRow from '@/components/Pacientes/PacienteRow'
 
 export default async function PacientesPage() {
     const pacientes = await getPacientes()
@@ -66,72 +67,15 @@ export default async function PacientesPage() {
                                         <th className="px-8 py-5 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Idade
                                         </th>
-                                        <th className="px-8 py-5 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            Ações
-                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {pacientes.map((paciente) => {
-                                        const idade = calcularIdade(paciente.data_nascimento)
-                                        return (
-                                            <tr
-                                                key={paciente.id}
-                                                className="hover:bg-gray-50/80 dark:hover:bg-gray-700/30 transition-colors group"
-                                            >
-                                                <td className="px-8 py-5 whitespace-nowrap">
-                                                    <div className="flex items-center">
-                                                        <Link href={`/admin/pacientes/${paciente.id}`}>
-                                                            <div className="h-12 w-12 flex-shrink-0 relative cursor-pointer hover:opacity-80 transition-opacity">
-                                                                {paciente.foto_url ? (
-                                                                    <img
-                                                                        className="h-12 w-12 rounded-full object-cover border-2 border-white shadow-sm"
-                                                                        src={paciente.foto_url}
-                                                                        alt={paciente.nome}
-                                                                    />
-                                                                ) : (
-                                                                    <div className="h-12 w-12 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center border border-blue-100 dark:border-blue-800">
-                                                                        <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">
-                                                                            {paciente.nome.charAt(0).toUpperCase()}
-                                                                        </span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </Link>
-                                                        <div className="ml-4">
-                                                            <div className="text-base font-bold text-gray-900 dark:text-white">
-                                                                {paciente.nome}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-5 whitespace-nowrap">
-                                                    <div className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                                        {new Date(paciente.data_nascimento).toLocaleDateString('pt-BR')}
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-5 whitespace-nowrap">
-                                                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                                                        {idade} {idade === 1 ? 'ano' : 'anos'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium">
-                                                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Link href={`/admin/pacientes/${paciente.id}`}>
-                                                            <Button size="sm" variant="outline" className="h-8 rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700">
-                                                                Ver Detalhes
-                                                            </Button>
-                                                        </Link>
-                                                        <Link href={`/admin/pacientes/${paciente.id}/editar`}>
-                                                            <Button size="sm" variant="outline" className="h-8 rounded-xl border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700">
-                                                                Editar
-                                                            </Button>
-                                                        </Link>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )
-                                    })}
+                                    {pacientes.map((paciente) => (
+                                        <PacienteRow
+                                            key={paciente.id}
+                                            paciente={paciente}
+                                        />
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
@@ -141,10 +85,10 @@ export default async function PacientesPage() {
                             {pacientes.map((paciente) => {
                                 const idade = calcularIdade(paciente.data_nascimento)
                                 return (
-                                    <Card key={paciente.id} className="overflow-hidden border-none shadow-md">
-                                        <CardContent className="p-6 flex flex-col items-center gap-4">
-                                            <Link href={`/admin/pacientes/${paciente.id}`}>
-                                                <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-white cursor-pointer hover:opacity-90 transition-opacity">
+                                    <Link key={paciente.id} href={`/admin/pacientes/${paciente.id}`}>
+                                        <Card className="overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow bg-white dark:bg-gray-800">
+                                            <CardContent className="p-6 flex flex-col items-center gap-4">
+                                                <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-white">
                                                     {paciente.foto_url ? (
                                                         <img
                                                             className="w-full h-full object-cover"
@@ -159,36 +103,23 @@ export default async function PacientesPage() {
                                                         </div>
                                                     )}
                                                 </div>
-                                            </Link>
 
-                                            <div className="text-center w-full">
-                                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                                                    {paciente.nome}
-                                                </h3>
-                                                <div className="flex justify-center gap-2 mb-2">
-                                                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                                                        {idade} {idade === 1 ? 'ano' : 'anos'}
-                                                    </span>
+                                                <div className="text-center w-full">
+                                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                                                        {paciente.nome}
+                                                    </h3>
+                                                    <div className="flex justify-center gap-2 mb-2">
+                                                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                                                            {idade} {idade === 1 ? 'ano' : 'anos'}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                        Nasc: {new Date(paciente.data_nascimento).toLocaleDateString('pt-BR')}
+                                                    </p>
                                                 </div>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                    Nasc: {new Date(paciente.data_nascimento).toLocaleDateString('pt-BR')}
-                                                </p>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-3 w-full mt-2">
-                                                <Link href={`/admin/pacientes/${paciente.id}`} className="w-full">
-                                                    <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50">
-                                                        Ver Detalhes
-                                                    </Button>
-                                                </Link>
-                                                <Link href={`/admin/pacientes/${paciente.id}/editar`} className="w-full">
-                                                    <Button variant="outline" className="w-full border-green-200 text-green-600 hover:bg-green-50">
-                                                        Editar
-                                                    </Button>
-                                                </Link>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+                                            </CardContent>
+                                        </Card>
+                                    </Link>
                                 )
                             })}
                         </div>

@@ -50,6 +50,7 @@ Ferramentas para o dia a dia dos terapeutas, focadas em produtividade e qualidad
 *   **Relatórios de Atendimento (Evolução):**
     *   Registro detalhado de cada sessão.
     *   **Assistente de Escrita (IA):** Gera o texto técnico baseado em tópicos brutos inseridos pelo terapeuta.
+    *   **Ditado por Voz:** Recurso de transcrição automática (fala-para-texto) para agilizar a entrada de anotações.
     *   **Contexto Histórico:** A IA analisa os últimos 3 relatórios para sugerir continuidade.
     *   **Liberação para Família:** Controle granular de quais relatórios os pais podem ver.
     *   Geração de PDF do relatório.

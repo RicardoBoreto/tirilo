@@ -19,6 +19,14 @@ Cada versão segue o formato:
 - **Faturamento:** Tabela de "Faturamento Pendente" agora possui rolagem horizontal. Botões "Gerar Guia" e "Gerar Fatura" ajustados para ocupar largura total no mobile, melhorando a área de toque.
 - **Visualização de Guia:** Modal de pré-visualização da guia de assinatura ajustado para permitir rolagem horizontal do documento A4, evitando distorções ou cortes laterais em dispositivos móveis.
 
+#### Prontuário e Relatórios
+- **Ditado por Voz:** Novo recurso de transcrição de áudio para texto (Speech-to-Text). Permite que o terapeuta dite as observações da sessão diretamente no navegador (celular ou PC), agilizando o preenchimento do relatório.
+
+#### Gestão de Pacientes (UX)
+- **Lista Simplificada:** A tabela de pacientes (desktop) e os cards (mobile) agora são inteiramente clicáveis, eliminando a necessidade de botões "Detalhes".
+- **Edição Rápida:** Implementada edição de dados cadastrais diretamente na aba "Dados Básicos" do perfil do paciente, substituindo a navegação para uma página de edição separada.
+- **Layout Mobile:** Ajustes de responsividade para garantir que botões de ação (IA, Salvar) não sobreponham informações vitais como a foto do paciente em telas pequenas.
+
 ## [1.10.0] - 18/01/2026
 
 ### 💰 Financeiro & Convênios (Major Update)

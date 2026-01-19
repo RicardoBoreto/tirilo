@@ -9,9 +9,14 @@ import TerapeutasTab from './TerapeutasTab'
 import RelatoriosTab from './RelatoriosTab'
 import PlanosIATab from './AI/PlanosIATab'
 import LudoterapiaTab from './LudoterapiaTab'
-import { Camera, Loader2 } from 'lucide-react'
+import { Camera, Loader2, Pencil, X, Save } from 'lucide-react'
 import Image from 'next/image'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { updatePaciente } from '@/lib/actions/pacientes'
+import { useRouter } from 'next/navigation'
 
 type Props = {
     paciente: Paciente
@@ -42,6 +47,43 @@ export default function PacienteDetailsTabs({
     const [fotoUrl, setFotoUrl] = useState(paciente.foto_url || '')
     const [uploadingFoto, setUploadingFoto] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const router = useRouter()
+
+    // Edit State
+    const [isEditing, setIsEditing] = useState(false)
+    const [editData, setEditData] = useState(paciente)
+    const [saving, setSaving] = useState(false)
+
+    async function handleSaveData() {
+        setSaving(true)
+        try {
+            const formData = new FormData()
+            formData.append('nome', editData.nome)
+            // Ensure date is string YYYY-MM-DD
+            formData.append('data_nascimento', editData.data_nascimento.toString().split('T')[0])
+            formData.append('observacoes', editData.observacoes || '')
+            if (editData.valor_sessao_padrao) formData.append('valor_sessao_padrao', editData.valor_sessao_padrao.toString())
+            if (editData.dia_vencimento_padrao) formData.append('dia_vencimento_padrao', editData.dia_vencimento_padrao.toString())
+            if (editData.convenio_nome) formData.append('convenio_nome', editData.convenio_nome)
+            if (editData.convenio_numero_carteirinha) formData.append('convenio_numero_carteirinha', editData.convenio_numero_carteirinha)
+            if (editData.convenio_validade) formData.append('convenio_validade', editData.convenio_validade.toString().split('T')[0])
+
+            // Mantem a foto atual
+            if (fotoUrl) {
+                formData.append('foto_url', fotoUrl)
+            }
+
+            await updatePaciente(paciente.id, formData)
+            setIsEditing(false)
+            router.refresh()
+            alert('Dados atualizados com sucesso!')
+        } catch (error) {
+            console.error(error)
+            alert('Erro ao atualizar dados')
+        } finally {
+            setSaving(false)
+        }
+    }
 
     async function handleFotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0]
@@ -156,34 +198,75 @@ export default function PacienteDetailsTabs({
                             <p className="text-sm text-gray-500 mt-2">Clique para alterar a foto</p>
                         </div>
 
-                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                            Informações do Paciente
-                        </h2>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                                Informações do Paciente
+                            </h2>
+                            {!isEditing ? (
+                                <Button onClick={() => setIsEditing(true)} variant="outline" size="sm" className="w-full md:w-auto">
+                                    <Pencil className="w-4 h-4 mr-2" />
+                                    Editar Dados
+                                </Button>
+                            ) : (
+                                <div className="flex gap-2 w-full md:w-auto">
+                                    <Button onClick={() => setIsEditing(false)} variant="ghost" size="sm" className="flex-1 md:flex-none">
+                                        <X className="w-4 h-4 mr-2" />
+                                        Cancelar
+                                    </Button>
+                                    <Button onClick={handleSaveData} disabled={saving} size="sm" className="flex-1 md:flex-none bg-green-600 hover:bg-green-700 text-white">
+                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                                        Salvar
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
 
                         <div className="grid grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     Nome Completo
                                 </label>
-                                <p className="text-gray-900 dark:text-white">{paciente.nome}</p>
+                                {isEditing ? (
+                                    <Input
+                                        value={editData.nome}
+                                        onChange={e => setEditData({ ...editData, nome: e.target.value })}
+                                    />
+                                ) : (
+                                    <p className="text-gray-900 dark:text-white">{paciente.nome}</p>
+                                )}
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     Data de Nascimento
                                 </label>
-                                <p className="text-gray-900 dark:text-white">
-                                    {new Date(paciente.data_nascimento).toLocaleDateString('pt-BR')}
-                                </p>
+                                {isEditing ? (
+                                    <Input
+                                        type="date"
+                                        value={new Date(editData.data_nascimento).toISOString().split('T')[0]}
+                                        onChange={e => setEditData({ ...editData, data_nascimento: e.target.value })}
+                                    />
+                                ) : (
+                                    <p className="text-gray-900 dark:text-white">
+                                        {new Date(paciente.data_nascimento).toLocaleDateString('pt-BR')}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     Observações
                                 </label>
-                                <p className="text-gray-900 dark:text-white">
-                                    {paciente.observacoes || 'Nenhuma observação registrada'}
-                                </p>
+                                {isEditing ? (
+                                    <Textarea
+                                        value={editData.observacoes || ''}
+                                        onChange={e => setEditData({ ...editData, observacoes: e.target.value })}
+                                    />
+                                ) : (
+                                    <p className="text-gray-900 dark:text-white">
+                                        {paciente.observacoes || 'Nenhuma observação registrada'}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Seção Financeira */}
@@ -196,19 +279,37 @@ export default function PacienteDetailsTabs({
                                         <label className="block text-sm font-medium text-gray-500 mb-1">
                                             Valor Sessão (Padrão)
                                         </label>
-                                        <p className="text-gray-900 dark:text-white font-medium">
-                                            {paciente.valor_sessao_padrao
-                                                ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(paciente.valor_sessao_padrao)
-                                                : 'Não definido'}
-                                        </p>
+                                        {isEditing ? (
+                                            <Input
+                                                type="number"
+                                                value={editData.valor_sessao_padrao || ''}
+                                                onChange={e => setEditData({ ...editData, valor_sessao_padrao: Number(e.target.value) })}
+                                                placeholder="0.00"
+                                            />
+                                        ) : (
+                                            <p className="text-gray-900 dark:text-white font-medium">
+                                                {paciente.valor_sessao_padrao
+                                                    ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(paciente.valor_sessao_padrao)
+                                                    : 'Não definido'}
+                                            </p>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-500 mb-1">
                                             Dia de Vencimento
                                         </label>
-                                        <p className="text-gray-900 dark:text-white font-medium">
-                                            {paciente.dia_vencimento_padrao || 'Não definido'}
-                                        </p>
+                                        {isEditing ? (
+                                            <Input
+                                                type="number"
+                                                min="1" max="31"
+                                                value={editData.dia_vencimento_padrao || ''}
+                                                onChange={e => setEditData({ ...editData, dia_vencimento_padrao: Number(e.target.value) })}
+                                            />
+                                        ) : (
+                                            <p className="text-gray-900 dark:text-white font-medium">
+                                                {paciente.dia_vencimento_padrao || 'Não definido'}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -223,29 +324,53 @@ export default function PacienteDetailsTabs({
                                         <label className="block text-sm font-medium text-gray-500 mb-1">
                                             Convênio
                                         </label>
-                                        <p className="text-gray-900 dark:text-white font-medium">
-                                            {paciente.convenio_nome || 'Particular / Não informado'}
-                                        </p>
+                                        {isEditing ? (
+                                            <Input
+                                                value={editData.convenio_nome || ''}
+                                                onChange={e => setEditData({ ...editData, convenio_nome: e.target.value })}
+                                                placeholder="Particular ou Nome do Convênio"
+                                            />
+                                        ) : (
+                                            <p className="text-gray-900 dark:text-white font-medium">
+                                                {paciente.convenio_nome || 'Particular / Não informado'}
+                                            </p>
+                                        )}
                                     </div>
-                                    {paciente.convenio_nome && (
+
+                                    {(isEditing || paciente.convenio_nome) && (
                                         <>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-500 mb-1">
                                                     Nº Carteirinha
                                                 </label>
-                                                <p className="text-gray-900 dark:text-white font-mono">
-                                                    {paciente.convenio_numero_carteirinha || '-'}
-                                                </p>
+                                                {isEditing ? (
+                                                    <Input
+                                                        value={editData.convenio_numero_carteirinha || ''}
+                                                        onChange={e => setEditData({ ...editData, convenio_numero_carteirinha: e.target.value })}
+                                                    />
+                                                ) : (
+                                                    <p className="text-gray-900 dark:text-white font-mono">
+                                                        {paciente.convenio_numero_carteirinha || '-'}
+                                                    </p>
+                                                )}
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-500 mb-1">
                                                     Validade
                                                 </label>
-                                                <p className="text-gray-900 dark:text-white">
-                                                    {paciente.convenio_validade
-                                                        ? new Date(paciente.convenio_validade).toLocaleDateString('pt-BR')
-                                                        : '-'}
-                                                </p>
+                                                {isEditing ? (
+                                                    <Input
+                                                        type="date"
+                                                        value={editData.convenio_validade ? new Date(editData.convenio_validade).toISOString().split('T')[0] : ''}
+                                                        onChange={e => setEditData({ ...editData, convenio_validade: e.target.value })}
+                                                    />
+                                                ) : (
+                                                    <p className="text-gray-900 dark:text-white">
+                                                        {paciente.convenio_validade
+                                                            ? new Date(paciente.convenio_validade).toLocaleDateString('pt-BR')
+                                                            : '-'}
+                                                    </p>
+                                                )}
                                             </div>
                                         </>
                                     )}
