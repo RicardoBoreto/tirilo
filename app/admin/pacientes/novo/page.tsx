@@ -1,13 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createPaciente } from '@/lib/actions/pacientes'
+import { Camera } from 'lucide-react'
 
 export default function NovoPacientePage() {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const [previewUrl, setPreviewUrl] = useState('')
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0]
+        if (file) {
+            const url = URL.createObjectURL(file)
+            setPreviewUrl(url)
+        }
+    }
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -74,16 +85,31 @@ export default function NovoPacientePage() {
                     />
                 </div>
 
-                <div>
-                    <label htmlFor="foto_url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        URL da Foto (opcional)
+                <div className="flex flex-col items-center gap-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Foto de Perfil
                     </label>
+                    <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="relative w-32 h-32 rounded-full border-4 border-white shadow-lg bg-gray-100 dark:bg-gray-700 flex flex-col items-center justify-center cursor-pointer hover:opacity-90 transition-opacity overflow-hidden group"
+                    >
+                        {previewUrl ? (
+                            <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                        ) : (
+                            <Camera className="w-8 h-8 text-gray-400" />
+                        )}
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Camera className="w-8 h-8 text-white" />
+                        </div>
+                    </div>
+                    <p className="text-xs text-gray-500">Clique para selecionar uma foto</p>
                     <input
-                        type="url"
-                        id="foto_url"
-                        name="foto_url"
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                        placeholder="https://exemplo.com/foto.jpg"
+                        ref={fileInputRef}
+                        type="file"
+                        name="foto"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileChange}
                     />
                 </div>
 

@@ -80,33 +80,39 @@ export interface Database {
                     created_at: string
                     email: string
                     nome_completo: string
+                    apelido: string | null
                     cpf: string | null
                     celular_whatsapp: string | null
                     tipo_perfil: 'master_admin' | 'admin_clinica' | 'terapeuta' | 'responsavel'
                     id_clinica: number | null
                     foto_url: string | null
+                    ativo: boolean | null
                 }
                 Insert: {
                     id: string
                     created_at?: string
                     email: string
                     nome_completo: string
+                    apelido?: string | null
                     cpf?: string | null
                     celular_whatsapp?: string | null
                     tipo_perfil: 'master_admin' | 'admin_clinica' | 'terapeuta' | 'responsavel'
                     id_clinica?: number | null
                     foto_url?: string | null
+                    ativo?: boolean | null
                 }
                 Update: {
                     id?: string
                     created_at?: string
                     email?: string
                     nome_completo?: string
+                    apelido?: string | null
                     cpf?: string | null
                     celular_whatsapp?: string | null
                     tipo_perfil?: 'master_admin' | 'admin_clinica' | 'terapeuta' | 'responsavel'
                     id_clinica?: number | null
                     foto_url?: string | null
+                    ativo?: boolean | null
                 }
             }
             saas_empresa: {
@@ -185,6 +191,8 @@ export interface Database {
                     especialidades: string[] | null
                     publico_alvo: string[] | null
                     bio: string | null
+                    valor_hora_padrao: number | null
+                    porcentagem_repasse: number | null
                 }
                 Insert: {
                     id?: never
@@ -196,6 +204,8 @@ export interface Database {
                     especialidades?: string[] | null
                     publico_alvo?: string[] | null
                     bio?: string | null
+                    valor_hora_padrao?: number | null
+                    porcentagem_repasse?: number | null
                 }
                 Update: {
                     id?: never
@@ -207,6 +217,8 @@ export interface Database {
                     especialidades?: string[] | null
                     publico_alvo?: string[] | null
                     bio?: string | null
+                    valor_hora_padrao?: number | null
+                    porcentagem_repasse?: number | null
                 }
             }
             pacientes: {

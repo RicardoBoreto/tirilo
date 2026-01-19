@@ -210,11 +210,12 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
 
     const renderWeekView = () => {
         const startDate = startOfWeek(currentDate, { weekStartsOn: 1 })
-        const weekDays = Array.from({ length: 6 }).map((_, i) => addDays(startDate, i))
+        // Show 5 days (Mon-Fri) instead of 6 to hide Saturday
+        const weekDays = Array.from({ length: 5 }).map((_, i) => addDays(startDate, i))
 
         return (
             <div className="flex-1 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col">
-                <div className="grid grid-cols-[60px_repeat(6,minmax(0,1fr))] border-b border-gray-100 dark:border-gray-700">
+                <div className="grid grid-cols-[50px_repeat(5,minmax(0,1fr))] sm:grid-cols-[60px_repeat(5,minmax(0,1fr))] border-b border-gray-100 dark:border-gray-700">
                     <div className="p-4 border-r border-gray-50 bg-gray-50/50"></div>
                     {weekDays.map((day, index) => {
                         const isToday = isSameDay(day, new Date())
@@ -247,7 +248,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                 </div>
                 <div className="flex-1 overflow-y-auto">
                     {HOURS.map(hour => (
-                        <div key={hour} className="grid grid-cols-[60px_repeat(6,minmax(0,1fr))] min-h-[80px]">
+                        <div key={hour} className="grid grid-cols-[50px_repeat(5,minmax(0,1fr))] sm:grid-cols-[60px_repeat(5,minmax(0,1fr))] min-h-[80px]">
                             <div className="p-2 text-xs font-medium text-gray-400 text-right border-r border-b border-gray-50 bg-gray-50/30 sticky left-0">
                                 {hour.toString().padStart(2, '0')}:00
                             </div>

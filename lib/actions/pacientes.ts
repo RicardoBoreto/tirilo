@@ -197,11 +197,15 @@ export async function getPaciente(id: number) {
 export async function createPaciente(formData: FormData) {
     const supabase = await createClient()
 
+    // 1. Extract file if present (it comes as 'foto' or 'file', let's stick to 'foto' from client)
+    const file = formData.get('foto') as File
+
+    // 2. Prepare initial data (without photo URL first)
     const pacienteData = {
         id_clinica: Number(formData.get('clinica_id')),
         nome: formData.get('nome') as string,
         data_nascimento: formData.get('data_nascimento') as string,
-        foto_url: formData.get('foto_url') as string || null,
+        foto_url: null, // Will update later if file exists
         observacoes: formData.get('observacoes') as string || null,
         valor_sessao_padrao: formData.get('valor_sessao_padrao') ? Number(formData.get('valor_sessao_padrao')) : null,
         dia_vencimento_padrao: formData.get('dia_vencimento_padrao') ? Number(formData.get('dia_vencimento_padrao')) : null,
@@ -211,6 +215,7 @@ export async function createPaciente(formData: FormData) {
         operadora_id: formData.get('operadora_id') ? Number(formData.get('operadora_id')) : null,
     }
 
+    // 3. Insert Patient
     const { data, error } = await supabase
         .from('pacientes')
         .insert(pacienteData)
@@ -222,8 +227,43 @@ export async function createPaciente(formData: FormData) {
         throw new Error('Erro ao criar paciente')
     }
 
+    const newPaciente = data as Paciente
+
+    // 4. Upload photo if exists
+    if (file && file.size > 0 && file.name) {
+        try {
+            // Re-use logic from uploadFotoPaciente roughly, but we are server-side here anyway
+            const fileExt = file.name.split('.').pop()
+            const fileName = `pacientes/${newPaciente.id}-${Date.now()}.${fileExt}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('fotos')
+                .upload(fileName, file, {
+                    cacheControl: '3600',
+                    upsert: true
+                })
+
+            if (!uploadError) {
+                const { data: { publicUrl } } = supabase.storage
+                    .from('fotos')
+                    .getPublicUrl(fileName)
+
+                // Update patient with URL
+                await supabase
+                    .from('pacientes')
+                    .update({ foto_url: publicUrl })
+                    .eq('id', newPaciente.id)
+
+                newPaciente.foto_url = publicUrl
+            }
+        } catch (e) {
+            console.error('Erro ao fazer upload da foto no cadastro:', e)
+            // Non-blocking, return patient created anyway
+        }
+    }
+
     revalidatePath('/admin/pacientes')
-    return data as Paciente
+    return newPaciente
 }
 
 export async function updatePaciente(id: number, formData: FormData) {

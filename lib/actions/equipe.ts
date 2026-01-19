@@ -171,10 +171,20 @@ export async function getTerapeutas() {
     return result
 }
 
-export async function toggleStatusMembro(id: string, novoStatus: boolean) {
-    const supabase = await createClient()
+import { createAdminClient } from '@/lib/supabase/admin'
 
-    const { error } = await supabase
+export async function toggleStatusMembro(id: string, novoStatus: boolean) {
+    const supabase = await createClient() // Keep for auth check
+    const supabaseAdmin = createAdminClient() // Use for DB operations
+
+    // 1. Verify User
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+        return { success: false, error: 'Usuário não autenticado' }
+    }
+
+    // 2. Perform Update using Admin Client to bypass RLS
+    const { error } = await supabaseAdmin
         .from('usuarios')
         .update({ ativo: novoStatus })
         .eq('id', id)
@@ -190,6 +200,7 @@ export async function toggleStatusMembro(id: string, novoStatus: boolean) {
 
 export async function updateMembroEquipe(id: string, formData: FormData) {
     const supabase = await createClient()
+    const supabaseAdmin = createAdminClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) return { error: 'Não autorizado' }
@@ -207,8 +218,8 @@ export async function updateMembroEquipe(id: string, formData: FormData) {
         return { error: 'Nome deve ter pelo menos 3 caracteres' }
     }
 
-    // Update usuarios table
-    const { error: userUpdateError } = await supabase
+    // Update usuarios table via Admin
+    const { error: userUpdateError } = await supabaseAdmin
         .from('usuarios')
         .update({
             nome_completo: rawData.nome,
@@ -233,7 +244,7 @@ export async function updateMembroEquipe(id: string, formData: FormData) {
         const valorHora = formData.get('valor_hora_padrao')
         const porcentagemRepasse = formData.get('porcentagem_repasse')
 
-        const { error: curriculoError } = await supabase
+        const { error: curriculoError } = await supabaseAdmin
             .from('terapeutas_curriculo')
             .update({
                 registro_profissional: rawData.registro_profissional,

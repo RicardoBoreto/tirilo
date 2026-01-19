@@ -34,12 +34,15 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
+import { useRouter } from 'next/navigation'
+
 export default function EquipeManager({ initialEquipe }: { initialEquipe: MembroEquipe[] }) {
+    const router = useRouter()
     const [open, setOpen] = useState(false)
     const [editOpen, setEditOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [selectedRole, setSelectedRole] = useState<'terapeuta' | 'recepcao'>('recepcao')
-    const [filterStatus, setFilterStatus] = useState<'ativos' | 'todos'>('ativos')
+    const [filterStatus, setFilterStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos')
     const [editingMembro, setEditingMembro] = useState<MembroEquipe | null>(null)
 
     async function handleSubmit(formData: FormData) {
@@ -51,6 +54,7 @@ export default function EquipeManager({ initialEquipe }: { initialEquipe: Membro
             } else {
                 setOpen(false)
                 alert('Membro adicionado com sucesso! Senha padrão: Tirilo2025!')
+                router.refresh()
             }
         } catch (error) {
             console.error(error)
@@ -67,6 +71,8 @@ export default function EquipeManager({ initialEquipe }: { initialEquipe: Membro
             const result = await toggleStatusMembro(id, !currentStatus)
             if (!result.success) {
                 alert('Erro ao atualizar status: ' + result.error)
+            } else {
+                router.refresh()
             }
         } catch (error) {
             console.error(error)
@@ -91,7 +97,7 @@ export default function EquipeManager({ initialEquipe }: { initialEquipe: Membro
                 setEditOpen(false)
                 setEditingMembro(null)
                 alert('Dados atualizados com sucesso!')
-                window.location.reload()
+                router.refresh()
             }
         } catch (error) {
             console.error(error)
@@ -103,6 +109,7 @@ export default function EquipeManager({ initialEquipe }: { initialEquipe: Membro
 
     const filteredEquipe = initialEquipe.filter(membro => {
         if (filterStatus === 'ativos') return membro.ativo !== false
+        if (filterStatus === 'inativos') return membro.ativo === false
         return true
     })
 
@@ -118,9 +125,10 @@ export default function EquipeManager({ initialEquipe }: { initialEquipe: Membro
                 </div>
 
                 <div className="flex items-center gap-4 w-full md:w-auto">
-                    <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as 'ativos' | 'todos')} className="w-full md:w-auto">
+                    <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as 'ativos' | 'inativos' | 'todos')} className="w-full md:w-auto">
                         <TabsList>
                             <TabsTrigger value="ativos">Ativos</TabsTrigger>
+                            <TabsTrigger value="inativos">Inativos</TabsTrigger>
                             <TabsTrigger value="todos">Todos</TabsTrigger>
                         </TabsList>
                     </Tabs>
