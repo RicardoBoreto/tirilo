@@ -610,3 +610,73 @@ GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role
 ALTER ROLE anon SET search_path TO public;
 ALTER ROLE authenticated SET search_path TO public;
 ALTER ROLE service_role SET search_path TO public;
+
+-- ----------------------------------------------------------------------------
+-- POLÍTICAS DE SEGURANÇA (RLS) - PROMPTS IA
+-- ----------------------------------------------------------------------------
+
+ALTER TABLE public.prompts_ia ENABLE ROW LEVEL SECURITY;
+
+-- Política de Leitura (SELECT):
+-- Permite que qualquer usuário da mesma clínica leia os prompts.
+-- Isso inclui terapeutas vendo prompts de admins (para clonagem).
+DROP POLICY IF EXISTS "Prompts Policy Select" ON prompts_ia;
+CREATE POLICY "Prompts Policy Select" ON prompts_ia
+FOR SELECT
+USING (
+  id_clinica IN (
+    SELECT id_clinica FROM usuarios WHERE id = auth.uid()
+  )
+);
+
+-- Política de Inserção (INSERT):
+-- Usuários podem criar prompts para sua clínica.
+-- Se for Admin/Super, pode criar em nome de outros (mas a aplicação decide).
+DROP POLICY IF EXISTS "Prompts Policy Insert" ON prompts_ia;
+CREATE POLICY "Prompts Policy Insert" ON prompts_ia
+FOR INSERT
+WITH CHECK (
+  id_clinica IN (
+    SELECT id_clinica FROM usuarios WHERE id = auth.uid()
+  )
+);
+
+-- Política de Atualização (UPDATE):
+-- Permite editar apenas os PRÓPRIOS prompts ou se for Admin não-terapeuta.
+DROP POLICY IF EXISTS "Prompts Policy Update" ON prompts_ia;
+CREATE POLICY "Prompts Policy Update" ON prompts_ia
+FOR UPDATE
+USING (
+  id_clinica IN (
+    SELECT id_clinica FROM usuarios WHERE id = auth.uid()
+  )
+  AND (
+    terapeuta_id = auth.uid()
+    OR
+    EXISTS (
+      SELECT 1 FROM usuarios 
+      WHERE id = auth.uid() 
+      AND tipo_perfil != 'terapeuta'
+    )
+  )
+);
+
+-- Política de Exclusão (DELETE):
+-- Mesma regra de atualização: Dono ou Admin.
+DROP POLICY IF EXISTS "Prompts Policy Delete" ON prompts_ia;
+CREATE POLICY "Prompts Policy Delete" ON prompts_ia
+FOR DELETE
+USING (
+  id_clinica IN (
+    SELECT id_clinica FROM usuarios WHERE id = auth.uid()
+  )
+  AND (
+    terapeuta_id = auth.uid()
+    OR
+    EXISTS (
+      SELECT 1 FROM usuarios 
+      WHERE id = auth.uid() 
+      AND tipo_perfil != 'terapeuta'
+    )
+  )
+);

@@ -36,12 +36,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { useRouter } from 'next/navigation'
 
-export default function EquipeManager({ initialEquipe }: { initialEquipe: MembroEquipe[] }) {
+export default function EquipeManager({ initialEquipe, currentUserRole }: { initialEquipe: MembroEquipe[], currentUserRole: string }) {
     const router = useRouter()
     const [open, setOpen] = useState(false)
     const [editOpen, setEditOpen] = useState(false)
     const [loading, setLoading] = useState(false)
-    const [selectedRole, setSelectedRole] = useState<'terapeuta' | 'recepcao'>('recepcao')
+    const [selectedRole, setSelectedRole] = useState<'terapeuta' | 'recepcao' | 'admin' | 'financeiro'>('recepcao')
+    const [editRole, setEditRole] = useState<'terapeuta' | 'recepcao' | 'admin' | 'financeiro'>('recepcao')
     const [filterStatus, setFilterStatus] = useState<'ativos' | 'inativos' | 'todos'>('ativos')
     const [editingMembro, setEditingMembro] = useState<MembroEquipe | null>(null)
 
@@ -82,6 +83,7 @@ export default function EquipeManager({ initialEquipe }: { initialEquipe: Membro
 
     function handleEdit(membro: MembroEquipe) {
         setEditingMembro(membro)
+        setEditRole(membro.tipo_perfil)
         setEditOpen(true)
     }
 
@@ -176,6 +178,7 @@ export default function EquipeManager({ initialEquipe }: { initialEquipe: Membro
                                                 <SelectItem value="recepcao">Recepção / Secretaria</SelectItem>
                                                 <SelectItem value="financeiro">Financeiro / Admin</SelectItem>
                                                 <SelectItem value="terapeuta">Terapeuta</SelectItem>
+                                                <SelectItem value="admin">Administrador</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -228,12 +231,33 @@ export default function EquipeManager({ initialEquipe }: { initialEquipe: Membro
                                         <p className="text-xs text-gray-500">Nome curto para exibição na agenda e notificações</p>
                                     </div>
 
+                                    {(currentUserRole === 'admin_clinica' || currentUserRole === 'master_admin' || currentUserRole === 'admin') && (
+                                        <div className="space-y-2">
+                                            <Label>Função / Cargo</Label>
+                                            <Select
+                                                name="tipo_perfil"
+                                                defaultValue={editingMembro.tipo_perfil}
+                                                onValueChange={(val: any) => setEditRole(val)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="recepcao">Recepção / Secretaria</SelectItem>
+                                                    <SelectItem value="financeiro">Financeiro / Admin</SelectItem>
+                                                    <SelectItem value="terapeuta">Terapeuta</SelectItem>
+                                                    <SelectItem value="admin">Administrador</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
+
                                     <div className="space-y-2">
                                         <Label>Telefone / WhatsApp</Label>
                                         <Input name="telefone" placeholder="(11) 99999-9999" defaultValue={editingMembro.celular_whatsapp || ''} />
                                     </div>
 
-                                    {editingMembro.tipo_perfil === 'terapeuta' && (
+                                    {editRole === 'terapeuta' && (
                                         <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
                                             <p className="text-xs font-medium text-primary uppercase">Dados do Terapeuta</p>
                                             <div className="grid grid-cols-2 gap-4">

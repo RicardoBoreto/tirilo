@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export type PromptIA = {
@@ -20,6 +20,7 @@ export type PromptIA = {
 
 export async function getPrompts(terapeutaIdFilter?: string) {
     const supabase = await createClient()
+    const supabaseAdmin = await createAdminClient()
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
@@ -37,9 +38,19 @@ export async function getPrompts(terapeutaIdFilter?: string) {
         .select('*')
         .eq('id_clinica', userProfile.id_clinica)
 
-    // Se for terapeuta, só vê os seus
+    // Se for terapeuta, só vê os seus E os da clínica (templates)
     if (userProfile.tipo_perfil === 'terapeuta') {
-        query = query.eq('terapeuta_id', user.id)
+        // Obter IDs de admins da clínica para mostrar os prompts deles também (templates)
+        const { data: adminUsers } = await supabaseAdmin
+            .from('usuarios')
+            .select('id')
+            .eq('id_clinica', userProfile.id_clinica)
+            .in('tipo_perfil', ['admin', 'super_admin', 'admin_clinica', 'master_admin'])
+
+        const adminIds = adminUsers?.map(u => u.id) || []
+        const allowedIds = [user.id, ...adminIds]
+
+        query = query.in('terapeuta_id', allowedIds)
     }
     // Se for admin (ou outro) e tiver filtro, aplica
     else if (terapeutaIdFilter && terapeutaIdFilter !== 'all') {
@@ -58,6 +69,7 @@ export async function getPrompts(terapeutaIdFilter?: string) {
 
 export async function getActivePrompts() {
     const supabase = await createClient()
+    const supabaseAdmin = await createAdminClient()
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
@@ -78,11 +90,12 @@ export async function getActivePrompts() {
 
     if (userProfile.tipo_perfil === 'terapeuta') {
         // Obter IDs de admins da clínica para mostrar os prompts deles também (templates)
-        const { data: adminUsers } = await supabase
+        // Usamos supabaseAdmin pois o terapeuta pode não ter permissão de listar usuários
+        const { data: adminUsers } = await supabaseAdmin
             .from('usuarios')
             .select('id')
             .eq('id_clinica', userProfile.id_clinica)
-            .in('tipo_perfil', ['admin', 'super_admin'])
+            .in('tipo_perfil', ['admin', 'super_admin', 'admin_clinica', 'master_admin'])
 
         const adminIds = adminUsers?.map(u => u.id) || []
         const allowedIds = [user.id, ...adminIds]

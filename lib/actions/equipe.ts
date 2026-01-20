@@ -211,7 +211,9 @@ export async function updateMembroEquipe(id: string, formData: FormData) {
         apelido: formData.get('apelido') || null,
         telefone: formData.get('telefone') || null,
         registro_profissional: formData.get('registro_profissional') || null,
+        registro_profissional: formData.get('registro_profissional') || null,
         especialidade: formData.get('especialidade') || null,
+        tipo_perfil: formData.get('tipo_perfil')
     }
 
     // Validate basic fields
@@ -227,6 +229,7 @@ export async function updateMembroEquipe(id: string, formData: FormData) {
             nome_completo: rawData.nome,
             apelido: rawData.apelido,
             celular_whatsapp: rawData.telefone,
+            tipo_perfil: rawData.tipo_perfil || undefined,
         })
         .eq('id', id)
 
@@ -242,24 +245,53 @@ export async function updateMembroEquipe(id: string, formData: FormData) {
         .eq('id', id)
         .single()
 
-    if (userProfile?.tipo_perfil === 'terapeuta') {
+    if (rawData.tipo_perfil === 'terapeuta' || userProfile?.tipo_perfil === 'terapeuta') {
         const valorHora = formData.get('valor_hora_padrao')
         const porcentagemRepasse = formData.get('porcentagem_repasse')
 
-        const { error: curriculoError } = await supabaseAdmin
+        // Check if curriculum exists
+        const { data: existingCurriculo } = await supabaseAdmin
             .from('terapeutas_curriculo')
-            // @ts-ignore
-            .update({
-                registro_profissional: rawData.registro_profissional,
-                especialidades: rawData.especialidade ? [rawData.especialidade] : null,
-                valor_hora_padrao: valorHora ? parseFloat(valorHora.toString()) : null,
-                porcentagem_repasse: porcentagemRepasse ? parseFloat(porcentagemRepasse.toString()) : null
-            })
+            .select('id')
             .eq('id_usuario', id)
+            .single()
 
-        if (curriculoError) {
-            console.error('Error updating curriculum:', curriculoError)
-            // Non-critical, don't fail the whole operation
+        if (existingCurriculo) {
+            // Update existing
+            const { error: curriculoError } = await supabaseAdmin
+                .from('terapeutas_curriculo')
+                // @ts-ignore
+                .update({
+                    registro_profissional: rawData.registro_profissional,
+                    especialidades: rawData.especialidade ? [rawData.especialidade] : null,
+                    valor_hora_padrao: valorHora ? parseFloat(valorHora.toString()) : null,
+                    porcentagem_repasse: porcentagemRepasse ? parseFloat(porcentagemRepasse.toString()) : null
+                })
+                .eq('id_usuario', id)
+
+            if (curriculoError) console.error('Error updating curriculum:', curriculoError)
+        } else {
+            // Create new if switching to therapist and none exists
+            // We need clinic ID
+            const { data: userWithClinic } = await supabaseAdmin
+                .from('usuarios')
+                .select('id_clinica')
+                .eq('id', id)
+                .single()
+
+            if (userWithClinic?.id_clinica) {
+                const { error: insertError } = await supabaseAdmin
+                    .from('terapeutas_curriculo')
+                    .insert({
+                        id_usuario: id,
+                        id_clinica: userWithClinic.id_clinica,
+                        registro_profissional: rawData.registro_profissional?.toString() || null,
+                        especialidades: rawData.especialidade ? [rawData.especialidade.toString()] : null,
+                        valor_hora_padrao: valorHora ? parseFloat(valorHora.toString()) : null,
+                        porcentagem_repasse: porcentagemRepasse ? parseFloat(porcentagemRepasse.toString()) : null
+                    })
+                if (insertError) console.error('Error creating curriculum:', insertError)
+            }
         }
     }
 
