@@ -12,6 +12,7 @@ interface AdminLayoutWrapperProps {
     user: any // Replace with proper type if available
     userProfile: any
     clinicData: any
+    systemVersion?: string
 }
 
 // Helper to convert hex to HSL (reusing mostly)
@@ -52,7 +53,8 @@ export default function AdminLayoutWrapper({
     children,
     user,
     userProfile,
-    clinicData
+    clinicData,
+    systemVersion
 }: AdminLayoutWrapperProps) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true)
     const [isMounted, setIsMounted] = useState(false)
@@ -83,7 +85,7 @@ export default function AdminLayoutWrapper({
                         }
                     `}</style>
                 )}
-                <Sidebar clinic={clinicData} userRole={userProfile?.tipo_perfil || 'super_admin'} userId={user.id} className="hidden lg:block w-64" />
+                <Sidebar clinic={clinicData} userRole={userProfile?.tipo_perfil || 'super_admin'} userId={user.id} systemVersion={systemVersion} className="hidden lg:block w-64" />
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <Header user={{ ...user, ...userProfile, nome: userProfile?.nome_completo }} clinic={clinicData} />
                     <main className="flex-1 overflow-y-auto p-6">
@@ -114,6 +116,7 @@ export default function AdminLayoutWrapper({
                     clinic={clinicData}
                     userRole={userProfile?.tipo_perfil || 'super_admin'}
                     userId={user.id}
+                    systemVersion={systemVersion}
                     className="w-full h-full border-none"
                     collapsed={!isSidebarOpen}
                 />

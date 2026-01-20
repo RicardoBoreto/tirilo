@@ -16,10 +16,11 @@ interface SidebarProps {
     userId?: string
     className?: string
     onLinkClick?: () => void
+    systemVersion?: string
 }
 
 
-export default function Sidebar({ clinic, userRole, userId, className, onLinkClick, collapsed = false }: SidebarProps & { collapsed?: boolean }) {
+export default function Sidebar({ clinic, userRole, userId, className, onLinkClick, collapsed = false, systemVersion }: SidebarProps & { collapsed?: boolean }) {
     const pathname = usePathname()
     const links = getSidebarLinks(clinic, userRole, userId)
 
@@ -82,6 +83,9 @@ export default function Sidebar({ clinic, userRole, userId, className, onLinkCli
                 <div className={`border-t border-gray-100 dark:border-gray-700 ${collapsed ? 'p-4' : 'p-6'}`}>
                     <p className={`text-xs text-gray-400 dark:text-gray-500 text-center font-medium ${collapsed ? 'hidden' : 'block'}`}>
                         Feito com 💙 para o Tirilo
+                        {systemVersion && (userRole === 'super_admin' || userRole === 'master_admin') && (
+                            <span className="block text-[10px] opacity-70 mt-1">v{systemVersion}</span>
+                        )}
                     </p>
                     {collapsed && <div className="w-full text-center text-xs">💙</div>}
                 </div>

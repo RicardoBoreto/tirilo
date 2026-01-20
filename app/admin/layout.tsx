@@ -4,6 +4,7 @@ import Sidebar from '@/components/Sidebar'
 import Header from '@/components/Header'
 import ForcePasswordChangeCheck from '@/components/ForcePasswordChangeCheck'
 import AdminLayoutWrapper from './AdminLayoutWrapper'
+import pkg from '@/package.json'
 
 export default async function AdminLayout({
     children,
@@ -57,6 +58,7 @@ export default async function AdminLayout({
             user={user}
             userProfile={userProfile}
             clinicData={clinicData}
+            systemVersion={pkg.version}
         >
             {children}
         </AdminLayoutWrapper>
