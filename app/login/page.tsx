@@ -20,6 +20,7 @@ export default function LoginPage() {
     const [isStaging, setIsStaging] = useState(false)
     const router = useRouter()
     const supabase = createClient()
+    const isDev = process.env.NODE_ENV === 'development'
 
     useEffect(() => {
         async function checkEnv() {
@@ -177,17 +178,19 @@ export default function LoginPage() {
                     </div>
                     */}
 
-                    <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-center">
-                        <button
-                            onClick={handleEnvSwitch}
-                            disabled={loading}
-                            className={`text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full transition-all flex items-center gap-2 mx-auto ${isStaging ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                                }`}
-                        >
-                            <ShieldAlert className="w-4 h-4" />
-                            Ambiente: {isStaging ? 'STAGING (Clique para mudar p/ PROD)' : 'PRODUÇÃO'}
-                        </button>
-                    </div>
+                    {isDev && (
+                        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-center">
+                            <button
+                                onClick={handleEnvSwitch}
+                                disabled={loading}
+                                className={`text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full transition-all flex items-center gap-2 mx-auto ${isStaging ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                    }`}
+                            >
+                                <ShieldAlert className="w-4 h-4" />
+                                Ambiente: {isStaging ? 'STAGING (Clique para mudar p/ PROD)' : 'PRODUÇÃO'}
+                            </button>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

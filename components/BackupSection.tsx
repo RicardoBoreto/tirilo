@@ -15,6 +15,7 @@ export default function BackupSection() {
     const [loading, setLoading] = useState(false)
     const [isStaging, setIsStaging] = useState(false)
     const router = useRouter()
+    const isDev = process.env.NODE_ENV === 'development'
 
     useEffect(() => {
         async function loadEnv() {
@@ -117,14 +118,20 @@ export default function BackupSection() {
                                 </p>
                             </div>
                             <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
-                                <Label htmlFor="env-mode" className={`text-xs font-bold ${!isStaging ? 'text-blue-600' : 'text-gray-400'}`}>PROD</Label>
-                                <Switch
-                                    id="env-mode"
-                                    checked={isStaging}
-                                    onCheckedChange={handleEnvToggle}
-                                    disabled={loading}
-                                />
-                                <Label htmlFor="env-mode" className={`text-xs font-bold ${isStaging ? 'text-amber-500' : 'text-gray-400'}`}>STAGING</Label>
+                                {isDev ? (
+                                    <>
+                                        <Label htmlFor="env-mode" className={`text-xs font-bold ${!isStaging ? 'text-blue-600' : 'text-gray-400'}`}>PROD</Label>
+                                        <Switch
+                                            id="env-mode"
+                                            checked={isStaging}
+                                            onCheckedChange={handleEnvToggle}
+                                            disabled={loading}
+                                        />
+                                        <Label htmlFor="env-mode" className={`text-xs font-bold ${isStaging ? 'text-amber-500' : 'text-gray-400'}`}>STAGING</Label>
+                                    </>
+                                ) : (
+                                    <span className="text-xs font-bold text-gray-400 px-2">Bloqueado em Produção</span>
+                                )}
                             </div>
                         </div>
 
