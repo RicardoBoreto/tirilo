@@ -19,14 +19,21 @@ export const metadata: Metadata = {
     description: "Sistema de gestão de clínicas",
 };
 
-export default function RootLayout({
+import { EnvironmentBanner } from "@/components/EnvironmentBanner"
+import { cookies } from "next/headers"
+
+export default async function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    const cookieStore = await cookies()
+    const env = cookieStore.get('tirilo-env')?.value || 'prod'
+
     return (
         <html lang="pt-BR">
             <body className={`${poppins.variable} ${inter.variable} font-sans antialiased bg-[#F8FBFF]`}>
+                <EnvironmentBanner env={env} />
                 {children}
                 <Toaster />
             </body>

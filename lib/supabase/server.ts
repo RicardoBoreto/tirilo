@@ -4,10 +4,15 @@ import { Database } from '@/types/database.types'
 
 export async function createClient() {
     const cookieStore = await cookies()
+    const env = cookieStore.get('tirilo-env')?.value || 'prod'
+    const isStaging = env === 'staging'
+
+    const url = isStaging ? process.env.NEXT_PUBLIC_STAGING_SUPABASE_URL! : process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const key = isStaging ? process.env.NEXT_PUBLIC_STAGING_SUPABASE_ANON_KEY! : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
     return createServerClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        url,
+        key,
         {
             cookies: {
                 getAll() {
@@ -30,9 +35,18 @@ export async function createClient() {
 }
 
 export async function createAdminClient() {
+    // Note: Admin client usually operates on Prod unless specified. 
+    // But for testing purposes, we might want it to respect the cookie if called from a server action context.
+    const cookieStore = await cookies()
+    const env = cookieStore.get('tirilo-env')?.value || 'prod'
+    const isStaging = env === 'staging'
+
+    const url = isStaging ? process.env.NEXT_PUBLIC_STAGING_SUPABASE_URL! : process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const key = isStaging ? process.env.STAGING_SUPABASE_SERVICE_ROLE_KEY! : process.env.SUPABASE_SERVICE_ROLE_KEY!
+
     return createServerClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        url,
+        key,
         {
             cookies: {
                 getAll() { return [] },

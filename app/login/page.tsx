@@ -8,15 +8,32 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CuteRobot, CuteStar } from '@/components/icons/CuteIcons'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ShieldAlert } from 'lucide-react'
+import { setEnvironment, getEnvironment } from '@/lib/actions/sync'
+import { useEffect } from 'react'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [isStaging, setIsStaging] = useState(false)
     const router = useRouter()
     const supabase = createClient()
+
+    useEffect(() => {
+        async function checkEnv() {
+            const env = await getEnvironment()
+            setIsStaging(env === 'staging')
+        }
+        checkEnv()
+    }, [])
+
+    const handleEnvSwitch = async () => {
+        setLoading(true)
+        await setEnvironment(isStaging ? 'prod' : 'staging')
+        window.location.reload()
+    }
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -159,6 +176,18 @@ export default function LoginPage() {
                         </p>
                     </div>
                     */}
+
+                    <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-center">
+                        <button
+                            onClick={handleEnvSwitch}
+                            disabled={loading}
+                            className={`text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full transition-all flex items-center gap-2 mx-auto ${isStaging ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                }`}
+                        >
+                            <ShieldAlert className="w-4 h-4" />
+                            Ambiente: {isStaging ? 'STAGING (Clique para mudar p/ PROD)' : 'PRODUÇÃO'}
+                        </button>
+                    </div>
                 </CardContent>
             </Card>
         </div>

@@ -6,9 +6,15 @@ export async function updateSession(request: NextRequest) {
         request,
     })
 
+    const env = request.cookies.get('tirilo-env')?.value || 'prod'
+    const isStaging = env === 'staging'
+
+    const url = isStaging ? process.env.NEXT_PUBLIC_STAGING_SUPABASE_URL! : process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const key = isStaging ? process.env.NEXT_PUBLIC_STAGING_SUPABASE_ANON_KEY! : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
     const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        url,
+        key,
         {
             cookies: {
                 getAll() {
