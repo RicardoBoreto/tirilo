@@ -280,6 +280,7 @@ export async function updateMembroEquipe(id: string, formData: FormData) {
 
             // @ts-ignore
             if (userWithClinic?.id_clinica) {
+                // @ts-ignore
                 const { error: insertError } = await supabaseAdmin
                     .from('terapeutas_curriculo')
                     .insert({
