@@ -57,15 +57,20 @@ export async function generateBackup() {
         { data: help_desk_tickets },
         { data: help_desk_mensagens },
         { data: recursos },
+        { data: clinicas_salas },
         // Games & Monetization
         { data: saas_jogos },
         { data: saas_jogos_versoes },
+        { data: saas_habilidades },
+        { data: saas_jogos_habilidades },
         { data: saas_clinicas_jogos },
         // Robotics
         { data: saas_frota_robos },
         { data: saas_manutencoes_frota },
         { data: clinica_config_ia },
         { data: comandos_robo },
+        { data: sessao_ludica },
+        { data: sessao_diario_bordo },
         { data: sessao_telemetria },
         // Financial (if any new tables were added recently like categories or accounts receivable, add here if they exist in schema)
         // Checking TABELAS.sql... 'financeiro_categorias', 'financeiro_lancamentos', 'contratos'
@@ -91,8 +96,11 @@ export async function generateBackup() {
         supabase.from('help_desk_tickets').select('*'),
         supabase.from('help_desk_mensagens').select('*'),
         supabase.from('recursos').select('*'),
+        supabase.from('clinicas_salas').select('*'),
 
         supabase.from('saas_jogos').select('*'),
+        supabase.from('saas_habilidades').select('*'),
+        supabase.from('saas_jogos_habilidades').select('*'),
         supabase.from('saas_jogos_versoes').select('*'),
         supabase.from('saas_clinicas_jogos').select('*'),
 
@@ -100,6 +108,8 @@ export async function generateBackup() {
         supabase.from('saas_manutencoes_frota').select('*'),
         supabase.from('clinica_config_ia').select('*'),
         supabase.from('comandos_robo').select('*'),
+        supabase.from('sessao_ludica').select('*'),
+        supabase.from('sessao_diario_bordo').select('*'),
         supabase.from('sessao_telemetria').select('*'),
 
         supabase.from('financeiro_categorias').select('*'),
@@ -130,15 +140,20 @@ export async function generateBackup() {
             help_desk_tickets,
             help_desk_mensagens,
             recursos,
+            clinicas_salas,
 
             // New Modules
             saas_jogos,
+            saas_habilidades,
+            saas_jogos_habilidades,
             saas_jogos_versoes,
             saas_clinicas_jogos,
             saas_frota_robos,
             saas_manutencoes_frota,
             clinica_config_ia,
             comandos_robo,
+            sessao_ludica,
+            sessao_diario_bordo,
             sessao_telemetria,
             financeiro_categorias,
             financeiro_lancamentos,
