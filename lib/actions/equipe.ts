@@ -211,7 +211,6 @@ export async function updateMembroEquipe(id: string, formData: FormData) {
         apelido: formData.get('apelido') || null,
         telefone: formData.get('telefone') || null,
         registro_profissional: formData.get('registro_profissional') || null,
-        registro_profissional: formData.get('registro_profissional') || null,
         especialidade: formData.get('especialidade') || null,
         tipo_perfil: formData.get('tipo_perfil')
     }
