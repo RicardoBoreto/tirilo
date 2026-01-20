@@ -272,13 +272,12 @@ export async function updateMembroEquipe(id: string, formData: FormData) {
         } else {
             // Create new if switching to therapist and none exists
             // We need clinic ID
-            const { data: userWithClinic } = await supabaseAdmin
+            const { data: userWithClinic } = await (supabaseAdmin
                 .from('usuarios')
                 .select('id_clinica')
                 .eq('id', id)
-                .single()
+                .single() as any)
 
-            // @ts-ignore
             if (userWithClinic?.id_clinica) {
                 // @ts-ignore
                 const { error: insertError } = await supabaseAdmin
