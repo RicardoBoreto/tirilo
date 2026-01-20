@@ -290,7 +290,7 @@ export async function updateMembroEquipe(id: string, formData: FormData) {
                         especialidades: rawData.especialidade ? [rawData.especialidade.toString()] : null,
                         valor_hora_padrao: valorHora ? parseFloat(valorHora.toString()) : null,
                         porcentagem_repasse: porcentagemRepasse ? parseFloat(porcentagemRepasse.toString()) : null
-                    })
+                    } as any)
                 if (insertError) console.error('Error creating curriculum:', insertError)
             }
         }
