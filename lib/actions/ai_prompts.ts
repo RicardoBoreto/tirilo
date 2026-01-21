@@ -3,6 +3,18 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+export async function getPromptById(id: number) {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+        .from('prompts_ia')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+    if (error) throw error
+    return data as PromptIA
+}
+
 export type PromptIA = {
     id: number
     id_clinica: number

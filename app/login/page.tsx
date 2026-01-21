@@ -56,11 +56,20 @@ export default function LoginPage() {
             // Check if user is admin/therapist
             const { data: usuario } = await supabase
                 .from('usuarios')
-                .select('id, tipo_perfil')
+                .select('id, tipo_perfil, ativo')
                 .eq('id', user.id)
                 .single()
 
             if (usuario) {
+                // Check if user is deactivated
+                if (usuario.ativo === false) {
+                    setError('Sua conta foi desativada. Entre em contato com o administrador.')
+                    // Sign out the user
+                    await supabase.auth.signOut()
+                    setLoading(false)
+                    return
+                }
+
                 if (usuario.tipo_perfil === 'terapeuta') {
                     router.push('/admin/pacientes')
                 } else {

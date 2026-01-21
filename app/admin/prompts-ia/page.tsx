@@ -1,5 +1,4 @@
 import { getPrompts, deletePrompt, togglePromptStatus } from '@/lib/actions/ai_prompts'
-import { clonePrompt } from '@/lib/actions/ai_prompts_clone'
 import PromptForm from '@/components/AI/PromptForm'
 import PromptFilter from '@/components/AI/PromptFilter'
 import DeletePromptButton from '@/components/AI/DeletePromptButton'
@@ -9,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Edit, Trash2, Power, Sparkles, Copy, Eye } from 'lucide-react'
-import { revalidatePath } from 'next/cache'
 
 // @ts-ignore
 export default async function PromptsIAPageV2(props: { searchParams: any }) {
@@ -88,44 +86,72 @@ export default async function PromptsIAPageV2(props: { searchParams: any }) {
                                     <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-gray-50 to-transparent" />
                                 </div>
 
-                                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-                                    <PromptForm
-                                        initialData={prompt}
-                                        terapeutas={terapeutas}
-                                        isAdmin={isAdmin}
-                                        currentUserId={user?.id}
-                                        trigger={
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:bg-blue-50" title="Clonar Prompt">
-                                                <Copy className="w-4 h-4" />
-                                            </Button>
-                                        }
-                                    />
+                                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 mt-auto">
+                                    {/* Botão de Clonar (Apenas se não for o dono OU se for Admin testando) */}
+                                    {(!isOwner || isAdmin) && (
+                                        <PromptForm
+                                            key={`clone-${prompt.id}`}
+                                            initialData={{
+                                                nome_prompt: prompt.nome_prompt,
+                                                descricao: prompt.descricao,
+                                                // @ts-ignore
+                                                modelo_gemini: prompt.modelo_gemini,
+                                                // @ts-ignore
+                                                categoria: prompt.categoria,
+                                                ativo: prompt.ativo,
+                                                temperatura: prompt.temperatura,
+                                                // terapeuta_id removed - causes rendering crash
+                                                prompt_texto: ""
+                                            }}
+                                            terapeutas={terapeutas}
+                                            isAdmin={isAdmin}
+                                            currentUserId={user?.id}
+                                            trigger={
+                                                <Button size="icon" variant="outline" className="h-9 w-9 text-blue-600 border-blue-100 hover:bg-blue-50 hover:text-blue-700 shadow-sm" title="Clonar Prompt">
+                                                    <Copy className="w-4 h-4" />
+                                                </Button>
+                                            }
+                                        />
+                                    )}
 
                                     {canEdit && (
                                         <form action={async () => {
                                             'use server'
                                             await togglePromptStatus(prompt.id, prompt.ativo)
-                                        }}>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-900" title={prompt.ativo ? "Desativar" : "Ativar"}>
+                                        }} key={`status-${prompt.id}`}>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-gray-400 hover:text-gray-900" title={prompt.ativo ? "Desativar" : "Ativar"}>
                                                 <Power className="w-4 h-4" />
                                             </Button>
                                         </form>
                                     )}
 
                                     <PromptForm
-                                        promptToEdit={prompt}
+                                        key={`view-edit-${prompt.id}`}
+                                        promptToEdit={{
+                                            id: prompt.id,
+                                            nome_prompt: prompt.nome_prompt,
+                                            descricao: prompt.descricao,
+                                            // @ts-ignore
+                                            modelo_gemini: prompt.modelo_gemini,
+                                            // @ts-ignore
+                                            categoria: prompt.categoria,
+                                            ativo: prompt.ativo,
+                                            temperatura: prompt.temperatura,
+                                            // terapeuta_id removed - causes rendering crash
+                                            prompt_texto: "" // Lazy load
+                                        }}
                                         terapeutas={terapeutas}
                                         isAdmin={isAdmin}
                                         readOnly={!canEdit}
                                         currentUserId={user?.id}
                                         trigger={
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:bg-blue-50" title={canEdit ? "Editar" : "Visualizar"}>
+                                            <Button size="icon" variant="outline" className="h-9 w-9 text-purple-600 border-purple-100 hover:bg-purple-50 hover:text-purple-700 shadow-sm" title={canEdit ? "Editar" : "Visualizar"}>
                                                 {canEdit ? <Edit className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                             </Button>
                                         }
                                     />
 
-                                    {canEdit && <DeletePromptButton promptId={prompt.id} />}
+                                    {canEdit && <DeletePromptButton promptId={prompt.id} key={`delete-${prompt.id}`} />}
                                 </div>
                             </CardContent>
                         </Card>

@@ -9,7 +9,36 @@ Cada versão segue o formato:
   - ✨ Novos Recursos
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
-  - 🐛 Correções de Bugs
+
+## [1.10.2] - 20/01/2026
+
+### 🐛 Correções Críticas (Prompts de IA)
+
+#### Renderização de Botões
+- **Problema Identificado:** O botão "Visualizar/Editar" (ícone do olho) não aparecia em alguns cards de prompt, especialmente aqueles com dados específicos.
+- **Causa Raiz:** O campo `terapeuta_id` estava causando falha silenciosa de renderização no componente `Dialog/DialogTrigger` do React.
+- **Solução Implementada:**
+  - Removido o campo `terapeuta_id` do objeto `promptToEdit` passado ao `PromptForm`.
+  - Removido também de `initialData` (botão de clonar) para consistência.
+  - O `terapeuta_id` não é necessário porque o `PromptForm` já recebe `currentUserId` como prop separada.
+  - O lazy-loading via `getPromptById` traz todos os dados completos quando o modal abre.
+- **Arquivos Modificados:**
+  - `app/admin/prompts-ia/page.tsx` - Sanitização de dados passados ao PromptForm
+  - `components/AI/PromptForm.tsx` - Limpeza de código de depuração
+
+### 🔒 Segurança e Controle de Acesso
+
+#### Bloqueio de Login para Usuários Desativados
+- **Descrição:** Implementado bloqueio automático de login para terapeutas/usuários desativados.
+- **Funcionalidades:**
+  - Verificação do campo `ativo` na tabela `usuarios` após autenticação bem-sucedida.
+  - Se `ativo === false`, o sistema:
+    - Exibe mensagem de erro: "Sua conta foi desativada. Entre em contato com o administrador."
+    - Faz logout automático do usuário.
+    - Impede o acesso ao sistema.
+- **Arquivo Modificado:**
+  - `app/login/page.tsx` - Adicionada validação de status ativo
+
 ## [1.10.1] - 18/01/2026
 
 ### 🐛 Correções (Mobile & Layout)

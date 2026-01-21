@@ -34,6 +34,7 @@ export default function Sidebar({ clinic, userRole, userId, className, onLinkCli
                                 src={clinic.logo_url}
                                 alt="Logo"
                                 fill
+                                sizes="(max-width: 768px) 40px, 112px"
                                 className="object-contain p-2"
                             />
                         </div>
