@@ -258,9 +258,9 @@ export default function GerarPlanoModal({ pacienteId, trigger }: GerarPlanoModal
                                                     }`}>
                                                     {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                                                 </div>
-                                                <div className={`text-sm p-3 rounded-2xl max-w-[85%] ${msg.role === 'user'
-                                                        ? 'bg-blue-600 text-white rounded-tr-none'
-                                                        : 'bg-white border border-gray-200 text-gray-700 rounded-tl-none shadow-sm'
+                                                <div className={`text-sm p-3 rounded-2xl max-w-[85%] break-words whitespace-pre-wrap ${msg.role === 'user'
+                                                    ? 'bg-blue-600 text-white rounded-tr-none'
+                                                    : 'bg-white border border-gray-200 text-gray-700 rounded-tl-none shadow-sm'
                                                     }`}>
                                                     {msg.text}
                                                 </div>

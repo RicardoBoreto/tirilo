@@ -211,6 +211,23 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
         promptFinal += `\n\nINSTRUÇÕES ADICIONAIS DO TERAPEUTA (PRIORIDADE ALTA):\n${anonInstrucoes}`
     }
 
+    // --- SYSTEM INSTRUCTION INJECTION ---
+    // Force professional tone regardless of user prompt
+    const systemInstruction = `
+    [DIRETRIZES DE ESTILO E COMPORTAMENTO - PRIORIDADE MÁXIMA]
+    1. PÚBLICO-ALVO: Este é um documento técnico para uso exclusivo do TERAPEUTA (SAM). NÃO escreva para o paciente.
+    2. TOM DE VOZ: Profissional, clínico, direto e objetivo.
+    3. REGRAS DE NOMENCLATURA:
+       - O nome do terapeuta (SAM) pode aparecer APENAS no cabeçalho/título.
+       - No corpo do texto, SEMPRE substitua o nome do terapeuta por "o terapeuta" ou "o profissional".
+    4. PROIBIDO: 
+       - NÃO inicie com saudações (ex: "Olá", "Querido").
+       - NÃO use linguagem coloquial.
+    5. FORMATO: Responda APENAS com o conteúdo do plano/documento solicitado.
+    ------------------------------------------------------------
+    `
+    promptFinal = systemInstruction + promptFinal
+
     // 7. Call Gemini API
     try {
         const model = genAI.getGenerativeModel({ model: promptData.modelo_gemini || GEMINI_MODEL_VERSION })
