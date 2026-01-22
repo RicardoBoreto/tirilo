@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Confetti } from '@/components/ui/Confetti'
+
 import { Loader2, Upload, FileText, Music, Activity, Printer, Sparkles } from 'lucide-react'
 
 type Props = {
@@ -25,7 +25,7 @@ export default function AnamneseTab({ pacienteId, anamnese, pacienteNome, clinic
     const [loading, setLoading] = useState(false)
     const [uploadingLaudo, setUploadingLaudo] = useState(false)
     const [importingAI, setImportingAI] = useState(false) // New state
-    const [showConfetti, setShowConfetti] = useState(false)
+
 
     // ... existing states ...
     const [formData, setFormData] = useState({
@@ -48,10 +48,7 @@ export default function AnamneseTab({ pacienteId, anamnese, pacienteNome, clinic
         objetivos_terapeuticos: anamnese?.musicoterapia?.objetivos_terapeuticos || '',
     })
 
-    const triggerConfetti = () => {
-        setShowConfetti(true)
-        setTimeout(() => setShowConfetti(false), 5000)
-    }
+
 
     async function handleImportFromAI(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0]
@@ -99,7 +96,7 @@ export default function AnamneseTab({ pacienteId, anamnese, pacienteNome, clinic
         try {
             await saveAnamnese(pacienteId, formData)
             router.refresh()
-            triggerConfetti()
+
         } catch (error) {
             console.error('Erro ao salvar:', error)
             alert('Erro ao salvar dados')
@@ -115,7 +112,7 @@ export default function AnamneseTab({ pacienteId, anamnese, pacienteNome, clinic
                 musicoterapia: musicoterapiaData,
             })
             router.refresh()
-            triggerConfetti()
+
         } catch (error) {
             console.error('Erro ao salvar:', error)
             alert('Erro ao salvar dados')
@@ -141,7 +138,7 @@ export default function AnamneseTab({ pacienteId, anamnese, pacienteNome, clinic
 
             await uploadLaudo(formData)
             router.refresh()
-            triggerConfetti()
+
         } catch (error) {
             console.error('Erro ao enviar laudo:', error)
             alert('Erro ao enviar laudo')
@@ -325,7 +322,7 @@ export default function AnamneseTab({ pacienteId, anamnese, pacienteNome, clinic
 
     return (
         <div className="space-y-6 relative">
-            {showConfetti && <Confetti />}
+
 
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">

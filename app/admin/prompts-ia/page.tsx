@@ -67,22 +67,42 @@ export default async function PromptsIAPageV2(props: { searchParams: any }) {
                 {prompts.map(prompt => {
                     const isOwner = prompt.terapeuta_id === user?.id
                     const canEdit = isAdmin || isOwner
+                    const isClinicTemplate = !isOwner // Template da clínica (não é do terapeuta atual)
+                    const isPlano = prompt.categoria === 'plano'
+
+                    // Define background colors based on category and ownership
+                    const cardBg = isClinicTemplate
+                        ? (isPlano ? 'bg-gradient-to-br from-blue-50/40 to-amber-50/30' : 'bg-gradient-to-br from-purple-50/40 to-amber-50/30')
+                        : (isPlano ? 'bg-gradient-to-br from-blue-50/30 to-white' : 'bg-gradient-to-br from-purple-50/30 to-white')
+
+                    const headerBg = isClinicTemplate
+                        ? (isPlano ? 'bg-gradient-to-br from-blue-50 via-amber-50/50 to-white' : 'bg-gradient-to-br from-purple-50 via-amber-50/50 to-white')
+                        : (isPlano ? 'bg-gradient-to-br from-blue-50 to-white' : 'bg-gradient-to-br from-purple-50 to-white')
+
+                    const borderColor = isClinicTemplate
+                        ? 'border-2 border-amber-300'
+                        : (isPlano ? 'border-blue-200' : 'border-purple-200')
 
                     return (
-                        <Card key={prompt.id} className="rounded-3xl border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden group">
-                            <CardHeader className="bg-gradient-to-br from-gray-50 to-white border-b border-gray-100 pb-4">
+                        <Card
+                            key={prompt.id}
+                            className={`rounded-3xl shadow-sm hover:shadow-md transition-all overflow-hidden group ${borderColor} ${cardBg}`}
+                        >
+                            <CardHeader className={`border-b border-gray-100 pb-4 ${headerBg}`}>
                                 <div className="flex justify-between items-start">
-                                    <Badge variant={prompt.ativo ? 'default' : 'secondary'} className={prompt.ativo ? "bg-green-500 hover:bg-green-600" : ""}>
-                                        {prompt.ativo ? 'Ativo' : 'Inativo'}
-                                    </Badge>
                                     <div className="flex gap-2">
-                                        <Badge variant="outline" className={`font-mono text-xs ${prompt.categoria === 'plano' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-purple-50 text-purple-700 border-purple-200'}`}>
-                                            {prompt.categoria === 'plano' ? 'Plano' : 'Relatório'}
+                                        <Badge variant={prompt.ativo ? 'default' : 'secondary'} className={prompt.ativo ? "bg-green-500 hover:bg-green-600" : ""}>
+                                            {prompt.ativo ? 'Ativo' : 'Inativo'}
                                         </Badge>
-                                        <Badge variant="outline" className="font-mono text-xs">
-                                            {prompt.modelo_gemini}
-                                        </Badge>
+                                        {isClinicTemplate && (
+                                            <Badge className="bg-amber-500 hover:bg-amber-600 text-white">
+                                                📚 Padrão
+                                            </Badge>
+                                        )}
                                     </div>
+                                    <Badge variant="outline" className={`font-mono text-xs ${prompt.categoria === 'plano' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-purple-50 text-purple-700 border-purple-200'}`}>
+                                        {prompt.categoria === 'plano' ? 'Plano' : 'Relatório'}
+                                    </Badge>
                                 </div>
                                 <CardTitle className="mt-2 text-xl">{prompt.nome_prompt}</CardTitle>
                                 <CardDescription className="line-clamp-2">{prompt.descricao}</CardDescription>
@@ -94,33 +114,31 @@ export default async function PromptsIAPageV2(props: { searchParams: any }) {
                                 </div>
 
                                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 mt-auto">
-                                    {/* Botão de Clonar (Apenas se não for o dono OU se for Admin testando) */}
-                                    {(!isOwner || isAdmin) && (
-                                        <PromptForm
-                                            key={`clone-${prompt.id}`}
-                                            initialData={{
-                                                id: prompt.id, // Needed for lazy loading
-                                                nome_prompt: prompt.nome_prompt,
-                                                descricao: prompt.descricao,
-                                                // @ts-ignore
-                                                modelo_gemini: prompt.modelo_gemini,
-                                                // @ts-ignore
-                                                categoria: prompt.categoria,
-                                                ativo: prompt.ativo,
-                                                temperatura: prompt.temperatura,
-                                                // terapeuta_id removed - causes rendering crash
-                                                prompt_texto: "" // Lazy load
-                                            }}
-                                            terapeutas={terapeutas}
-                                            isAdmin={isAdmin}
-                                            currentUserId={user?.id}
-                                            trigger={
-                                                <Button size="icon" variant="outline" className="h-9 w-9 text-blue-600 border-blue-100 hover:bg-blue-50 hover:text-blue-700 shadow-sm" title="Clonar Prompt">
-                                                    <Copy className="w-4 h-4" />
-                                                </Button>
-                                            }
-                                        />
-                                    )}
+                                    {/* Botão de Clonar - Sempre visível para todos os prompts */}
+                                    <PromptForm
+                                        key={`clone-${prompt.id}`}
+                                        initialData={{
+                                            id: prompt.id, // Needed for lazy loading
+                                            nome_prompt: prompt.nome_prompt,
+                                            descricao: prompt.descricao,
+                                            // @ts-ignore
+                                            modelo_gemini: prompt.modelo_gemini,
+                                            // @ts-ignore
+                                            categoria: prompt.categoria,
+                                            ativo: prompt.ativo,
+                                            temperatura: prompt.temperatura,
+                                            // terapeuta_id removed - causes rendering crash
+                                            prompt_texto: "" // Lazy load
+                                        }}
+                                        terapeutas={terapeutas}
+                                        isAdmin={isAdmin}
+                                        currentUserId={user?.id}
+                                        trigger={
+                                            <Button size="icon" variant="outline" className="h-9 w-9 text-blue-600 border-blue-100 hover:bg-blue-50 hover:text-blue-700 shadow-sm" title="Clonar Prompt">
+                                                <Copy className="w-4 h-4" />
+                                            </Button>
+                                        }
+                                    />
 
                                     {canEdit && (
                                         <form action={async () => {

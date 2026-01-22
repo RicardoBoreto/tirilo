@@ -44,7 +44,7 @@ function deanonymize(text: string, map: Record<string, string>) {
     return result
 }
 
-export async function generateInterventionPlan(promptId: number, pacienteId: number) {
+export async function generateInterventionPlan(promptId: number, pacienteId: number, instrucoesAdicionais?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -203,6 +203,13 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
         .replace(/{{TERAPEUTA_RECURSOS_PREFERIDOS}}/g, anonTerapeutaRecursos)
         .replace(/{{TERAPEUTA_ESTILO_CONDUCAO}}/g, anonTerapeutaEstilo)
         .replace(/{{TERAPEUTA_OBSERVACOES}}/g, anonTerapeutaObs)
+
+    // Append Additional Instructions if provided
+    if (instrucoesAdicionais) {
+        // Anonymize instructions just in case
+        const anonInstrucoes = anonymize(instrucoesAdicionais, anonymizationMap)
+        promptFinal += `\n\nINSTRUÇÕES ADICIONAIS DO TERAPEUTA (PRIORIDADE ALTA):\n${anonInstrucoes}`
+    }
 
     // 7. Call Gemini API
     try {
@@ -666,5 +673,58 @@ export async function refineInterventionPlan(planoId: number, feedbackUsuario: s
     } catch (e: any) {
         console.error('Erro ao refinar plano:', e)
         return { success: false, error: e.message || 'Erro ao comunicar com a IA' }
+    }
+}
+
+export async function refineGeneratedPlan(planoAtual: string, feedbackUsuario: string, pacienteId: number) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { success: false, error: 'Usuário não autenticado' }
+
+    // 1. Buscar Dados para Anonimização (mesma lógica do generate)
+    const { data: paciente } = await supabase.from('pacientes').select('nome').eq('id', pacienteId).single()
+    const { data: terapeuta } = await supabase.from('usuarios').select('nome_completo').eq('id', user.id).single()
+
+    if (!paciente || !terapeuta) return { success: false, error: 'Dados não encontrados' }
+
+    const mapRealToFake = {
+        [paciente.nome]: 'HORACE',
+        [terapeuta.nome_completo]: 'SAM'
+    }
+
+    const planoAtualAnon = anonymize(planoAtual, mapRealToFake)
+    const feedbackAnon = anonymize(feedbackUsuario, mapRealToFake)
+
+    // 2. Chamar IA
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL_VERSION })
+
+    const promptRefinamento = `
+    ATUAÇÃO: Você é um supervisor clínico.
+    OBJETIVO: Refinar o plano de intervenção abaixo com base no feedback.
+    
+    PLANO ATUAL:
+    """
+    ${planoAtualAnon}
+    """
+    
+    FEEDBACK DO TERAPEUTA:
+    "${feedbackAnon}"
+    
+    INSTRUÇÕES:
+    1. Retorne o plano COMPLETO e REVISADO.
+    2. Aplique as mudanças solicitadas.
+    3. Mantenha a formatação Markdown.
+    `
+
+    try {
+        const result = await model.generateContent(promptRefinamento)
+        const text = result.response.text()
+        const finalPlan = deanonymize(text, mapRealToFake)
+
+        return { success: true, plan: finalPlan }
+    } catch (e: any) {
+        console.error('Erro ao refinar (in-memory):', e)
+        return { success: false, error: e.message }
     }
 }
