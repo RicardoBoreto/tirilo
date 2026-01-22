@@ -19,7 +19,14 @@ export default async function PromptsIAPageV2(props: { searchParams: any }) {
     const isAdmin = userProfile?.tipo_perfil !== 'terapeuta'
 
     const terapeutaId = searchParams?.terapeuta
-    const prompts = await getPrompts(terapeutaId)
+    const categoriaFilter = searchParams?.categoria
+
+    let prompts = await getPrompts(terapeutaId)
+
+    // Apply category filter if specified
+    if (categoriaFilter && categoriaFilter !== 'all') {
+        prompts = prompts.filter(p => p.categoria === categoriaFilter)
+    }
 
     let terapeutas: any[] = []
     if (isAdmin) {
@@ -51,7 +58,7 @@ export default async function PromptsIAPageV2(props: { searchParams: any }) {
                     <p className="text-gray-500 mt-2">Personalize como a IA deve atuar na sua clínica.</p>
                 </div>
                 <div className="flex items-center gap-4">
-                    {isAdmin && <PromptFilter terapeutas={terapeutas} />}
+                    <PromptFilter terapeutas={terapeutas} isAdmin={isAdmin} />
                     <PromptForm terapeutas={terapeutas} isAdmin={isAdmin} currentUserId={user?.id} />
                 </div>
             </div>
@@ -92,6 +99,7 @@ export default async function PromptsIAPageV2(props: { searchParams: any }) {
                                         <PromptForm
                                             key={`clone-${prompt.id}`}
                                             initialData={{
+                                                id: prompt.id, // Needed for lazy loading
                                                 nome_prompt: prompt.nome_prompt,
                                                 descricao: prompt.descricao,
                                                 // @ts-ignore

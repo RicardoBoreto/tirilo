@@ -2,13 +2,15 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Filter } from 'lucide-react'
 
-export default function PromptFilter({ terapeutas }: { terapeutas: any[] }) {
+export default function PromptFilter({ terapeutas, isAdmin = false }: { terapeutas: any[], isAdmin?: boolean }) {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const currentFilter = searchParams.get('terapeuta') || 'all'
+    const currentTerapeutaFilter = searchParams.get('terapeuta') || 'all'
+    const currentCategoriaFilter = searchParams.get('categoria') || 'all'
 
-    function handleChange(value: string) {
+    function handleTerapeutaChange(value: string) {
         const params = new URLSearchParams(searchParams.toString())
         if (value === 'all') {
             params.delete('terapeuta')
@@ -18,19 +20,46 @@ export default function PromptFilter({ terapeutas }: { terapeutas: any[] }) {
         router.push(`?${params.toString()}`)
     }
 
+    function handleCategoriaChange(value: string) {
+        const params = new URLSearchParams(searchParams.toString())
+        if (value === 'all') {
+            params.delete('categoria')
+        } else {
+            params.set('categoria', value)
+        }
+        router.push(`?${params.toString()}`)
+    }
+
     return (
-        <div className="w-[250px]">
-            <Select value={currentFilter} onValueChange={handleChange}>
-                <SelectTrigger className="bg-white border-gray-200 shadow-sm rounded-xl">
-                    <SelectValue placeholder="Filtrar por Terapeuta" />
+        <div className="flex items-center gap-3">
+            <Filter className="w-5 h-5 text-gray-400" />
+
+            {/* Filtro de Categoria */}
+            <Select value={currentCategoriaFilter} onValueChange={handleCategoriaChange}>
+                <SelectTrigger className="w-[180px] bg-white border-gray-200 shadow-sm rounded-xl">
+                    <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="all">Todos os Terapeutas</SelectItem>
-                    {terapeutas.map((t: any) => (
-                        <SelectItem key={t.id} value={t.id}>{t.nome_completo || t.nome}</SelectItem>
-                    ))}
+                    <SelectItem value="all">Todas Categorias</SelectItem>
+                    <SelectItem value="plano">📋 Planos</SelectItem>
+                    <SelectItem value="relatorio">📝 Relatórios</SelectItem>
                 </SelectContent>
             </Select>
+
+            {/* Filtro de Terapeuta - Apenas para Admins */}
+            {isAdmin && (
+                <Select value={currentTerapeutaFilter} onValueChange={handleTerapeutaChange}>
+                    <SelectTrigger className="w-[220px] bg-white border-gray-200 shadow-sm rounded-xl">
+                        <SelectValue placeholder="Terapeuta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todos os Terapeutas</SelectItem>
+                        {terapeutas.map((t: any) => (
+                            <SelectItem key={t.id} value={t.id}>{t.nome_completo || t.nome}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            )}
         </div>
     )
 }
