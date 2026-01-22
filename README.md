@@ -168,6 +168,19 @@ SaaS_tirilo_v2/
 - [x] Agendamento de Sessões
 - [x] Prontuário Eletrônico (Básico)
 
+### 🤖 Módulo IA & Assistente Clínico
+- [x] **Geração de Planos de Intervenção**: IA cria planos personalizados baseados na anamnese e histórico.
+- [x] **Refinamento Interativo**: Chat pós-geração para ajustar detalhes do plano com a IA ("Copiloto").
+- [x] **Instruções Pré-Geração**: Campo para terapeuta guiar a IA antes da criação do plano.
+- [x] **Relatórios Automáticos**: Geração de relatórios de evolução com base nas sessões anteriores.
+- [x] **Gestão de Prompts (SaaS)**:
+  - Marketplace de Prompts (Templates da Clínica vs Pessoais).
+  - Filtros por Categoria (Planos/Relatórios).
+  - Editor de Prompts com variáveis dinâmicas (`{{NOME}}`, `{{DIAGNOSTICO}}`, etc).
+- [x] **Segurança & Privacidade**:
+  - **Anonimização Automática**: Nomes reais (paciente/terapeuta) são substituídos por codinomes ("HORACE", "SAM") antes de enviar para a IA (Gemini), garantindo conformidade com LGPD/HIPAA.
+  - Deanonimização automática na volta para o frontend.
+
 ## 🎨 Páginas Disponíveis
 
 | Rota | Descrição | Acesso |
