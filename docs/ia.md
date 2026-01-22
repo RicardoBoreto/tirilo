@@ -95,14 +95,22 @@ Este próprio arquivo, que detalha o funcionamento funcional e arquitetural do m
   - **Contexto Avançado:** A IA recebe automaticamente histórico de relatórios e planos anteriores para maior precisão e continuidade do tratamento.
 - **Estrutura de Dados:** Detalha as tabelas `prompts_ia` e `planos_intervencao_ia`.
 - **Funcionalidades:** Cobre a geração de planos (modal) e a visualização do histórico (aba Planos IA) com TTS.
-  - **Refinamento Conversacional:** Interface de chat integrada que permite "conversar com o documento". O terapeuta envia feedbacks para a IA (ex: "Foque mais em coordenação motora"), e o sistema regenera o plano mantendo o contexto histórico.
+  - **Refinamento Conversacional (IA Copilot):** Interface de chat dividida (Split-View) que permite "conversar com o documento" após a geração. O terapeuta envia comandos de ajuste (ex: "Remova a atividade 2", "Foque mais em coordenação motora"), e o sistema regenera o plano instantaneamente sem salvar no banco até a aprovação final.
+  - **Instruções Pré-Geração:** Novo campo opcional que permite ao terapeuta enviar diretrizes específicas (ex: "Prefira atividades ao ar livre") *antes* da IA criar a primeira versão do plano, garantindo maior assertividade desde o início.
 
 ### 🎨 Padrões de Interface (UI)
 Detalha o padrão visual adotado para as ferramentas de IA:
-- **Botões:** Grandes (`h-14`), arredondados (`rounded-2xl`) e com sufixo `(IA)`.
-- **Código de Cores:**
-  - 🟣 **Roxo (Criação):** Usado para "Gerar Plano (IA)". Representa a "magia" da criação criativa.
-  - 🟢 **Verde (Registro):** Usado para "Registrar Atendimento (IA)". Representa a "conclusão" e "sucesso" da tarefa.
+
+#### Botões de Ação
+- **Botões Grandes:** `h-14`, arredondados (`rounded-2xl`) com sufixo `(IA)`.
+- 🟣 **Roxo (Criação):** Ações de "Gerar" (Criar algo novo).
+- 🟢 **Verde (Registro):** Ações de "Registrar" (Salvar histórico).
+
+#### Cards de Prompts (Admin)
+Diferenciação visual imediata por categoria:
+- 🔵 **Azul (Planos de Intervenção):** Prompts focados em planejamento futuro.
+- 🟣 **Roxo (Relatórios):** Prompts focados em relato de sessões passadas.
+- 🔶 **Borda Dourada + Badge "Padrão":** Indica Templates da Clínica (Oficiais), que se destacam dos prompts pessoais do terapeuta.
 
 ## 🔒 Privacidade e Segurança (IA)
 
