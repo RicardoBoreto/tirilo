@@ -10,6 +10,28 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.10.3] - 22/01/2026
+
+### 🤖 IA - Copiloto Clínico & Gestão de Prompts
+
+#### Refinamento Interativo de Planos
+- **Descrição:** Implementada interface de chat pós-geração para refinar planos de intervenção.
+- **Funcionalidade:** O terapeuta pode conversar com a IA após a geração do plano (ex: "Troque a atividade 2 por algo mais calmo") e o sistema reescreve o plano mantendo o contexto.
+- **Instruções Prévias:** Novo campo "Instruções Adicionais" no modal de geração, permitindo direcionar o foco da IA antes mesmo de criar o plano (Prioridade Alta no prompt).
+
+#### Gestão Visual de Prompts
+- **Categorização Visual:** Cards de prompts agora possuem cores distintas:
+  - 🔵 **Planos:** Tema Azul.
+  - 🟣 **Relatórios:** Tema Roxo.
+- **Marcação de Origem:**
+  - **Padrão:** Prompts da clínica (templates) recebem badge dourado "📚 Padrão" e borda diferenciada.
+  - **Pessoal:** Prompts criados pelo próprio terapeuta mantêm estilo clean.
+- **Terminologia:** Renomeado de "Template" para "Padrão" para maior clareza.
+
+### 🎨 Interface (UI/UX)
+- **Cadastro de Pacientes:** Removida a animação de "Confetes" ao salvar dados (Anamnese/Musicoterapia), tornando o processo mais sóbrio e profissional.
+- **Modal de IA:** Layout redesenhado para "Split View" (Visualização do Plano à esquerda, Chat à direita) em telas grandes.
+
 ## [1.10.2] - 20/01/2026
 
 ### 🐛 Correções Críticas (Prompts de IA)
