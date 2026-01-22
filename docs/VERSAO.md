@@ -32,6 +32,13 @@ Cada versão segue o formato:
 - **Cadastro de Pacientes:** Removida a animação de "Confetes" ao salvar dados (Anamnese/Musicoterapia), tornando o processo mais sóbrio e profissional.
 - **Modal de IA:** Layout redesenhado para "Split View" (Visualização do Plano à esquerda, Chat à direita) em telas grandes.
 
+### 📚 Documentação
+- **Atualização Geral:** Revisão completa da documentação técnica em `docs/ia.md` e `README.md` para incluir detalhes dos novos recursos (Chat Copilot, Instruções Pré-Geração e UI de Cards).
+
+### ⚙️ Engenharia de Prompt (System Instructions)
+- **Tom Profissional:** Injeção de regras estritas ("Strict Mode") no prompt do sistema para garantir que a IA evite saudações informais e mantenha foco técnico.
+- **Anonimização Contextual:** Regra explícita para que a IA use o nome do terapeuta apenas no cabeçalho, substituindo por "o profissional" no corpo do texto.
+
 ## [1.10.2] - 20/01/2026
 
 ### 🐛 Correções Críticas (Prompts de IA)
