@@ -101,7 +101,7 @@ export default async function PromptsIAPageV2(props: { searchParams: any }) {
                                                 ativo: prompt.ativo,
                                                 temperatura: prompt.temperatura,
                                                 // terapeuta_id removed - causes rendering crash
-                                                prompt_texto: ""
+                                                prompt_texto: "" // Lazy load
                                             }}
                                             terapeutas={terapeutas}
                                             isAdmin={isAdmin}
