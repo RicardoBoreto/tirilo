@@ -78,7 +78,8 @@ export async function generateBackup() {
         { data: financeiro_lancamentos },
         { data: contratos },
         { data: saas_empresa },
-        { data: saas_operadoras }
+        { data: saas_operadoras },
+        { data: saas_integracoes_google }
     ] = await Promise.all([
         supabase.from('saas_clinicas').select('*'),
         supabase.from('usuarios').select('*'),
@@ -116,7 +117,8 @@ export async function generateBackup() {
         supabase.from('financeiro_lancamentos').select('*'),
         supabase.from('contratos').select('*'),
         supabase.from('saas_empresa').select('*'),
-        supabase.from('saas_operadoras').select('*')
+        supabase.from('saas_operadoras').select('*'),
+        supabase.from('saas_integracoes_google').select('*')
     ])
 
     const backupData = {
@@ -159,7 +161,8 @@ export async function generateBackup() {
             financeiro_lancamentos,
             contratos,
             saas_empresa,
-            saas_operadoras
+            saas_operadoras,
+            saas_integracoes_google
         }
     }
 

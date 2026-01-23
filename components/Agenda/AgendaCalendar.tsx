@@ -15,6 +15,8 @@ import NovoAgendamentoForm from './NovoAgendamentoForm'
 import DetalhesAgendamento from './DetalhesAgendamento'
 
 
+import GoogleSyncButton from './GoogleSyncButton'
+
 interface AgendaCalendarProps {
     agendamentos: Agendamento[]
 }
@@ -135,6 +137,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                 </div>
 
                 <div className="flex gap-2 flex-1 sm:flex-none">
+                    <GoogleSyncButton />
                     <Button
                         variant="outline"
                         className="flex-1 sm:flex-none rounded-xl border-gray-200"

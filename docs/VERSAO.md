@@ -10,6 +10,14 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.11.0] - 23/01/2026
+
+### 📅 Integrações
+- **Google Calendar:** Sincronização automática de agendamentos com a agenda do Google do terapeuta.
+  - **Botão de Conexão:** Novo botão "Sincronizar Google" na página da agenda.
+  - **Fluxo OAuth:** Autenticação segura via Google com escopos de calendário.
+  - **Sincronização Bidirecional (App -> Google):** Criação, Edição e Exclusão de agendamentos no sistema refletem imediatamente no Google Agenda.
+
 ## [1.10.3] - 22/01/2026
 
 ### 🤖 IA - Copiloto Clínico & Gestão de Prompts

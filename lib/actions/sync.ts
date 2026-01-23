@@ -97,7 +97,8 @@ export async function syncToStaging() {
             'help_desk_mensagens',
             'financeiro_categorias',
             'contratos',
-            'salas_recursos'
+            'salas_recursos',
+            'saas_integracoes_google'
         ]
 
         // Map data
@@ -154,6 +155,7 @@ export async function syncToStaging() {
         // Let's implement deletion carefully.
         const reversedDeleteOrder = [
             'help_desk_mensagens', 'help_desk_tickets',
+            'saas_integracoes_google',
             'financeiro_lancamentos', 'financeiro_categorias',
             'sessao_diario_bordo', 'sessao_telemetria', 'comandos_robo',
             'sessao_ludica',
@@ -225,7 +227,8 @@ export async function syncToStaging() {
             'salas_recursos',
             'contratos',
             'help_desk_tickets',
-            'help_desk_mensagens'
+            'help_desk_mensagens',
+            'saas_integracoes_google'
         ]
 
         // Handling Auth Users (Staff & Family)
