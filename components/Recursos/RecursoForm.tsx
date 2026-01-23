@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Upload, X, Camera, Sparkles } from 'lucide-react'
+import { Loader2, Upload, X, Camera, Sparkles, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 
@@ -51,6 +51,7 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
     const [analyzingAI, setAnalyzingAI] = useState(false)
     const [internalOpen, setInternalOpen] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
+    const [error, setError] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Form state
@@ -73,6 +74,7 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
 
         setSelectedFile(file)
         setUploading(true)
+        setError(null) // Clear previous errors
         try {
             const formData = new FormData()
             formData.append('file', file)
@@ -104,6 +106,7 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         setLoading(true)
+        setError(null)
 
         const formData = new FormData()
         formData.append('nome_item', nome)
@@ -133,7 +136,6 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
             }
         } catch (error) {
             console.error(error)
-            alert('Erro ao salvar recurso')
         } finally {
             setLoading(false)
         }
@@ -187,13 +189,14 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
 
 
                     {(selectedFile || fotoUrl) && !analyzingAI && (
-                        <div className="flex justify-center -mt-2">
+                        <div className="flex flex-col items-center -mt-2 space-y-2">
                             <Button
                                 type="button"
                                 variant="secondary"
                                 onClick={async () => {
                                     if (!selectedFile && !fotoUrl) return
                                     setAnalyzingAI(true)
+                                    setError(null)
                                     try {
                                         const formData = new FormData()
                                         if (selectedFile) {
@@ -209,10 +212,11 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
                                             const novos = result.objetivos.filter((o: string) => !objetivos.includes(o))
                                             setObjetivos([...objetivos, ...novos])
                                         }
-                                        alert('Análise concluída! Nome, descrição e objetivos foram sugeridos.')
+                                        // removido o alert de sucesso para não atrapalhar
                                     } catch (error: any) {
                                         console.error(error)
-                                        alert('Erro na análise IA: ' + error.message)
+                                        // Aqui definimos o erro no estado para o usuário poder copiar
+                                        setError('Erro na análise IA: ' + error.message)
                                     } finally {
                                         setAnalyzingAI(false)
                                     }
@@ -228,6 +232,15 @@ export default function RecursoForm({ recurso, trigger, open, onOpenChange }: Re
                     {analyzingAI && (
                         <div className="flex justify-center -mt-2 text-sm text-purple-600 animate-pulse items-center gap-2">
                             <Sparkles className="w-4 h-4" /> Analisando imagem...
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-start gap-3 select-text">
+                            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                            <div className="text-sm font-medium break-words">
+                                {error}
+                            </div>
                         </div>
                     )}
 
