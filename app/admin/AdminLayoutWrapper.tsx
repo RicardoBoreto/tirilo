@@ -76,7 +76,7 @@ export default function AdminLayoutWrapper({
     if (!isMounted) {
         // Initial server/first-render state match
         return (
-            <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+            <div className="flex h-screen bg-background dark:bg-background">
                 <ForcePasswordChangeCheck needsChange={userProfile?.precisa_trocar_senha || false} />
                 {clinicData?.config_cor_primaria && (
                     <style>{`
@@ -108,8 +108,8 @@ export default function AdminLayoutWrapper({
             )}
 
             <div
-                className={`relative hidden lg:flex flex-col border-r border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 transition-all duration-300 ease-in-out overflow-visible
-                    ${isSidebarOpen ? 'w-64' : 'w-20'}
+                className={`relative hidden lg:flex flex-col transition-all duration-300 ease-in-out overflow-visible z-20
+                    ${isSidebarOpen ? 'w-72' : 'w-24'}
                 `}
             >
                 <Sidebar

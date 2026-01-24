@@ -32,7 +32,7 @@ export default async function RootLayout({
 
     return (
         <html lang="pt-BR">
-            <body className={`${poppins.variable} ${inter.variable} font-sans antialiased bg-[#F8FBFF]`}>
+            <body className={`${poppins.variable} ${inter.variable} font-sans antialiased bg-background text-foreground`}>
                 <EnvironmentBanner env={env} />
                 {children}
                 <Toaster />

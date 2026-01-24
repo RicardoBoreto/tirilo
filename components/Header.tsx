@@ -36,7 +36,7 @@ export default function Header({ user, clinic, userRole }: HeaderProps) {
     }
 
     return (
-        <header className="bg-white/80 backdrop-blur-md dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-700 px-4 py-3 lg:px-8 lg:py-5 sticky top-0 z-40 transition-all duration-200">
+        <header className="bg-white/60 backdrop-blur-xl supports-[backdrop-filter]:bg-white/40 border-b border-transparent px-6 py-4 lg:px-10 lg:py-5 sticky top-0 z-40 transition-all duration-300">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <div className="lg:hidden">
