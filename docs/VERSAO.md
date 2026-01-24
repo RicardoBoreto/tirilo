@@ -10,6 +10,15 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.11.1] - 24/01/2026
+
+### 🎨 Frontend & UX
+- **Refatoração Visual (Premium Look):**
+  - **Identidade Visual:** Migração da paleta de cinzas para tons **Slate** (frio/profissional) e adoção de **Fundo Branco** como padrão.
+  - **Sidebar Flutuante:** Nova navegação lateral com estilo **Glassmorphism** (efeito de vidro), sombras suaves e sem bordas rígidas.
+  - **Geometria:** Aumento do raio de borda global (`1rem` / 16px) para cards, botões e elementos de interface.
+  - **Header Limpo:** Remoção de bordas inferiores no cabeçalho para integração fluida com o conteúdo.
+
 ## [1.11.0] - 23/01/2026
 
 ### 📅 Integrações
