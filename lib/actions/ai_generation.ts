@@ -269,7 +269,7 @@ export async function saveInterventionPlan(pacienteId: number, promptId: number,
     return { success: true }
 }
 
-export async function generateSessionReport(promptId: number, pacienteId: number, relatoSessao: string, dataSessaoIso?: string) {
+export async function generateSessionReport(promptId: number, pacienteId: number, relatoSessao: string, dataSessaoIso?: string, instrucoesAdicionais?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -419,6 +419,16 @@ export async function generateSessionReport(promptId: number, pacienteId: number
         .replace(/{{TERAPEUTA_OBSERVACOES}}/g, anonTerapeutaObs)
         .replace(/{{TERAPEUTA_CREDENCIAL_COM_REGISTRO}}/g, anonCredencial)
 
+    // Append Additional Instructions if provided
+    if (instrucoesAdicionais) {
+        const anonInstrucoes = anonymize(instrucoesAdicionais, anonymizationMap)
+        promptFinal += `\n\nINSTRUÇÕES ADICIONAIS DO TERAPEUTA (PRIORIDADE ALTA):
+    ${anonInstrucoes}
+    
+    Considere estas instruções acima com prioridade máxima na elaboração do relatório.
+    `
+    }
+
     // 7. Call Gemini API
     try {
         const model = genAI.getGenerativeModel({ model: promptData.modelo_gemini || GEMINI_MODEL_VERSION })
@@ -433,6 +443,60 @@ export async function generateSessionReport(promptId: number, pacienteId: number
     } catch (error: any) {
         console.error('Erro na API Gemini:', error)
         return { success: false, error: 'Erro ao gerar relatório com IA: ' + error.message }
+    }
+}
+
+export async function refineSessionReport(relatorioAtual: string, feedbackUsuario: string, pacienteId: number) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return { success: false, error: 'Usuário não autenticado' }
+
+    // 1. Fetch Data for Anonymization
+    const { data: paciente } = await supabase.from('pacientes').select('nome').eq('id', pacienteId).single()
+    const { data: terapeuta } = await supabase.from('usuarios').select('nome_completo').eq('id', user.id).single()
+
+    if (!paciente || !terapeuta) return { success: false, error: 'Dados não encontrados' }
+
+    const mapRealToFake = {
+        [paciente.nome]: 'HORACE',
+        [terapeuta.nome_completo]: 'SAM'
+    }
+
+    const relatorioAtualAnon = anonymize(relatorioAtual, mapRealToFake)
+    const feedbackAnon = anonymize(feedbackUsuario, mapRealToFake)
+
+    // 2. Call IA
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL_VERSION })
+
+    const promptRefinamento = `
+    ATUAÇÃO: Você é um supervisor clínico revisando um relatório de atendimento.
+    OBJETIVO: Refinar o relatório abaixo com base no feedback fornecido.
+    
+    RELATÓRIO ATUAL:
+    """
+    ${relatorioAtualAnon}
+    """
+    
+    FEEDBACK DO TERAPEUTA (Ajustes):
+    "${feedbackAnon}"
+    
+    INSTRUÇÕES:
+    1. Retorne o texto do relatório COMPLETO e REVISADO.
+    2. Aplique estritamente as mudanças solicitadas.
+    3. Mantenha o tom profissional e técnico.
+    4. Mantenha a formatação original (se houver).
+    `
+
+    try {
+        const result = await model.generateContent(promptRefinamento)
+        const text = result.response.text()
+        const finalReport = deanonymize(text, mapRealToFake)
+
+        return { success: true, report: finalReport }
+    } catch (e: any) {
+        console.error('Erro ao refinar relatório (in-memory):', e)
+        return { success: false, error: e.message }
     }
 }
 

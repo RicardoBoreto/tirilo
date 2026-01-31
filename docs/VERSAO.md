@@ -10,6 +10,13 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.11.2] - 31/01/2026
+
+### 🤖 IA - Relatórios Assistidos (Aprimoramento)
+- **Refinamento Conversacional:** Interface de chat integrada ao modal de relatórios ("Split View"), permitindo refinar o texto gerado via comandos de linguagem natural (ex: "Resuma o primeiro parágrafo").
+- **Instruções Prévias:** Novo campo "Instruções Adicionais" para guiar a IA antes da geração do relatório.
+- **Backend:** Nova estrutura de 'server action' (`refineSessionReport`) para suportar o fluxo de refinamento.
+
 ## [1.11.1] - 24/01/2026
 
 ### 🎨 Frontend & UX
