@@ -26,7 +26,7 @@ const TerapeutaSchema = z.object({
 
 
 
-export async function getTerapeutas() {
+export async function getTerapeutas(options?: { onlyActive?: boolean }) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -65,13 +65,20 @@ export async function getTerapeutas() {
         throw new Error('Erro ao buscar dados da clínica: ' + clinicError.message)
     }
 
-    // Get therapists
-    const { data: terapeutas, error: terapeutasError } = await supabase
+    // Build query
+    let query = supabase
         .from('usuarios')
         .select('*')
         .eq('id_clinica', clinicId)
         .eq('tipo_perfil', 'terapeuta')
         .order('created_at', { ascending: false })
+
+    if (options?.onlyActive) {
+        query = query.eq('ativo', true)
+    }
+
+    // Get therapists
+    const { data: terapeutas, error: terapeutasError } = await query
 
     if (terapeutasError) {
         console.error('Error fetching therapists:', terapeutasError)

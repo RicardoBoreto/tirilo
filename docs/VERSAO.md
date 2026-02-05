@@ -10,6 +10,13 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.11.5] - 05/02/2026
+
+### 👥 Gestão de Pacientes: Vínculos
+- **Filtro de Terapeutas:** 
+  - A lista de seleção de terapeutas na tela de edição do paciente agora exibe **apenas profissionais ativos**.
+  - Terapeutas inativos são ocultados para prevenir vínculos errôneos, mantendo o histórico dos já vinculados.
+
 ## [1.11.4] - 05/02/2026
 
 ### 👥 Gestão de Pacientes: Responsáveis

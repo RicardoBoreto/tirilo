@@ -24,7 +24,7 @@ export default async function PacienteDetailsPage({
         getPaciente(pacienteId),
         getResponsaveis(pacienteId),
         getAnamnese(pacienteId),
-        getTerapeutas().catch(() => ({ terapeutas: [] })), // Handle error if user not allowed
+        getTerapeutas({ onlyActive: true }).catch(() => ({ terapeutas: [] })), // Handle error if user not allowed
         getRelatoriosByPaciente(pacienteId),
         getPlanosIAByPaciente(pacienteId),
         getClinica(),
