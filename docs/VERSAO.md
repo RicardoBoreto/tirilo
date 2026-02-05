@@ -10,6 +10,27 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.11.4] - 05/02/2026
+
+### 👥 Gestão de Pacientes: Responsáveis
+- **Vínculo Inteligente:** 
+  - Novo fluxo para adicionar responsáveis: botão dedicado **"Associar Existente"**.
+  - **Lista Global do Terapeuta:** Exibe automaticamente todos os responsáveis já cadastrados em outros pacientes do mesmo terapeuta.
+  - **Ordenação Cronológica:** Lista ordenada pelos cadastros mais recentes, facilitando o vínculo de irmãos/familiares cadastrados em sequência.
+  - **Prevenção de Duplicidade:** O sistema agora bloqueia proativamente o cadastro de CPFs duplicados, sugerindo o vínculo.
+
+## [1.11.3] - 05/02/2026
+
+### 📝 Relatórios e Impressão
+- **Formatação PDF:**
+  - Implementado **alinhamento justificado** real para o texto do relatório.
+  - Correção na renderização de **listas** (bullet points) e **negrito** (`**`), resolvendo conflitos onde negrito no início da linha era confundido com lista.
+  - Adicionado suporte a **Quebra de Página Manual** via comando `---` ou `[QUEBRA]`.
+- **Impressão (Ctrl+P):**
+  - Sincronização da lógica de impressão para espelhar o PDF (Justificado, Bullets, Quebras de Página).
+  - **Limpeza Visual:** Remoção de cabeçalhos duplicados, metadados redundantes (Data/Terapeuta) e ocultação automática de rodapés do navegador ("about:blank").
+- **UX:** Adicionado guia visual de formatação diretamente na tela de edição do relatório.
+
 ## [1.11.2] - 31/01/2026
 
 ### 🤖 IA - Relatórios Assistidos (Aprimoramento)

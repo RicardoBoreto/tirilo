@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { revalidatePath } from 'next/cache'
 import { GEMINI_MODEL_VERSION } from '@/lib/constants/ai_models'
@@ -366,9 +366,10 @@ export async function addResponsavel(pacienteId: number, responsavelData: {
     responsavel_principal: boolean
 }) {
     const supabase = await createClient()
+    const supabaseAdmin = await createAdminClient()
 
-    // Primeiro, criar ou buscar o responsável
-    const { data: existingResp } = await supabase
+    // Primeiro, criar ou buscar o responsável usando Admin Client (Bypass RLS)
+    const { data: existingResp } = await supabaseAdmin
         .from('responsaveis')
         .select('*')
         .eq('cpf', responsavelData.cpf)
@@ -377,9 +378,10 @@ export async function addResponsavel(pacienteId: number, responsavelData: {
     let responsavelId: number
 
     if (existingResp) {
-        responsavelId = existingResp.id
+        // [MODIFICADO] Usuário solicitou bloquear duplicação de CPF
+        throw new Error(`Um responsável com o CPF ${responsavelData.cpf} já está cadastrado no sistema.`)
     } else {
-        const { data: newResp, error: respError } = await supabase
+        const { data: newResp, error: respError } = await supabaseAdmin
             .from('responsaveis')
             .insert({
                 nome: responsavelData.nome,
@@ -398,7 +400,7 @@ export async function addResponsavel(pacienteId: number, responsavelData: {
         responsavelId = newResp.id
     }
 
-    // Agora, criar a relação
+    // Agora, criar a relação (Usando client do usuário para garantir permissão no paciente)
     const { error: relError } = await supabase
         .from('pacientes_responsaveis')
         .insert({
@@ -431,6 +433,106 @@ export async function removeResponsavel(pacienteId: number, responsavelId: numbe
     }
 
     revalidatePath(`/admin/pacientes/${pacienteId}`)
+}
+
+export async function searchResponsaveis(query: string) {
+    const supabaseAdmin = await createAdminClient()
+
+    if (!query || query.length < 3) return []
+
+    // Busca por Nome ou CPF
+    // Nota: ilike é case-insensitive
+    const { data, error } = await supabaseAdmin
+        .from('responsaveis')
+        .select('id, nome, cpf, whatsapp')
+        .or(`nome.ilike.%${query}%,cpf.ilike.%${query}%`)
+        .limit(10)
+
+    if (error) {
+        console.error('Erro ao buscar responsáveis:', error)
+        return []
+    }
+
+    return data
+}
+
+export async function linkResponsavel(pacienteId: number, responsavelId: number, dadosVinculo: {
+    grau_parentesco: string
+    responsavel_principal: boolean
+}) {
+    const supabase = await createClient()
+
+    // Verificar se já existe vínculo
+    const { data: existing } = await supabase
+        .from('pacientes_responsaveis')
+        .select('id')
+        .eq('paciente_id', pacienteId)
+        .eq('responsavel_id', responsavelId)
+        .single()
+
+    if (existing) {
+        throw new Error('Este responsável já está vinculado a este paciente.')
+    }
+
+    const { error } = await supabase
+        .from('pacientes_responsaveis')
+        .insert({
+            paciente_id: pacienteId,
+            responsavel_id: responsavelId,
+            grau_parentesco: dadosVinculo.grau_parentesco,
+            responsavel_principal: dadosVinculo.responsavel_principal,
+        })
+
+    if (error) {
+        console.error('Erro ao vincular responsável:', error)
+        throw new Error('Erro ao vincular responsável')
+    }
+
+    revalidatePath(`/admin/pacientes/${pacienteId}`)
+}
+
+
+
+export async function getResponsaveisDoTerapeuta() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return []
+
+    // 1. Buscar Pacientes do Terapeuta
+    const { data: pacientes } = await supabase
+        .from('pacientes_terapeutas')
+        .select('paciente_id')
+        .eq('terapeuta_id', user.id)
+
+    if (!pacientes || pacientes.length === 0) return []
+
+    const pacienteIds = pacientes.map(p => p.paciente_id)
+
+    // 2. Buscar Responsáveis desses Pacientes
+    const { data: vinculos } = await supabase
+        .from('pacientes_responsaveis')
+        .select('responsavel_id')
+        .in('paciente_id', pacienteIds)
+
+    if (!vinculos || vinculos.length === 0) return []
+
+    const responsavelIds = vinculos.map(v => v.responsavel_id)
+
+    // 3. Buscar Dados dos Responsáveis (Distinct via Set ou SQL se preferir)
+    // O supabase 'in' já filtra, mas precisamos garantir unicidade se houver repetição de IDs no array?
+    // O 'in' aceita repetição, mas o resultado será unico por ID se selecionarmos da tabela responsaveis.
+
+    // Eliminando duplicatas do array de IDs apenas para limpar a query
+    const uniqueIds = Array.from(new Set(responsavelIds))
+
+    const { data: responsaveis } = await supabase
+        .from('responsaveis')
+        .select('*')
+        .in('id', uniqueIds)
+        .order('created_at', { ascending: false })
+
+    return responsaveis || []
 }
 
 // ============================================

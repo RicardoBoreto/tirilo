@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function togglePacienteTerapeuta(pacienteId: number, terapeutaId: string, shouldLink: boolean) {
@@ -45,9 +45,22 @@ export async function updateResponsavel(pacienteId: number, responsavelId: numbe
     responsavel_principal: boolean
 }) {
     const supabase = await createClient()
+    const supabaseAdmin = await createAdminClient()
 
-    // 1. Update Responsavel Data
-    const { error: respError } = await supabase
+    // 1. Verificar duplicação de CPF (exceto o próprio)
+    const { data: existingResp } = await supabaseAdmin
+        .from('responsaveis')
+        .select('id')
+        .eq('cpf', responsavelData.cpf)
+        .neq('id', responsavelId)
+        .single()
+
+    if (existingResp) {
+        throw new Error(`O CPF ${responsavelData.cpf} já está em uso por outro responsável.`)
+    }
+
+    // 2. Update Responsavel Data (Global - Requires Admin Bypass if RLS is strict)
+    const { error: respError } = await supabaseAdmin
         .from('responsaveis')
         .update({
             nome: responsavelData.nome,
