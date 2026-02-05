@@ -3,14 +3,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { FileText, Eye, User, Calendar, Printer, FileDown, Upload, Loader2, Sparkles, Trash2, Play, Pause, Settings2 } from 'lucide-react'
+import { FileText, Eye, User, Calendar, Printer, FileDown, Upload, Loader2, Sparkles, Trash2, Play, Pause, Settings2, Edit, Save, X, Info } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { extractRelatorioFromImage, importarRelatorioLegado, deleteRelatorio, toggleVisibilidadeRelatorio } from '@/lib/actions/relatorios'
+import { extractRelatorioFromImage, importarRelatorioLegado, deleteRelatorio, toggleVisibilidadeRelatorio, saveRelatorio } from '@/lib/actions/relatorios'
 import { useRouter } from 'next/navigation'
 import jsPDF from 'jspdf'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -75,6 +75,10 @@ interface Relatorio {
     id: number
     created_at: string
     relatorio_gerado: string
+    texto_bruto: string
+    id_agendamento: number
+    id_paciente: number
+    id_prompt_ia: number | null
     status: string
     visivel_familia?: boolean
     terapeuta?: {
@@ -114,6 +118,18 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
     const [processingAI, setProcessingAI] = useState(false)
     const [savingImport, setSavingImport] = useState(false)
     const [importData, setImportData] = useState({ dataSessao: '', texto: '' })
+
+    // Edição
+    const [isEditing, setIsEditing] = useState(false)
+    const [editedText, setEditedText] = useState('')
+    const [isSavingEdit, setIsSavingEdit] = useState(false)
+
+    useEffect(() => {
+        if (selectedRelatorio) {
+            setEditedText(selectedRelatorio.relatorio_gerado)
+            setIsEditing(false)
+        }
+    }, [selectedRelatorio])
 
     useEffect(() => {
         const loadVoices = () => {
@@ -246,6 +262,40 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
         }
     }
 
+    const handleSaveEdit = async () => {
+        if (!selectedRelatorio) return
+
+        setIsSavingEdit(true)
+        try {
+            const result = await saveRelatorio({
+                id_agendamento: selectedRelatorio.id_agendamento,
+                id_paciente: selectedRelatorio.id_paciente,
+                texto_bruto: selectedRelatorio.texto_bruto,
+                relatorio_gerado: editedText,
+                id_prompt_ia: selectedRelatorio.id_prompt_ia,
+                status: selectedRelatorio.status as 'rascunho' | 'finalizado'
+            })
+
+            if (result.success) {
+                // Atualiza estado local
+                setSelectedRelatorio({
+                    ...selectedRelatorio,
+                    relatorio_gerado: editedText
+                })
+                setIsEditing(false)
+                router.refresh()
+                // alert('Relatório atualizado com sucesso!') (Opcional, feedback visual já existe pelo estado de edição fechando)
+            } else {
+                alert('Erro ao salvar: ' + result.error)
+            }
+        } catch (error) {
+            console.error(error)
+            alert('Erro ao salvar edição')
+        } finally {
+            setIsSavingEdit(false)
+        }
+    }
+
     const handlePrint = () => {
         if (!selectedRelatorio) return
 
@@ -254,13 +304,34 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
 
         const date = getRelatorioDate(selectedRelatorio)
         const content = selectedRelatorio.relatorio_gerado
-            .replace(/\n/g, '<br>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .split('\n')
+            .map(line => {
+                const cleanLine = line.trim();
+
+                // Page Break
+                if (cleanLine === '---' || cleanLine === '***' || cleanLine.toUpperCase() === '[QUEBRA]') {
+                    return '<div class="page-break"></div>';
+                }
+
+                // Bullet Points
+                // Regex ajustado: Ignora ** (negrito)
+                if (cleanLine.match(/^([*•-](?!\*)\s?)/)) {
+                    const text = cleanLine.replace(/^([*•-](?!\*)\s?)/, '');
+                    const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    return `<div class="bullet-point"><span>•</span> <span>${formattedText}</span></div>`;
+                }
+
+                // Normal Paragraph
+                if (cleanLine === '') return '<br>';
+
+                return `<p>${cleanLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>`;
+            })
+            .join('')
 
         printWindow.document.write(`
             <html>
                 <head>
-                    <title>Relatório de Atendimento - ${format(date, "dd/MM/yyyy", { locale: ptBR })}</title>
+                    <title>Relatório</title>
                     <style>
                         body {
                             font-family: Arial, sans-serif;
@@ -268,36 +339,42 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
                             color: #333;
                             max-width: 800px;
                             margin: 0 auto;
-                            padding: 20px;
+                            padding: 2cm;
                         }
                         h1 {
                             font-size: 24px;
                             margin-bottom: 10px;
                             color: #1a1a1a;
                         }
-                        .meta {
-                            margin-bottom: 30px;
-                            padding-bottom: 20px;
-                            border-bottom: 1px solid #eee;
-                            color: #666;
-                            font-size: 14px;
-                        }
+
                         .content {
-                            white-space: pre-wrap;
                             text-align: justify;
                         }
+                        .content p {
+                            margin: 0 0 10px 0;
+                        }
+                        .page-break { 
+                            page-break-after: always; 
+                            height: 0; 
+                            margin: 0;
+                        }
+                        .bullet-point {
+                            display: flex;
+                            gap: 10px;
+                            margin-bottom: 5px;
+                            padding-left: 20px;
+                        }
                         @media print {
-                            body { padding: 0; }
+                            @page { margin: 0; }
+                            body { padding: 2cm !important; margin: 0 !important; }
                             .no-print { display: none; }
+                            .page-break { break-after: page; }
                         }
                     </style>
                 </head>
                 <body>
-                    <h1>Relatório de Atendimento</h1>
-                    <div class="meta">
-                        <p><strong>Data da Sessão:</strong> ${format(date, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}</p>
-                        <p><strong>Terapeuta:</strong> ${selectedRelatorio.terapeuta?.nome_completo || 'Não identificado'}</p>
-                    </div>
+
+
                     <div class="content">${content}</div>
                     <script>
                         window.onload = function() { window.print(); }
@@ -320,15 +397,17 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
         const maxWidth = pageWidth - (margin * 2)
         let yPosition = margin
 
-        doc.setFontSize(18)
-        doc.setFont('helvetica', 'bold')
-        doc.text('Relatório de Atendimento', margin, yPosition)
-        yPosition += 10
+        // Cabeçalho (Removido para evitar duplicação)
+        // doc.setFontSize(18)
+        // doc.setFont('helvetica', 'bold')
+        // doc.text('Relatório de Atendimento', margin, yPosition)
+        // yPosition += 10
 
-        doc.setLineWidth(0.5)
-        doc.line(margin, yPosition, pageWidth - margin, yPosition)
-        yPosition += 10
+        // doc.setLineWidth(0.5)
+        // doc.line(margin, yPosition, pageWidth - margin, yPosition)
+        // yPosition += 10
 
+        // Metadados
         doc.setFontSize(10)
         doc.setFont('helvetica', 'normal')
         doc.text(`Data da Sessão: ${format(date, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}`, margin, yPosition)
@@ -339,45 +418,138 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
         doc.line(margin, yPosition, pageWidth - margin, yPosition)
         yPosition += 10
 
+        // Conteúdo
         doc.setFontSize(11)
         const content = selectedRelatorio.relatorio_gerado
         const paragraphs = content.split('\n')
+        // Variável de line-height
+        const lineHeight = 6
 
         paragraphs.forEach((p) => {
-            const cleanP = p.trim()
+            let cleanP = p.trim()
             if (!cleanP) {
                 yPosition += 6
                 return
             }
 
-            const lines = doc.splitTextToSize(cleanP, maxWidth)
-            const lineHeight = 6
-            const blockHeight = lines.length * lineHeight
-            const maxPageHeight = pageHeight - (margin * 2)
+            // [NOVO] DETECTOR DE QUEBRA DE PÁGINA MANUAL
+            if (cleanP === '---' || cleanP === '***' || cleanP.toUpperCase() === '[QUEBRA]') {
+                doc.addPage()
+                yPosition = margin
+                return
+            }
 
-            // Se o parágrafo for maior que uma página inteira, imprime linha por linha (fallback)
-            if (blockHeight > maxPageHeight) {
-                lines.forEach((line: string) => {
-                    if (yPosition > pageHeight - margin) {
-                        doc.addPage()
-                        yPosition = margin
-                    }
-                    // Fallback: Left align para parágrafos gigantes para evitar cortes
-                    doc.text(line, margin, yPosition)
-                    yPosition += lineHeight
-                })
-            } else {
-                // Parágrafo cabe em um bloco: verifica se cabe na página atual
-                if (yPosition + blockHeight > pageHeight - margin) {
+            // 1. Detectar Bullet Points (*, -, •)
+            let isBullet = false
+            // Regex ajustado: Aceita *, -, • mas rejeita se for ** (início de negrito)
+            const bulletMatch = cleanP.match(/^([*•-](?!\*)\s?)/)
+            if (bulletMatch) {
+                isBullet = true
+                cleanP = cleanP.slice(bulletMatch[0].length)
+            }
+
+            // 2. Configurar Margens e Check de Página
+            const contentMargin = isBullet ? margin + 5 : margin
+            const contentWidth = isBullet ? maxWidth - 5 : maxWidth
+
+            // Função para verificar quebra de página
+            const checkPageBreak = () => {
+                if (yPosition > pageHeight - margin) {
                     doc.addPage()
                     yPosition = margin
                 }
-                // Imprime parágrafo inteiro justificado
-                doc.text(cleanP, margin, yPosition, { maxWidth: maxWidth, align: 'justify' })
-                yPosition += blockHeight
             }
 
-            yPosition += 2 // Espaço entre parágrafos
+            // 3. Desenhar Bullet se necessário
+            if (isBullet) {
+                checkPageBreak()
+                doc.setFontSize(14)
+                doc.text('•', margin, yPosition)
+                doc.setFontSize(11) // Volta ao tamanho normal
+            }
+
+            // 4. Parser de Bold (** e *) e Preparação de Palavras
+            // O objetivo é transformar todo o parágrafo em uma lista única de palavras com suas propriedades (bold/normal)
+            const parts = cleanP.split(/(\*\*.*?\*\*|\*.*?\*)/g)
+            let allWords: { text: string, isBold: boolean, width: number }[] = []
+
+            parts.forEach(part => {
+                const isDoubleBold = part.startsWith('**') && part.endsWith('**')
+                const isSingleBold = part.startsWith('*') && part.endsWith('*')
+                const isBold = isDoubleBold || isSingleBold
+
+                let text = part
+                if (isDoubleBold) text = part.slice(2, -2)
+                else if (isSingleBold) text = part.slice(1, -1)
+
+                if (!text) return
+
+                doc.setFont('helvetica', isBold ? 'bold' : 'normal')
+                const words = text.split(/\s+/)
+
+                words.forEach((word) => {
+                    if (!word) return
+                    allWords.push({
+                        text: word,
+                        isBold,
+                        width: doc.getTextWidth(word)
+                    })
+                })
+            })
+
+            // 5. Renderização Unificada (Manual Justification)
+            let currentLine: typeof allWords = []
+            let currentLineWidth = 0
+            const standardSpaceWidth = doc.getTextWidth(' ')
+
+            allWords.forEach((wordObj, index) => {
+                const isFirst = currentLine.length === 0
+                // Espaço padrão apenas para cálculo de quebra ("vai caber?")
+                const addedWidth = (isFirst ? 0 : standardSpaceWidth) + wordObj.width
+
+                if (currentLineWidth + addedWidth > contentWidth) {
+                    // A linha estourou a largura -> Precisamos imprimir a linha atual JUSTIFICADA
+                    checkPageBreak()
+
+                    const wordsWidth = currentLine.reduce((acc, w) => acc + w.width, 0)
+                    const availableSpace = contentWidth - wordsWidth
+                    const gaps = currentLine.length - 1
+
+                    // Se houver espaços (gaps), distribuímos o espaço disponível. Se for palavra única, alinha à esquerda.
+                    const spaceWidth = gaps > 0 ? availableSpace / gaps : 0
+
+                    let x = contentMargin
+                    currentLine.forEach((w, i) => {
+                        doc.setFont('helvetica', w.isBold ? 'bold' : 'normal')
+                        doc.text(w.text, x, yPosition)
+                        if (i < gaps) x += w.width + spaceWidth
+                    })
+
+                    yPosition += lineHeight
+
+                    // Começa nova linha com a palavra que estourou
+                    currentLine = [wordObj]
+                    currentLineWidth = wordObj.width
+                } else {
+                    // Cabe na linha -> Adiciona
+                    currentLine.push(wordObj)
+                    currentLineWidth += addedWidth
+                }
+            })
+
+            // 6. Última linha (Sempre alinhada à Esquerda)
+            if (currentLine.length > 0) {
+                checkPageBreak()
+                let x = contentMargin
+                currentLine.forEach((w, i) => {
+                    doc.setFont('helvetica', w.isBold ? 'bold' : 'normal')
+                    doc.text(w.text, x, yPosition)
+                    if (i < currentLine.length - 1) x += w.width + standardSpaceWidth
+                })
+                yPosition += lineHeight
+            }
+
+            yPosition += 2 // Espaço extra após parágrafo
         })
 
         const nomeSanitizado = pacienteNome
@@ -623,10 +795,52 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto border rounded-md p-4 bg-gray-50 dark:bg-gray-900">
-                            <div className="mt-4 prose dark:prose-invert max-w-none whitespace-pre-wrap text-justify">
-                                {selectedRelatorio?.relatorio_gerado}
-                            </div>
+                        <div className="flex-1 overflow-y-auto border rounded-md p-4 bg-gray-50 dark:bg-gray-900 relative">
+                            {isEditing ? (
+                                <div className="h-full flex flex-col gap-2">
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 rounded-md text-xs text-blue-800 dark:text-blue-200 flex gap-2">
+                                        <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="font-semibold mb-1">Dicas de Formatação para PDF:</p>
+                                            <ul className="list-disc pl-4 space-y-0.5">
+                                                <li>Use <strong>**negrito**</strong> para destacar termos.</li>
+                                                <li>Inicie linhas com <strong>*</strong> ou <strong>-</strong> para criar listas (bullet points).</li>
+                                                <li>Digite <strong>---</strong> ou <strong>[QUEBRA]</strong> em uma linha separada para forçar nova página.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <Textarea
+                                        value={editedText}
+                                        onChange={(e) => setEditedText(e.target.value)}
+                                        className="flex-1 w-full resize-none border-none focus-visible:ring-0 bg-transparent p-0 font-sans"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="mt-4 prose dark:prose-invert max-w-none whitespace-pre-wrap text-justify">
+                                    {selectedRelatorio?.relatorio_gerado}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-end gap-2 border-t pt-4">
+                            {isEditing ? (
+                                <>
+                                    <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                                    <Button onClick={handleSaveEdit} disabled={isSavingEdit}>
+                                        {isSavingEdit ? (
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        ) : (
+                                            <Save className="w-4 h-4 mr-2" />
+                                        )}
+                                        Salvar Alterações
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button variant="secondary" onClick={() => setIsEditing(true)}>
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Editar Texto
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </DialogContent>
@@ -651,7 +865,7 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
                                         A IA irá ler a data e o conteúdo automaticamente.
                                     </p>
                                 </div>
-                                <label className="cursor-pointer inline-flex items-center justify-center rounded-xl text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8">
+                                <label className="cursor-pointer inline-flex items-center justify-center rounded-xl text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8">
                                     {processingAI ? (
                                         <>
                                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
