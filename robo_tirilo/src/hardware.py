@@ -273,7 +273,7 @@ class HardwareController:
         # ALSA usually maps it to card X (plughw:X,0).
         # Fallback to plughw:1,0 or plughw:0,0 if detection fails.
         
-        device_str = "plughw:0,0" # Default fallback
+        device_str = "plughw:2,0" # Default fallback (Raspberry Pi 5 with USB Audio)
         if self.input_index is not None:
              device_str = f"plughw:{self.input_index},0"
         

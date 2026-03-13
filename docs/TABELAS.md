@@ -93,6 +93,9 @@ Agendamentos de sessões
 ### `recursos`
 Materiais e recursos disponíveis (antigo materiais_recursos)
 
+### `saas_diretrizes_ai`
+Armazena as diretrizes (prompts) da IA do robô. Gerenciado exclusivamente pelo Super Admin. Suporta hierarquia Genérica (id_clinica NULL) e Específica por clínica.
+
 ---
 
-**Última atualização:** 06/12/2025
+**Última atualização:** 13/03/2026

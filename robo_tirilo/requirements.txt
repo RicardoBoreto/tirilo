@@ -1,9 +1,10 @@
-pygame
 supabase
-google-generativeai
+google-genai
 edge-tts
 SpeechRecognition
 pyaudio
 gpiozero
 python-dotenv
 aiofiles
+opencv-python
+flask==2.3.3

@@ -12,6 +12,25 @@ GREEN = (0, 200, 0)
 
 class GuiManager:
     def __init__(self):
+        # Suporte para OS Lite (sem X11) no Pi 5 - Tenta drivers e índices
+        if "DISPLAY" not in os.environ:
+            for driver in ['kmsdrm', 'drm']:
+                for index in ['0', '1']:
+                    try:
+                        os.environ["SDL_VIDEODRIVER"] = driver
+                        os.environ["SDL_KMSDRM_DEVICE_INDEX"] = index
+                        pygame.display.init()
+                        break
+                    except pygame.error:
+                        continue
+                if pygame.display.get_init(): break
+            
+            if not pygame.display.get_init():
+                try:
+                    os.environ["SDL_VIDEODRIVER"] = "x11"
+                    pygame.display.init()
+                except: pass
+
         os.environ['SDL_VIDEO_CENTERED'] = '1'
         pygame.init()
         # Use FULLSCREEN on RPi, but windowed for dev/testing if needed

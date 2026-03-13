@@ -42,6 +42,11 @@ export interface Telemetry {
     timestamp: string;
 }
 
+// --- Helpers ---
+function normalizeMac(mac: string): string {
+    return mac.trim().toUpperCase().replace(/[^A-F0-9:]/g, '');
+}
+
 // --- Actions ---
 
 export async function getRobots(clinicaId?: string) {
@@ -85,15 +90,7 @@ export async function updateRobotConfig(clinicaId: string, config: { prompt_pers
         .upsert({
             id_clinica: clinicaId,
             ...config,
-            updated_at: new Date().toISOString() // Note: DB column might be 'atualizado_em' based on previous schema viewing, let me double check. 
-            // In schema 20251208120000: atualizado_em TIMESTAMPTZ DEFAULT NOW(),
-            // Wait, previous code used 'updated_at' here? 
-            // Line 76: updated_at: new Date().toISOString()
-            // But schema says: atualizado_em.
-            // I should adhere to schema, but existing code might be wrong if 'updated_at' column doesn't exist.
-            // I'll check saas_frota_robos schema again. Line 11 says 'atualizado_em'. Line 21 'atualizado_em'.
-            // So 'updated_at' works? Maybe createAdminClient maps it or it was a bug?
-            // I will fix it to 'atualizado_em' to be safe.
+            atualizado_em: new Date().toISOString()
         }, { onConflict: 'id_clinica' });
 
     if (error) throw new Error(error.message);
@@ -101,18 +98,26 @@ export async function updateRobotConfig(clinicaId: string, config: { prompt_pers
 }
 
 export async function sendCommand(macAddress: string, command: string, params: any = {}) {
-    const supabase = await createAdminClient();
+    try {
+        const supabase = await createAdminClient();
 
-    const { error } = await supabase
-        .from('comandos_robo')
-        .insert({
-            mac_address: macAddress,
-            comando: command,
-            parametros: params,
-            status: 'PENDENTE'
-        });
+        const { error } = await supabase
+            .from('comandos_robo')
+            .insert({
+                mac_address: macAddress,
+                comando: command,
+                parametros: params,
+                status: 'PENDENTE'
+            });
 
-    if (error) throw new Error(error.message);
+        if (error) {
+            console.error("Supabase Error [sendCommand]:", error);
+            throw new Error(`Erro no banco: ${error.message} (Código: ${error.code})`);
+        }
+    } catch (e: any) {
+        console.error("Critical Failure [sendCommand]:", e);
+        throw new Error(e.message || "Falha técnica ao tentar enviar comando.");
+    }
 }
 
 export async function toggleRobotBlock(id: string, currentStatus: boolean) {
@@ -147,7 +152,7 @@ export async function registerRobot(macAddress: string, name: string, clinicaId?
     const { error } = await supabase
         .from('saas_frota_robos')
         .insert({
-            mac_address: macAddress,
+            mac_address: normalizeMac(macAddress),
             nome_identificacao: name,
             id_clinica: clinicaId || null,
             status_bloqueio: false, // Auto-activate if created by admin
@@ -167,7 +172,11 @@ export async function updateRobot(id: string, data: Partial<Robot>) {
 
     const { error } = await supabase
         .from('saas_frota_robos')
-        .update({ ...updateData, atualizado_em: new Date().toISOString() })
+        .update({
+            ...updateData,
+            mac_address: data.mac_address ? normalizeMac(data.mac_address) : undefined,
+            atualizado_em: new Date().toISOString()
+        })
         .eq('id', id);
 
     if (error) throw new Error(error.message);

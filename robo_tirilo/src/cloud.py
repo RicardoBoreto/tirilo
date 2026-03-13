@@ -6,63 +6,67 @@ import threading
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv() # Removido para evitar carga precoce do .env antigo
 
 class CloudManager:
     def __init__(self):
-        self.url = os.environ.get("SUPABASE_URL")
-        self.key = os.environ.get("SUPABASE_KEY")
+        # Tenta localizar .env.local no diretório do robô ou no diretório raiz do projeto
+        from pathlib import Path
+        
+        # Caminhos prováveis para o .env.local
+        base_path = Path(__file__).parent.parent # robo_tirilo/
+        root_path = base_path.parent             # SaaS_tirilo_v2/
+        
+        env_files = [
+            base_path / ".env.local",
+            root_path / ".env.local",
+            base_path / ".env",
+            root_path / ".env",
+            Path(".") / ".env.local",
+            Path(".") / ".env"
+        ]
+        
+        found_env = False
+        for env_path in env_files:
+            if env_path.exists():
+                load_dotenv(dotenv_path=env_path, override=True) # USA OVERRIDE AQUI!
+                found_env = True
+                print(f"DEBUG: Credenciais carregadas de: {env_path}")
+                break
+        
+        # Mapeamento de chaves (Prioriza NEXT_PUBLIC_ se disponível)
+        self.url = os.environ.get("SUPABASE_URL") or os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
+        self.key = os.environ.get("SUPABASE_KEY") or os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+        
+        # DEBUG das chaves (primeiros caracteres apenas para segurança)
+        if self.url: print(f"DEBUG: URL Supabase: {self.url[:15]}...")
+        if self.key: print(f"DEBUG: KEY Supabase: {self.key[:10]}...")
+        
+        # Se as chaves padrão não estiverem no environ, tenta ler manualmente do primeiro arquivo encontrado
         if not self.url or not self.key:
-            print(f"DEBUG: CWD is {os.getcwd()}")
-            print(f"DEBUG: .env exists? {os.path.exists('.env')}")
-            # Tenta carregar explicitamente
-            from pathlib import Path
-            env_path = Path('.') / '.env'
-            load_dotenv(dotenv_path=env_path)
-            self.url = os.environ.get("SUPABASE_URL")
-            self.key = os.environ.get("SUPABASE_KEY")
+            for env_path in env_files:
+                if env_path.exists():
+                    try:
+                        with open(env_path, 'r') as f:
+                            for line in f:
+                                line = line.strip()
+                                if not line or line.startswith('#') or '=' not in line: continue
+                                k, v = line.split('=', 1)
+                                val = v.strip("'").strip('"')
+                                os.environ[k] = val
+                                if k in ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL']: self.url = val
+                                if k in ['SUPABASE_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY']: self.key = val
+                        if self.url and self.key: break
+                    except: pass
 
-            # Fallback: Tenta keys do Next.js se as padrões não existirem
-            if not self.url: self.url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
-            if not self.key: self.key = os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
-
-            # Fallback manual se load_dotenv falhar e ainda não tiver keys
-            if not self.url or not self.key:
-                print("DEBUG: load_dotenv/os.environ failed, trying manual parse...")
-                try:
-                    with open('.env', 'r') as f:
-                        for line in f:
-                            line = line.strip()
-                            if not line or line.startswith('#') or '=' not in line:
-                                continue
-                            k, v = line.split('=', 1)
-                            val = v.strip("'").strip('"')
-                            
-                            # Adicionar ao environ
-                            os.environ[k] = val
-                            
-                            # Mapear chaves possíveis
-                            if k == 'SUPABASE_URL' or k == 'NEXT_PUBLIC_SUPABASE_URL': self.url = val
-                            if k == 'SUPABASE_KEY' or k == 'NEXT_PUBLIC_SUPABASE_ANON_KEY': self.key = val
-                            if k == 'GEMINI_API_KEY' or k == 'GOOGLE_GEMINI_API_KEY': os.environ['GEMINI_API_KEY'] = val
-                            
-                except Exception as e:
-                    print(f"DEBUG: Manual parse error: {e}")
-            
-            if not self.url or not self.key:
-                # Debug final antes de falhar
-                print("DEBUG: Content of .env (first 20 chars of lines):")
-                try:
-                    with open('.env', 'r') as f:
-                        for line in f:
-                            print(f"L: {line[:20]}...")
-                except: pass
-                raise ValueError("Supabase credentials not found in .env")
+        if not self.url or not self.key:
+            raise ValueError("Credenciais Supabase (URL/KEY) não encontradas no .env.local ou .env")
         
         self.client: Client = create_client(self.url, self.key)
         self.mac_address = self._get_mac_address()
         self.clinica_id = None
         self.config = {}
+        self.cache_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "diretrizes_cache.json")
         self.callbacks = []
         self.running = False
 
@@ -94,8 +98,11 @@ class CloudManager:
     def get_config(self):
         """Fetches configuration from clinica_config_ia."""
         if not self.clinica_id:
-            print("Clinica ID not set. Cannot fetch config.")
-            return {}
+            # Tenta descobrir o id_clinica primeiro
+            self.check_status()
+            if not self.clinica_id:
+                print("Clinica ID not set. Cannot fetch config.")
+                return {}
 
         try:
             response = self.client.table('clinica_config_ia') \
@@ -110,6 +117,73 @@ class CloudManager:
         except Exception as e:
             print(f"Error fetching config: {e}")
             return {}
+
+    def get_ai_directive(self, modo):
+        """
+        Busca a diretriz de IA no Supabase com hierarquia:
+        1. Específica para a Clínica (id_clinica)
+        2. Genérica (id_clinica nulo)
+        3. Cache Local (Fallback)
+        """
+        diretriz = None
+        
+        # 0. Garante que temos o id_clinica
+        if not self.clinica_id:
+            self.check_status()
+
+        try:
+            # 1. Tenta buscar a específica da Clínica
+            if self.clinica_id:
+                res = self.client.table('saas_diretrizes_ai') \
+                    .select('diretriz') \
+                    .eq('id_clinica', self.clinica_id) \
+                    .eq('modo', modo) \
+                    .execute()
+                if res.data:
+                    diretriz = res.data[0]['diretriz']
+
+            # 2. Se não achou específica, busca a Genérica (id_clinica is null)
+            if not diretriz:
+                res = self.client.table('saas_diretrizes_ai') \
+                    .select('diretriz') \
+                    .is_('id_clinica', 'null') \
+                    .eq('modo', modo) \
+                    .execute()
+                if res.data:
+                    diretriz = res.data[0]['diretriz']
+
+            # 3. Se conseguiu buscar, atualiza o Cache Local
+            if diretriz:
+                self._salvar_cache_diretriz(modo, diretriz)
+                return diretriz
+
+        except Exception as e:
+            print(f"CloudManager: Erro ao buscar diretriz online ({modo}): {e}")
+
+        # 4. Fallback: Cache Local
+        print(f"CloudManager: Usando cache local para {modo}")
+        return self._ler_cache_diretriz(modo)
+
+    def _salvar_cache_diretriz(self, modo, texto):
+        cache = {}
+        if os.path.exists(self.cache_file):
+            try:
+                with open(self.cache_file, 'r') as f: cache = json.load(f)
+            except: pass
+        
+        cache[modo] = texto
+        try:
+            with open(self.cache_file, 'w') as f: json.dump(cache, f)
+        except: pass
+
+    def _ler_cache_diretriz(self, modo):
+        if os.path.exists(self.cache_file):
+            try:
+                with open(self.cache_file, 'r') as f:
+                    cache = json.load(f)
+                    return cache.get(modo)
+            except: pass
+        return None
 
     def register_callback(self, callback):
         """Registers a callback function for incoming commands."""
