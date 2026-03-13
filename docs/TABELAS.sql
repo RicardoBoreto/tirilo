@@ -727,3 +727,36 @@ CREATE POLICY "Users can manage their own google tokens" ON public.saas_integrac
 -- Alteração na tabela de agendamentos para suportar integração
 -- ALTER TABLE public.agendamentos ADD COLUMN google_event_id TEXT;
 
+-- ----------------------------------------------------------------------------
+-- 11. FIRMWARE DO ROBÔ (MIGRATIONS ADICIONAIS)
+-- ----------------------------------------------------------------------------
+
+-- Adiciona coluna de versão do firmware (executar se não existir)
+ALTER TABLE public.saas_frota_robos
+ADD COLUMN IF NOT EXISTS versao_firmware TEXT DEFAULT NULL;
+
+COMMENT ON COLUMN public.saas_frota_robos.versao_firmware 
+IS 'Versão do firmware tirilo.py em execução. Atualizada automaticamente via heartbeat a cada 60s.';
+
+-- Habilita RLS na tabela de frota (se ainda não estiver)
+ALTER TABLE public.saas_frota_robos ENABLE ROW LEVEL SECURITY;
+
+-- Permite leitura pública (robôs e dashboard)
+DROP POLICY IF EXISTS "frota_select_all" ON public.saas_frota_robos;
+CREATE POLICY "frota_select_all" ON public.saas_frota_robos
+FOR SELECT USING (true);
+
+-- Permite que o próprio robô (anon key) atualize seu próprio registro (firmware, heartbeat)
+DROP POLICY IF EXISTS "robots_can_update_own_firmware" ON public.saas_frota_robos;
+CREATE POLICY "robots_can_update_own_firmware" ON public.saas_frota_robos
+FOR UPDATE TO anon
+USING (true)
+WITH CHECK (true);
+
+-- Permite que admins autenticados façam todas as operações
+DROP POLICY IF EXISTS "admins_manage_frota" ON public.saas_frota_robos;
+CREATE POLICY "admins_manage_frota" ON public.saas_frota_robos
+FOR ALL TO authenticated
+USING (true)
+WITH CHECK (true);
+

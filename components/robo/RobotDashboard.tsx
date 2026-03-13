@@ -544,7 +544,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
 
                                                 {/* Right Column: Specs */}
                                                 <div className="flex-1 space-y-4">
-                                                    <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid grid-cols-3 gap-3">
                                                         <div className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded border">
                                                             <p className="text-xs text-gray-500 uppercase font-semibold">Preço Venda</p>
                                                             <p className="text-lg font-bold text-green-700 dark:text-green-400">
@@ -561,6 +561,12 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                                                     : 'R$ 0,00'}
                                                             </p>
                                                         </div>
+                                                        <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded border border-indigo-200 dark:border-indigo-700">
+                                                            <p className="text-xs text-indigo-600 dark:text-indigo-400 uppercase font-semibold">Firmware</p>
+                                                            <p className="text-lg font-bold font-mono text-indigo-700 dark:text-indigo-300">
+                                                                {selectedRobot.versao_firmware ? `v${selectedRobot.versao_firmware}` : <span className="text-gray-400 text-sm font-sans font-normal">N/A</span>}
+                                                            </p>
+                                                        </div>
                                                     </div>
 
                                                     <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
@@ -575,7 +581,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                                             <span className="font-medium text-gray-900 dark:text-gray-100">{selectedRobot.modelo_hardware || '-'}</span>
                                                         </div>
                                                         <div className="flex justify-between border-b border-gray-100 dark:border-gray-700 pb-1">
-                                                            <span>Versão:</span>
+                                                            <span>Versão Hardware:</span>
                                                             <span className="font-medium text-gray-900 dark:text-gray-100">{selectedRobot.versao_hardware || '-'}</span>
                                                         </div>
                                                         <div className="flex justify-between border-b border-gray-100 dark:border-gray-700 pb-1">
