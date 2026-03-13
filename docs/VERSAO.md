@@ -3,12 +3,38 @@
 ## Formato do Changelog
 
 Cada versão segue o formato:
-- **Data:** DD/MM/YYYY
-- **Versão:** X.Y.Z (Semantic Versioning)
-- **Categorias:** 
+- **Última atualização:** 13/03/2026  
+**Versão do sistema:** 1.12.0  
+**Node.js requerido:** 18.x ou superior  
+**Next.js:** 15.5.6
   - ✨ Novos Recursos
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
+
+## [1.12.0] - 13/03/2026
+
+### 🤖 Robô Tirilo - Firmware v3.25 (Unificação e Comandos)
+
+#### Novos Comandos Remotos (SaaS → Robô)
+- **`JOGAR_CORES`**: Inicia o jogo de reconhecimento de cores na tela do robô.
+- **`JOGAR_EMOCOES`**: Inicia o jogo de expressões faciais/emoções.
+- **`JOGO_PAREAR`**: Novo mini-game de arrastar e parear objetos por cor (suporte a touch na tela 5").
+- **`MODO_PAPAGAIO`**: Ativa o modo de repetição (Eco), desativando a IA Gemini.
+- **`MODO_CONVERSA`**: Ativa a IA Gemini para diálogos abertos com a criança.
+- **`CALIBRAR`**: Lança o script de calibragem de servos (`calibrador_olhos.py`) diretamente da UI remotamente.
+- **`VISAO_TELA`**: Alterna o modo de visão em tempo real, exibindo o frame da câmera no monitor do robô.
+- **`PARAR`**: Parada de emergência robusta: interrompe todos os áudios (`aplay`, `mpg123`), jogos, e reseta os servos.
+
+#### Infraestrutura e Auto-start
+- **Nome definitivo:** Script principal unificado como `tirilo.py` (substitui versionamento por arquivo).
+- **Auto-start via Systemd:** Criados `tirilo.service` e `setup_autostart_tirilo.sh` para garantir que o robô inicie automaticamente ao ligar o Raspberry Pi.
+- **Reinicio Automático:** O serviço reinicia o processo em caso de queda ou erro.
+
+#### Melhorias Técnicas
+- Tratamento de exceções robusto no listener de comandos da nuvem.
+- Compartilhamento de frame de câmera entre a `VisaoThread` e a `RoboInterface` via variável global thread-safe.
+
+---
 
 ## [1.11.5] - 05/02/2026
 
@@ -795,4 +821,4 @@ Cada versão segue o formato:
 - **0.X.0** - Novos recursos, melhorias significativas
 - **0.0.X** - Correções de bugs, pequenas melhorias
 
-**Última atualização:** 08/12/2024
+**Última atualização:** 13/03/2026

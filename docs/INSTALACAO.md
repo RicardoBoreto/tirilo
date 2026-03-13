@@ -297,6 +297,72 @@ npm list --depth=0
 
 ---
 
+## 🤖 Configuração do Robô Tirilo (Raspberry Pi)
+
+### 1. Pré-requisitos do Robô
+
+No Raspberry Pi OS, instale as dependências:
+
+```bash
+sudo apt update && sudo apt install -y espeak-ng python3-pygame python3-opencv
+pip3 install supabase edge-tts google-genai adafruit-circuitpython-servokit dotenv
+```
+
+### 2. Copiar os arquivos
+
+Do seu PC Windows (no PowerShell):
+
+```powershell
+scp -r robo_tirilo boreto@<IP_DO_RASPBERRY>:~/projeto_robo
+```
+
+### 3. Instalar o Auto-start
+
+No Raspberry Pi, via SSH:
+
+```bash
+cd ~/projeto_robo/robo_tirilo
+chmod +x setup_autostart_tirilo.sh
+bash setup_autostart_tirilo.sh
+```
+
+### 4. Verificar o serviço
+
+```bash
+# Ver status
+sudo systemctl status tirilo.service
+
+# Ver logs em tempo real
+journalctl -u tirilo.service -f
+
+# Reiniciar manualmente
+sudo systemctl restart tirilo.service
+```
+
+### 5. Variáveis de ambiente do Robô
+
+Crie o arquivo `~/projeto_robo/robo_tirilo/.env` com:
+
+```env
+GOOGLE_GEMINI_API_KEY=AIzaSy...
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
+ROBO_MAC_ADDRESS=XX:XX:XX:XX:XX:XX
+```
+
+### Estrutura de Arquivos do Robô
+
+| Arquivo | Função |
+|---|---|
+| `tirilo.py` | Script principal (versão de produção) |
+| `tirilo.service` | Configuração do serviço systemd |
+| `setup_autostart_tirilo.sh` | Instalador do auto-start |
+| `calibrador_olhos.py` | Ferramenta de calibragem de servos |
+| `olhos_tirilo.py` | Driver do hardware PCA9685 |
+| `.env` | Credenciais (não commitar) |
+
+---
+
 ## 🔍 Troubleshooting
 
 ### Erro: "Module not found"
