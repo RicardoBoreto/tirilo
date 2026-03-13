@@ -3,10 +3,9 @@
 ## Formato do Changelog
 
 Cada versão segue o formato:
-- **Última atualização:** 13/03/2026  
-**Versão do sistema:** 1.12.0  
-**Node.js requerido:** 18.x ou superior  
-**Next.js:** 15.5.6
+- **Data:** DD/MM/YYYY
+- **Versão:** X.Y.Z (Semantic Versioning)
+- **Categorias:** 
   - ✨ Novos Recursos
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
