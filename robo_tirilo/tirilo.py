@@ -16,6 +16,7 @@ MUDANÇAS TÉCNICAS:
 
 import os
 import sys
+import math
 import threading
 import time
 import subprocess
