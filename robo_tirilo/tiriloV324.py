@@ -642,27 +642,44 @@ class RoboInterface:
         tam = 100
         esp = (self.w - 4*tam)//5
         for i, cor in enumerate(cores):
-            quadrados.append({'rect': pygame.Rect(esp + i*(tam+esp), 80, tam, tam), 'cor': cor, 'id': i})
-            circulos.append({'x': esp + i*(tam+esp) + tam//2, 'y': self.h - 100, 'cor': cor, 'id': i, 'orig_x': esp + i*(tam+esp) + tam//2, 'orig_y': self.h - 100})
-        self.parear_dados = {'quadrados': quadrados, 'circulos': circulos, 'arrastando': None}
+            quadrados.append({'rect': pygame.Rect(esp + i*(tam+esp), 80, tam, tam), 'cor': cor, 'id': i, 'pareado': False})
+            circulos.append({
+                'x': esp + i*(tam+esp) + tam//2, 'y': self.h - 100,
+                'cor': cor, 'id': i,
+                'orig_x': esp + i*(tam+esp) + tam//2, 'orig_y': self.h - 100,
+                'pareado': False
+            })
+        self.parear_dados = {'quadrados': quadrados, 'circulos': circulos, 'arrastando': None, 'acertos': 0}
+        threading.Thread(target=falar, args=("Vamos parear as cores! Arraste a bolinha colorida até o quadrado da mesma cor!",)).start()
 
     def processar_toque_parear(self, x, y, up=False):
         if not hasattr(self, 'parear_dados'): return
         if up:
             if self.parear_dados['arrastando']:
                 c = self.parear_dados['arrastando']
-                # Verifica acerto
                 alvo = self.parear_dados['quadrados'][c['id']]
-                if alvo['rect'].collidepoint(x, y):
+                if not alvo['pareado'] and alvo['rect'].collidepoint(x, y):
                     c['x'], c['y'] = alvo['rect'].center
-                    falar_prioridade("Muito bem!")
+                    c['pareado'] = True
+                    alvo['pareado'] = True
+                    self.parear_dados['acertos'] += 1
+                    acertos = self.parear_dados['acertos']
+                    total = len(self.parear_dados['circulos'])
+                    if acertos >= total:
+                        def _finalizar():
+                            falar("Parabéns! Você pareou todas as cores! Muito bem!")
+                            time.sleep(3)
+                            self.parar_jogo()
+                        threading.Thread(target=_finalizar).start()
+                    else:
+                        falar_prioridade("Isso mesmo!")
                 else:
                     c['x'], c['y'] = c['orig_x'], c['orig_y']
                 self.parear_dados['arrastando'] = None
             return
 
         for c in self.parear_dados['circulos']:
-            if math.hypot(c['x']-x, c['y']-y) < 50:
+            if not c['pareado'] and math.hypot(c['x']-x, c['y']-y) < 50:
                 self.parear_dados['arrastando'] = c
                 break
         
