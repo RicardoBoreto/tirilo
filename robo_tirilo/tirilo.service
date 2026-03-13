@@ -1,0 +1,19 @@
+[Unit]
+Description=Servico de Inicializacao do Robo Tirilo
+After=network.target
+
+[Service]
+Type=simple
+User=boreto
+WorkingDirectory=/home/boreto/projeto_robo
+Environment=PYTHONUNBUFFERED=1
+# Garante compatibilidade V4L2 para camera CSI no Pi 5
+Environment=LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libcamera/v4l2-compat.so
+# SDL_VIDEODRIVER sera detectado automaticamente pelo script principal, 
+# mas podemos forcar se necessario.
+ExecStart=/usr/bin/python3 /home/boreto/projeto_robo/tirilo.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
