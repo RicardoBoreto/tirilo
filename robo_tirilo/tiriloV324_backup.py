@@ -20,19 +20,13 @@ import threading
 import time
 import subprocess
 import random 
-import uuid
 import pygame
-import queue
 import speech_recognition as sr
 import socket 
-from dotenv import load_dotenv
-import asyncio
-import edge_tts
+# edge_tts removido
 from google import genai
 from google.genai import types
-import cv2
-from olhos_tirilo import ControladorOlhos
-from src.cloud import CloudManager
+from gpiozero import Servo, LED
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
@@ -42,14 +36,12 @@ AUTOR = "Ricardo Alonso Boreto"
 # Configurações de Jogo
 QTD_CHARADAS = 5 
 
-DISPOSITIVO_AUDIO = "plughw:0,0"
+DISPOSITIVO_AUDIO = "plughw:2,0"
 ARQUIVO_REC = "/tmp/voz_usuario.wav"
 ARQUIVO_TTS = "/tmp/resposta_robo.wav" # Alterado para WAV
-DIR_BASE_SCRIPT = os.path.dirname(os.path.abspath(__file__))
-# Mantém DIR_BASE para retrocompatibilidade em outros lugares
-DIR_BASE = os.path.dirname(DIR_BASE_SCRIPT)
-DIR_ASSETS = os.path.join(DIR_BASE_SCRIPT, "assets")
-DIR_LOGS = os.path.join(DIR_BASE_SCRIPT, "logs") 
+DIR_BASE = "/home/boreto/projeto_robo"
+DIR_ASSETS = os.path.join(DIR_BASE, "assets")
+DIR_LOGS = os.path.join(DIR_BASE, "logs") # Diretório para logs e dados
 ARQUIVO_MUSICA = os.path.join(DIR_ASSETS, "musica.mp3")
 
 # ARQUIVOS DE PERFIL E MODO
@@ -60,8 +52,6 @@ ARQUIVO_IA_TERAPEUTA = os.path.join(DIR_BASE, "ia_terapeuta.txt")
 NOME_TERAPEUTA = "Terapeuta" # Valor padrão, será lido ou substituído
 MODO_ROBO_ATUAL = "CRIANCA" # Pode ser "CRIANCA" ou "TERAPEUTA"
 TEXTO_RESPOSTA_IA = "" # Variável global para exibição na tela
-MODO_VISAO_TELA = False # Se True, mostra o frame da câmera na tela
-FRAME_CAMERA = None # Armazena o último frame para o Pygame
 
 # Configurações do Espeak
 ESPEAK_VOZ = "pt-br"
@@ -79,8 +69,7 @@ AZUL_ESPECIAL = (0, 50, 100) # Cor para o modo Doutor Tirilo
 HISTORICO_ANIMAIS = []
 
 # IA
-MODELO_IA = "gemini-2.5-flash"
-cloud_mgr = None
+MODELO_IA = "gemini-2.0-flash"
 
 
 # --- INICIALIZAÇÃO DE ARQUIVOS ---
@@ -142,131 +131,23 @@ Não use emojis ou linguagem infantil.
         except: pass
 
 def ler_diretriz_ia(modo):
-    """Lê a diretriz de IA: Supabase (via CloudManager) -> Fallback Local."""
-    diretriz = None
-    
-    # 1. Tenta buscar via CloudManager (Supabase ou Cache Local)
-    if cloud_mgr:
-        diretriz = cloud_mgr.get_ai_directive(modo)
-    
-    # 2. Se falhar, tenta ler o arquivo de texto local antigo
-    if not diretriz:
-        caminho = ARQUIVO_IA_TERAPEUTA if modo == "TERAPEUTA" else ARQUIVO_IA_CRIANCA
-        try:
-            if os.path.exists(caminho):
-                with open(caminho, "r") as f:
-                    diretriz = f.read()
-        except Exception as e:
-            print(f"ERRO: Falha ao ler diretriz local para {modo}: {e}")
-
-    # 3. Processamento Final e Placeholders
-    if diretriz:
-        diretriz = diretriz.replace("{NOME_ROBO}", NOME_ROBO).replace("{NOME_TERAPEUTA}", NOME_TERAPEUTA)
-        return diretriz.strip()
-    
-    # 4. Fallback absoluto
-    return "Você é o robô Tirilo. Responda de forma curta e amigável."
-
-
-# --- CONFIGURAÇÃO DE VISÃO ---
-MODO_VISAO_ATIVO = True # Controla se o robô segue rostos
-HAAR_PATH = os.path.join(DIR_BASE, "robo_tirilo", "haarcascades", "haarcascade_frontalface_default.xml")
-
-try:
-    from picamera2 import Picamera2
-    PICAMERA2_ATIVO = True
-except ImportError:
-    PICAMERA2_ATIVO = False
-
-class VisaoThread(threading.Thread):
-    def __init__(self, controlador_olhos):
-        super().__init__()
-        self.olhos = controlador_olhos
-        self.running = True
-        self.daemon = True
-        self.cap = None
-        self.last_x, self.last_y = 50.0, 50.0
-        self.alpha = 0.15
-        self.limite_salto = 35.0
-        self.frames_sem_rosto = 0
-
-    def run(self):
-        if not self.olhos: return
+    """Lê e retorna o conteúdo da diretriz para o modo especificado."""
+    if modo == "TERAPEUTA":
+        caminho = ARQUIVO_IA_TERAPEUTA
+    else:
+        caminho = ARQUIVO_IA_CRIANCA
         
-        # Inicializa Câmera
-        try:
-            if PICAMERA2_ATIVO:
-                self.cap = Picamera2()
-                config = self.cap.create_video_configuration(main={"size": (640, 480), "format": "BGR888"})
-                self.cap.configure(config)
-                self.cap.start()
-            else:
-                self.cap = cv2.VideoCapture(0)
-        except Exception as e:
-            print(f"VisaoThread: Erro ao iniciar câmera: {e}")
-            return
+    try:
+        with open(caminho, "r") as f:
+            diretriz = f.read()
+            # Substitui placeholders antes de retornar, garantindo o nome do terapeuta atual
+            diretriz = diretriz.replace("{NOME_ROBO}", NOME_ROBO).replace("{NOME_TERAPEUTA}", NOME_TERAPEUTA)
+            return diretriz.strip()
+    except Exception as e:
+        print(f"ERRO: Não foi possível ler o arquivo de diretriz para {modo}: {e}")
+        # Fallback para evitar falha da IA
+        return "Você é um robô. Responda educadamente."
 
-        face_cascade = cv2.CascadeClassifier(HAAR_PATH)
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-
-        while self.running:
-            if not MODO_VISAO_ATIVO:
-                time.sleep(0.5)
-                continue
-
-            frame = None
-            try:
-                if PICAMERA2_ATIVO and isinstance(self.cap, Picamera2):
-                    frame = self.cap.capture_array()
-                elif self.cap:
-                    ret, f = self.cap.read()
-                    if ret: frame = f
-            except: pass
-
-            if frame is not None:
-                # Processamento P&B CLAHE
-                pequeno = cv2.resize(frame, (320, 240))
-                gray = cv2.cvtColor(pequeno, cv2.COLOR_BGR2GRAY)
-                gray = clahe.apply(gray)
-                
-                faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-
-                if len(faces) > 0:
-                    self.frames_sem_rosto = 0
-                    maior = max(faces, key=lambda f: f[2] * f[3])
-                    (x_p, y_p, w_p, h_p) = maior
-                    
-                    cx = (x_p + w_p//2) * 2
-                    cy = (y_p + h_p//2) * 2
-                    
-                    alvo_x = 100 - (cx / 640 * 100)
-                    alvo_y = (cy / 480 * 100)
-                    
-                    if abs(alvo_x - self.last_x) < self.limite_salto and abs(alvo_y - self.last_y) < self.limite_salto:
-                        self.last_x = (alvo_x * self.alpha) + (self.last_x * (1.0 - self.alpha))
-                        self.last_y = (alvo_y * self.alpha) + (self.last_y * (1.0 - self.alpha))
-                        self.olhos.olhar_para(self.last_x, self.last_y)
-                else:
-                    self.frames_sem_rosto += 1
-                    if self.frames_sem_rosto > 20: # 1 sec
-                        self.last_x = (50.0 * 0.05) + (self.last_x * 0.95)
-                        self.last_y = (50.0 * 0.05) + (self.last_y * 0.95)
-                        self.olhos.olhar_para(self.last_x, self.last_y)
-
-                # Exporta frame para o GUI se o modo visão tela estiver ativo
-                global FRAME_CAMERA, MODO_VISAO_TELA
-                if MODO_VISAO_TELA and frame is not None:
-                    try:
-                        # Reduz para performance
-                        f_small = cv2.resize(frame, (320, 240))
-                        f_rgb = cv2.cvtColor(f_small, cv2.COLOR_BGR2RGB)
-                        FRAME_CAMERA = pygame.image.frombuffer(f_rgb.tobytes(), (320, 240), 'RGB')
-                    except: pass
-
-            time.sleep(0.05) # ~20 FPS
-
-        if PICAMERA2_ATIVO and self.cap: self.cap.stop()
-        elif self.cap: self.cap.release()
 
 def obter_ip_local(): 
     """Tenta obter o IP do dispositivo na rede. Retorna 'Não encontrado' em caso de erro."""
@@ -280,69 +161,33 @@ def obter_ip_local():
         return "Não encontrado"
 
 
-# --- 2. HARDWARE (Controlador PCA9685) ---
-olhos = None
-HARDWARE_ATIVO = False
-
-def inicializar_hardware():
-    global olhos, HARDWARE_ATIVO
-    try:
-        print("Iniciando Controlador de Olhos/Boca (PCA9685)...")
-        olhos = ControladorOlhos()
-        olhos.olhar_neutro()
-        
-        HARDWARE_ATIVO = True
-        print("Hardware PCA9685 ativado com sucesso.")
-    except Exception as e:
-        print(f"Erro ao ligar hardware: {e}")
-        HARDWARE_ATIVO = False
+# --- 2. HARDWARE ---
+PINO_BOCA = 18; PINO_OLHO_D = 23; PINO_OLHO_E = 24
+try:
+    sys.stderr = open(os.devnull, 'w')
+    servo_boca = Servo(PINO_BOCA)
+    led_dir = LED(PINO_OLHO_D); led_esq = LED(PINO_OLHO_E)
+    HARDWARE_ATIVO = True
+    sys.stderr = sys.__stderr__
+except:
+    sys.stderr = sys.__stderr__
+    HARDWARE_ATIVO = False
 
 # --- 3. IA ---
+CLIENTE_GEMINI = None
 def configurar_gemini():
     global CLIENTE_GEMINI
-    
-    # 1. Carrega os arquivos .env
-    # Prioridade para o .env dentro da pasta do robô (o que é sincronizado via SCP manualmente)
-    path_env_robo = os.path.join(DIR_BASE_SCRIPT, ".env")
-    path_env_local = os.path.join(DIR_BASE, ".env.local")
-    
-    if os.path.exists(path_env_robo):
-        print(f"DEBUG: Carregando chaves de {path_env_robo}")
-        load_dotenv(path_env_robo, override=True)
-    elif os.path.exists(path_env_local):
-        print(f"DEBUG: Carregando chaves de {path_env_local}")
-        load_dotenv(path_env_local, override=True)
-    
     chave = None
-    # Lista de variáveis possíveis (GOOGLE_GEMINI_API_KEY do seu arquivo)
-    for var in ["GOOGLE_GEMINI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"]:
-        val = os.getenv(var)
-        if val and "your_" not in val.lower() and val.strip() != "":
-            chave = val.strip()
-            print(f"IA: Chave encontrada na variável '{var}' (Inicia com: {chave[:4]}...)")
-            break
-            
-    if not chave:
-        for p in [os.path.join(DIR_BASE_SCRIPT, "chave_gemini.txt"), "chave_gemini.txt"]:
-            if os.path.exists(p):
-                try:
-                    with open(p, "r") as f:
-                        chave = f.read().strip().replace('"', '').replace("'", "")
-                        if chave: 
-                            print(f"IA: Chave carregada de {p}")
-                            break
-                except: pass
-
-    if chave:
+    caminho_chave = os.path.join(DIR_BASE, "chave_gemini.txt") # Usando DIR_BASE
+    if os.path.exists(caminho_chave):
         try:
-            CLIENTE_GEMINI = genai.Client(api_key=chave)
-            print("IA: Cérebro Gemini inicializado com sucesso!")
-        except Exception as e:
-            print(f"IA: Falha crítica: {e}")
-            CLIENTE_GEMINI = None
-    else:
-        print("IA: !!! NENHUMA CHAVE ENCONTRADA !!!")
-        print("Atenção: Coloque sua chave no arquivo .env dentro da pasta 'robo_tirilo' no seu PC.")
+            with open(caminho_chave, "r") as f:
+                chave = f.read().strip().replace('"', '').replace("'", "")
+        except: pass
+    if not chave: chave = os.getenv("GEMINI_API_KEY")
+    if chave:
+        try: CLIENTE_GEMINI = genai.Client(api_key=chave)
+        except: pass
 
 r = sr.Recognizer()
 
@@ -444,20 +289,7 @@ class RoboInterface:
                 if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.FINGERDOWN:
                     if event.type == pygame.FINGERDOWN: x = int(event.x * self.w); y = int(event.y * self.h)
                     else: x, y = event.pos
-                    if self.modo_jogo and self.tipo_jogo == "parear":
-                        self.processar_toque_parear(x, y)
-                    else:
-                        threading.Thread(target=self.processar_toque, args=(x,y)).start()
-                
-                if (event.type == pygame.MOUSEBUTTONUP or event.type == pygame.FINGERUP) and self.modo_jogo and self.tipo_jogo == "parear":
-                     if event.type == pygame.FINGERUP: x = int(event.x * self.w); y = int(event.y * self.h)
-                     else: x, y = event.pos
-                     self.processar_toque_parear(x, y, up=True)
-
-                if (event.type == pygame.MOUSEMOTION or event.type == pygame.FINGERMOTION) and self.modo_jogo and self.tipo_jogo == "parear":
-                    if event.type == pygame.FINGERMOTION: x = int(event.x * self.w); y = int(event.y * self.h)
-                    else: x, y = event.pos
-                    self.processar_toque_parear(x, y)
+                    threading.Thread(target=self.processar_toque, args=(x,y)).start()
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: self.running = False
 
             if self.exibindo_splash: self._render_splash()
@@ -495,11 +327,18 @@ class RoboInterface:
 
     def _render_rosto(self):
         self.tela.fill(PRETO)
+        cor_olhos = self.cor_status if self.cor_status != CINZA else AZUL
         
-        # Desenha apenas o sprite da boca (o rosto físico já tem olhos de vidro/LED)
+        pygame.draw.circle(self.tela, cor_olhos, self.centro_olho_esq, self.raio_olho)
+        pygame.draw.circle(self.tela, cor_olhos, self.centro_olho_dir, self.raio_olho)
+        
         if self.sprite_atual:
             rect = self.sprite_atual.get_rect(center=(self.w // 2, self.pos_boca_y))
             self.tela.blit(self.sprite_atual, rect)
+        else:
+            larg = int(self.w * 0.3)
+            alt = int(self.h * 0.02)
+            pygame.draw.rect(self.tela, BRANCO, (self.w//2 - larg//2, self.pos_boca_y, larg, alt))
             
         # EXIBIÇÃO DA RESPOSTA DA IA NO MODO CRIANÇA
         global TEXTO_RESPOSTA_IA
@@ -522,36 +361,7 @@ class RoboInterface:
             self.tela.fill(self.cor_jogo)
             area_texto = pygame.Rect(50, 50, self.w - 100, self.h - 100)
             self.desenhar_texto_quebrado(self.texto_jogo, self.fonte_charada, BRANCO, area_texto)
-        elif self.tipo_jogo == "parear":
-            self._render_jogo_parear()
-        elif self.tipo_jogo == "visao":
-            self._render_visao_camera()
         else: self._render_rosto() # Fallback
-
-    def _render_visao_camera(self):
-        self.tela.fill(PRETO)
-        global FRAME_CAMERA
-        if FRAME_CAMERA:
-            img = pygame.transform.scale(FRAME_CAMERA, (self.w, self.h))
-            self.tela.blit(img, (0, 0))
-            txt = self.fonte_peq.render("MODO VISÃO ATIVO", True, VERDE)
-            self.tela.blit(txt, (20, 20))
-        else:
-            self.desenhar_texto_quebrado("Aguardando câmera...", self.fonte_media, BRANCO, self.tela.get_rect())
-
-    def _render_jogo_parear(self):
-        self.tela.fill((235, 250, 255))
-        # Simplificado para o TiriloV3
-        txt = self.fonte_media.render("JOGO PAREAR", True, AZUL)
-        self.tela.blit(txt, (self.w//2 - txt.get_width()//2, 20))
-        
-        # Desenha os círculos/alvos se definidos
-        if hasattr(self, 'parear_dados'):
-            for q in self.parear_dados['quadrados']:
-                pygame.draw.rect(self.tela, q['cor'], q['rect'])
-            for c in self.parear_dados['circulos']:
-                pygame.draw.circle(self.tela, c['cor'], (int(c['x']), int(c['y'])), 40)
-                pygame.draw.circle(self.tela, PRETO, (int(c['x']), int(c['y'])), 40, 2)
 
     def _render_modo_terapeuta(self):
         self.tela.fill(AZUL_ESPECIAL)
@@ -633,96 +443,38 @@ class RoboInterface:
         except Exception as e:
             self.set_status(f"Erro ao listar logs: {e}", VERMELHO)
 
-    def iniciar_parear(self):
-        self.iniciar_jogo("parear")
-        cores = [VERMELHO, AZUL, VERDE, AMARELO]
-        quadrados = []
-        circulos = []
-        tam = 100
-        esp = (self.w - 4*tam)//5
-        for i, cor in enumerate(cores):
-            quadrados.append({'rect': pygame.Rect(esp + i*(tam+esp), 80, tam, tam), 'cor': cor, 'id': i})
-            circulos.append({'x': esp + i*(tam+esp) + tam//2, 'y': self.h - 100, 'cor': cor, 'id': i, 'orig_x': esp + i*(tam+esp) + tam//2, 'orig_y': self.h - 100})
-        self.parear_dados = {'quadrados': quadrados, 'circulos': circulos, 'arrastando': None}
-
-    def processar_toque_parear(self, x, y, up=False):
-        if not hasattr(self, 'parear_dados'): return
-        if up:
-            if self.parear_dados['arrastando']:
-                c = self.parear_dados['arrastando']
-                # Verifica acerto
-                alvo = self.parear_dados['quadrados'][c['id']]
-                if alvo['rect'].collidepoint(x, y):
-                    c['x'], c['y'] = alvo['rect'].center
-                    falar_prioridade("Muito bem!")
-                else:
-                    c['x'], c['y'] = c['orig_x'], c['orig_y']
-                self.parear_dados['arrastando'] = None
-            return
-
-        for c in self.parear_dados['circulos']:
-            if math.hypot(c['x']-x, c['y']-y) < 50:
-                self.parear_dados['arrastando'] = c
-                break
-        
-        if self.parear_dados['arrastando']:
-            self.parear_dados['arrastando']['x'] = x
-            self.parear_dados['arrastando']['y'] = y
-
 
 gui = None
 
 # --- 5. LÓGICA ---
 def animar_fala(evento_parada):
+    opcoes = ['media', 'aberta', 'media']
     while not evento_parada.is_set():
-        if gui and gui.modo_jogo and gui.tipo_jogo == "emocoes": 
-            time.sleep(0.1)
-            continue
-            
-        if olhos:
-            # Sincronia de boca (Lip Sync simplificado)
-            abertura = random.choice([0, 50, 80, 50, 100])
-            olhos.mover_boca(abertura)
-            if gui:
-                if abertura == 0: gui.set_boca('fechada')
-                elif abertura <= 50: gui.set_boca('media')
-                else: gui.set_boca('aberta')
-        
+        if gui and gui.modo_jogo and gui.tipo_jogo == "emocoes": time.sleep(0.1); continue
+        boca = random.choice(opcoes)
+        if gui: gui.set_boca(boca)
+        if HARDWARE_ATIVO:
+            if boca == 'aberta': servo_boca.max()
+            else: servo_boca.mid()
         time.sleep(random.uniform(0.1, 0.2))
-    
-    if olhos: 
-        olhos.mover_boca(0)
     if gui: gui.set_boca('fechada')
+    if HARDWARE_ATIVO: servo_boca.min()
 
 def capturar_voz():
+    if gui: gui.set_status("Ouvindo...", VERDE)
+    if HARDWARE_ATIVO: led_dir.on(); led_esq.on()
     try:
-        if gui: gui.set_status("Ouvindo...", VERDE)
-        # Pequeno delay para garantir que o hardware de áudio (mpg123/aplay) foi liberado
-        time.sleep(0.4)
-        
         subprocess.run(["arecord", "-D", DISPOSITIVO_AUDIO, "-d", "4", "-f", "cd", "-q", ARQUIVO_REC], check=True)
         if os.path.exists(ARQUIVO_REC):
             if gui: gui.set_status("Processando...", AZUL)
             with sr.AudioFile(ARQUIVO_REC) as source: audio = r.record(source)
-            texto = r.recognize_google(audio, language="pt-BR").lower()
-            return texto
-    except Exception as e:
-        # Se printar apenas 'Erro na captura de voz: ', pode ser erro de conexão do recognize_google
-        print(f"Erro na captura de voz (pode ser internet): {e}")
-        if gui: gui.set_status(f"Erro Voz", VERMELHO)
-        return None
+            return r.recognize_google(audio, language="pt-BR").lower()
+    except: return None
     return None
 
-def falar_prioridade(texto, local_fast=False): 
-    threading.Thread(target=falar, args=(texto, local_fast)).start()
+def falar_prioridade(texto): threading.Thread(target=falar, args=(texto,)).start()
 
-async def gerar_audio_edge(texto, arquivo):
-    """Gera áudio usando Microsoft Edge TTS."""
-    voz = "pt-BR-AntonioNeural"
-    comunicador = edge_tts.Communicate(texto, voz)
-    await comunicador.save(arquivo)
-
-def falar(texto, local_fast=False):
+def falar(texto):
     if not texto: return
     
     # Define a cor do status/olho com base no modo
@@ -733,96 +485,50 @@ def falar(texto, local_fast=False):
 
     if gui: gui.set_status("Falando...", cor_fala)
     
-    # Gera nome de arquivo único para esta fala (evita colisão de threads)
-    id_unica = str(uuid.uuid4())[:8]
-    arq_wav = f"/tmp/voz_{id_unica}.wav"
-    arq_mp3 = f"/tmp/voz_{id_unica}.mp3"
-    
-    evt = threading.Event()
-    t_anim = threading.Thread(target=animar_fala, args=(evt,))
-    
     try:
         txt = str(texto).replace('*', '').replace('#', '')
         
-        # --- TENTATIVA 1: ESPEAK-NG (Voz Robótica - Primária agora) ---
-        try:
-            subprocess.run([
-                "espeak-ng", "-v", ESPEAK_VOZ, "-s", ESPEAK_VELOCIDADE,
-                "-p", ESPEAK_PITCH, "-w", arq_wav, txt
-            ], check=True)
+        # --- GERAÇÃO DE ÁUDIO COM ESPEAK-NG (OFFLINE) ---
+        subprocess.run([
+            "espeak-ng",
+            "-v", ESPEAK_VOZ,
+            "-s", ESPEAK_VELOCIDADE,
+            "-p", ESPEAK_PITCH,
+            "-w", ARQUIVO_TTS,
+            txt
+        ], check=True)
 
-            t_anim.start() # Inicia animação
-            subprocess.run(["aplay", "-D", DISPOSITIVO_AUDIO, "-q", arq_wav], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f"IA: Voz robótica [{id_unica}] pronta.")
-            sucesso_espeak = True
-        except Exception as e:
-            print(f"IA: Falha no Espeak [{id_unica}]: {e}")
-            sucesso_espeak = False
-
-        # --- TENTATIVA 2: EDGE-TTS (Fallback apenas se o usuário quiser, ou se local_fast for False) ---
-        # Removido por preferência do usuário por voz robótica
-
-    except Exception as e:
-        print(f"Erro TTS [{id_unica}]: {e}")
-        if gui: gui.set_status("Erro Voz", VERMELHO)
-    finally:
-        # GARANTE QUE A BOCA PARE
-        evt.set()
-        if t_anim.is_alive(): t_anim.join()
+        evt = threading.Event()
+        t = threading.Thread(target=animar_fala, args=(evt,))
+        t.start()
         
-        # Limpeza
-        for f in [arq_wav, arq_mp3]:
-            if os.path.exists(f): 
-                try: os.remove(f)
-                except: pass
+        # Usa 'aplay' pois o arquivo gerado pelo espeak é WAV
+        subprocess.run(["aplay", "-D", DISPOSITIVO_AUDIO, "-q", ARQUIVO_TTS], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
+        evt.set(); t.join()
+        
+        if os.path.exists(ARQUIVO_TTS): os.remove(ARQUIVO_TTS)
         if gui: gui.set_status("Pronto!", CINZA)
-        if olhos: olhos.mover_boca(0)
+    except Exception as e:
+        print(f"Erro TTS: {e}")
+        if gui: gui.set_status("Erro Voz", VERMELHO)
 
 def perguntar_gemini(texto):
     global TEXTO_RESPOSTA_IA
     if not CLIENTE_GEMINI: 
         TEXTO_RESPOSTA_IA = "Erro: Sem chave de IA."
         return "Sem chave."
-        
     try:
-        # --- 1. ANIMAÇÃO IMEDIATA (Antes de qualquer processamento) ---
-        global MODO_VISAO_ATIVO
-        antigo_modo_visao = MODO_VISAO_ATIVO
-        MODO_VISAO_ATIVO = False # Pausa o rastreamento imediatamente
-        
-        if olhos: 
-            # Inicia movimento suave para o teto (V=90) em paralelo
-            threading.Thread(target=olhos.olhar_cima).start()
-            olhos.mover_boca(0)
-        
-        # Sorteia um som de pensamento (Modo local_fast=True p/ latência zero)
-        # Usando 'Hummm' ou 'Um' para evitar que o Espeak soletre 'H-U-M'
-        som_pensar = random.choice([
-            "Ummm, deixa eu ver...", 
-            "Ummm, deixa eu pensar...", 
-            "Só um momento...", 
-            "Ummm, boa pergunta..."
-        ])
-        falar_prioridade(som_pensar, local_fast=True)
-        time.sleep(0.3) # Pequena pausa para o movimento começar
-        
-        # --- 2. PREPARAÇÃO E ENVIO PARA IA ---
+        # Carrega a instrução de sistema do arquivo
         instrucao = ler_diretriz_ia(MODO_ROBO_ATUAL)
+        
         prompt = f"{instrucao}\n\nFala: {texto}\n{NOME_ROBO}:"
         
+        # Gravar a interação (Simples gravação em arquivo para o Modo Terapeuta)
         if MODO_ROBO_ATUAL == "TERAPEUTA":
             log_terapeuta(f"Terapeuta: {texto}")
 
-        # Chama a IA (Pode demorar alguns segundos)
         resp = CLIENTE_GEMINI.models.generate_content(model=MODELO_IA, contents=[prompt])
-        
-        if olhos: 
-            # Volta a olhar para frente suavemente após resposta
-            threading.Thread(target=olhos.olhar_frente).start()
-            time.sleep(0.5) 
-            
-        MODO_VISAO_ATIVO = antigo_modo_visao 
         
         resposta = resp.text if resp.text else "Não entendi."
         
@@ -833,10 +539,8 @@ def perguntar_gemini(texto):
             log_terapeuta(f"{NOME_ROBO}: {resposta}")
         
         return resposta
-        return resposta
-    except Exception as e: 
-        print(f"ERRO IA: {e}")
-        TEXTO_RESPOSTA_IA = f"Erro IA: {str(e)[:40]}..."
+    except: 
+        TEXTO_RESPOSTA_IA = "Tive um erro de comunicação com a IA."
         return "Tive um erro."
 
 def log_terapeuta(conteudo):
@@ -847,33 +551,6 @@ def log_terapeuta(conteudo):
         with open(nome_arquivo, "a") as f:
             f.write(f"[{timestamp}] {conteudo}\n")
     except: pass # Ignora falha de log
-
-def finalizar_modo_geral():
-    """Para tudo: jogos, música, fala e visão."""
-    global MODO_VISAO_ATIVO, TEXTO_RESPOSTA_IA, MODO_VISAO_TELA
-    MODO_VISAO_TELA = False
-    if gui: gui.parar_jogo()
-    TEXTO_RESPOSTA_IA = ""
-    # Mata processos de áudio
-    subprocess.run(["pkill", "-9", "aplay"], stderr=subprocess.DEVNULL)
-    subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
-    if olhos:
-        olhos.olhar_frente()
-        olhos.mover_boca(0)
-    falar("Parei tudo.")
-
-def iniciar_calibragem():
-    """Lança o calibrador externo."""
-    falar("Iniciando calibrador. Por favor, aguarde.")
-    if gui: gui.running = False # Tenta fechar o Pygame atual
-    time.sleep(1)
-    # Tenta rodar o script de calibragem
-    try:
-        subprocess.run(["python3", "calibrador_olhos.py"], check=False)
-    except: pass
-    # Após sair do calibrador, o ideal seria o sistema reiniciar o script.
-    # Se não reiniciar, o usuário pode dar boot novamente.
-    os._exit(0)
 
 # --- JOGOS ---
 
@@ -903,16 +580,14 @@ def jogar_emocoes():
     if not gui: return
     falar("Vamos brincar de emoções!")
     gui.iniciar_jogo("emocoes")
-    if olhos: olhos.olhar_triste()
-    gui.set_boca("triste"); gui.set_status("Como estou?", AZUL_TRISTE);
+    gui.set_boca("triste"); gui.set_status("Como estou?", AZUL_TRISTE); # gui.cor_olhos = AZUL_TRISTE
     falar("Estou feliz ou triste?")
     resp = capturar_voz()
     if gui.ultimo_toque: gui.ultimo_toque = None; gui.parar_jogo(); falar("Parando."); return
     if resp and ("triste" in resp or "tristeza" in resp): falar("Isso mesmo! Estou triste.")
     else: falar("Na verdade, estou triste.")
     time.sleep(1)
-    if olhos: olhos.surpresa()
-    gui.set_boca("surpresa"); gui.set_status("E agora?", AMARELO);
+    gui.set_boca("surpresa"); gui.set_status("E agora?", AMARELO); # gui.cor_olhos = AMARELO
     falar("E agora? O que eu estou sentindo?")
     resp = capturar_voz()
     if gui.ultimo_toque: gui.ultimo_toque = None; gui.parar_jogo(); falar("Parando."); return
@@ -1014,12 +689,18 @@ def tocar_musica():
     except: pass
 
 def animar_pensamento(evento):
+    estado = True
     while not evento.is_set():
         if gui: 
             cor = ROXO if gui.cor_status == ROXO else VERMELHO
             gui.set_status("Pensando...", cor)
-        time.sleep(0.5)
+        if HARDWARE_ATIVO:
+            if estado: led_dir.on(); led_esq.off()
+            else: led_dir.off(); led_esq.on()
+        estado = not estado
+        time.sleep(0.2)
     if gui: gui.set_status("Pronto", AZUL)
+    if HARDWARE_ATIVO: led_dir.on(); led_esq.on()
     
 def iniciar_modo_terapeuta():
     """Ativa o modo Doutor Tirilo e muda a interface."""
@@ -1049,91 +730,33 @@ def finalizar_modo_terapeuta():
 def loop_logica():
     global modo_ia_ativo, MODO_ROBO_ATUAL, TEXTO_RESPOSTA_IA 
     
-    # 1. Prepara arquivos e conexão Cloud (ESSENCIAL para carregar .env.local)
-    global cloud_mgr
+    # Prepara arquivos e IA
     configurar_arquivos_terapeuta()
-    configurar_arquivos_diretriz()
-    
-    # Inicia conexão Cloud (Supabase) PRIMEIRO para carregar as chaves unificadas
-    try:
-        cloud_mgr = CloudManager()
-        print("CloudManager inicializado com sucesso.")
-    except Exception as e:
-        print(f"Aviso: CloudManager não pôde ser iniciado: {e}")
-        
-    # Agora configura o Gemini (que usará as chaves carregadas pelo CloudManager)
+    configurar_arquivos_diretriz() # Chama a função de configuração
+    time.sleep(1)
+    if gui: gui.atualizar_loading("Carregando IA..."); time.sleep(1)
     configurar_gemini()
+    if gui: gui.atualizar_loading("Carregando Hardware..."); time.sleep(1)
+    if HARDWARE_ATIVO: servo_boca.min(); led_dir.on(); led_esq.on()
     
-    # 2. Inicia Hardware e Visão
-    inicializar_hardware()
-    visao = None
-    if olhos:
-        visao = VisaoThread(olhos)
-        visao.start()
-        
-    modo_ia_ativo = True
+    modo_ia_ativo = False
     if gui: gui.set_splash(False)
     
-    # 3. Configura Fila de Comandos Supabase
-    comando_fila = queue.Queue()
-    if cloud_mgr:
-        def on_nuvem_comando(cmd):
-            comando_fila.put(cmd)
-        cloud_mgr.register_callback(on_nuvem_comando)
-        cloud_mgr.start_listener()
-        print("Listener de comandos ativado.")
-
-    falar(f"Olá! Eu sou o {NOME_ROBO}. Minha inteligência artificial está ligada. Como posso ajudar você hoje?")
+    # CORREÇÃO: Saudação completa restaurada
+    falar(f"Olá! Eu sou o {NOME_ROBO}. Diga 'Gemini' para ativar minha inteligência.")
     
     while gui.running:
         try:
+            
             texto = capturar_voz()
             
             if not texto: 
-                # --- PROCESSA COMANDOS DA NUVEM (Se houver) ---
-                try:
-                    while not comando_fila.empty():
-                        cmd = comando_fila.get_nowait()
-                        payload = cmd.get('comando', '')
-                        print(f"Comando recebido: {payload}")
-                        
-                        if payload == "PARAR":
-                            finalizar_modo_geral()
-                        elif payload == "FALAR":
-                            msg = cmd.get('parametros', {}).get('texto', '')
-                            if msg: falar(msg)
-                        elif payload == "JOGAR_CORES":
-                            threading.Thread(target=jogar_cores).start()
-                        elif payload == "JOGAR_EMOCOES":
-                            threading.Thread(target=jogar_emocoes).start()
-                        elif payload == "MODO_PAPAGAIO":
-                            modo_ia_ativo = False
-                            falar("Modo Papagaio ativado. Eu vou repetir tudo!")
-                        elif payload == "MODO_CONVERSA":
-                            modo_ia_ativo = True
-                            falar("Modo Conversa ativado. Vamos bater um papo?")
-                        elif payload == "JOGO_PAREAR":
-                            if gui: threading.Thread(target=gui.iniciar_parear).start()
-                        elif payload == "CALIBRAR":
-                            threading.Thread(target=iniciar_calibragem).start()
-                        elif payload == "VISAO_TELA":
-                            global MODO_VISAO_TELA
-                            MODO_VISAO_TELA = not MODO_VISAO_TELA
-                            if gui: 
-                                if MODO_VISAO_TELA: gui.iniciar_jogo("visao")
-                                else: gui.parar_jogo()
-                            falar("Modo visão " + ("ativado" if MODO_VISAO_TELA else "desativado"))
-                except Exception as e: 
-                    print(f"Erro ao processar comando: {e}")
-
                 if gui and MODO_ROBO_ATUAL == "CRIANCA":
+                    # Mantém o status "Pronto!" se não ouvir nada no modo criança
                     gui.set_status("Pronto!", CINZA)
                 continue
             
-            # --- DEBUG: Mostra o que ouviu na tela ---
-            TEXTO_RESPOSTA_IA = f"Ouvi: {texto}"
-            
-            texto_l = texto.lower()
+            texto_l = texto.lower() # Converte para minúsculas
             
             # --- CONTROLE DE MODO ---
             
@@ -1205,9 +828,7 @@ def loop_logica():
                 falar(f"Você disse: {texto}")
         except: pass
     
-    if HARDWARE_ATIVO and olhos: 
-        olhos.mover_boca(0)
-        olhos.fechar_olhos()
+    if HARDWARE_ATIVO: servo_boca.detach(); led_dir.off(); led_esq.off()
     if gui: gui.running = False
 
 if __name__ == "__main__":
