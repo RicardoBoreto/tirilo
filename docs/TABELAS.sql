@@ -377,7 +377,8 @@ CREATE TABLE public.saas_frota_robos (
     endereco_tailscale TEXT,
     usuario_ssh TEXT DEFAULT 'pi',
     modelo_contrato TEXT DEFAULT 'VENDA',
-    status_financeiro TEXT DEFAULT 'ADIMPLENTE'
+    status_financeiro TEXT DEFAULT 'ADIMPLENTE',
+    versao_firmware TEXT DEFAULT NULL -- Versão do firmware tirilo.py (atualizada via heartbeat)
 );
 
 -- Configuração de IA da Clínica (Personalidade)

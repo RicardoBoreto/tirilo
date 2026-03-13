@@ -472,6 +472,13 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                                         </span>
                                                     </h2>
                                                     <p className="text-sm text-gray-500 font-mono mt-1">MAC: {selectedRobot.mac_address}</p>
+                                                    {selectedRobot.versao_firmware && (
+                                                        <p className="text-xs mt-0.5">
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono font-semibold">
+                                                                🔧 Firmware: v{selectedRobot.versao_firmware}
+                                                            </span>
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button

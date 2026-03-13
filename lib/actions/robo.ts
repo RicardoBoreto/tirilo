@@ -24,6 +24,7 @@ export interface Robot {
     ultimo_visto?: string;
     endereco_tailscale?: string;
     usuario_ssh?: string;
+    versao_firmware?: string | null; // Versão do firmware em execução
 }
 
 export interface RobotConfig {

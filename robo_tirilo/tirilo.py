@@ -3,14 +3,17 @@
 =============================================================================
 PROJETO: ROBÔ TIRILO
 ARQUIVO: tirilo.py
-VERSÃO:  3.25 (Unificação e Comandos)
-DATA:    25/11/2025
+VERSÃO:  4.3 (Otimização e Precisão Mecânica)
+DATA:    13/03/2026
 AUTOR:   Ricardo Alonso Boreto
 
 MUDANÇAS TÉCNICAS:
-- Implementação dos ambientes: Robô Tirilo (Criança) e Doutor Tirilo (Terapeuta).
-- Diretrizes da IA (persona e regras) externalizadas em arquivos para fácil edição (ia_crianca.txt, ia_terapeuta.txt).
-- CORREÇÃO: Restaurada a mensagem de saudação e apresentação do robô, removendo apenas a instrução para ativar a IA.
+- Latência Zero: Via expressa de áudio local, reactão instantânea.
+- Pálpebras Independentes: Mecânica de semicerrar ao olhar para cima.
+- Voz Robótica Clássica: espeak-ng como voz primária.
+- Comandos SaaS: JOGAR_CORES, JOGAR_EMOCOES, MODO_PAPAGAIO, MODO_CONVERSA, JOGO_PAREAR, CALIBRAR, VISAO_TELA, PARAR.
+- Auto-start: Serviço systemd para iniciar com o Raspberry Pi.
+- Reporte de versão ao painel SaaS via heartbeat.
 =============================================================================
 """
 
@@ -37,7 +40,7 @@ from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "3.25 (Unificação e Comandos)"
+VERSAO_ATUAL = "4.3"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -1100,11 +1103,12 @@ def loop_logica():
     # 3. Configura Fila de Comandos Supabase
     comando_fila = queue.Queue()
     if cloud_mgr:
+        cloud_mgr.versao_firmware = VERSAO_ATUAL  # Informa a versão ao CloudManager
         def on_nuvem_comando(cmd):
             comando_fila.put(cmd)
         cloud_mgr.register_callback(on_nuvem_comando)
         cloud_mgr.start_listener()
-        print("Listener de comandos ativado.")
+        print(f"Listener de comandos ativado. Firmware: {VERSAO_ATUAL}")
 
     falar(f"Olá! Eu sou o {NOME_ROBO}. Minha inteligência artificial está ligada. Como posso ajudar você hoje?")
     

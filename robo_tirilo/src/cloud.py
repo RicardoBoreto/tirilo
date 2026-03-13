@@ -66,6 +66,7 @@ class CloudManager:
         self.mac_address = self._get_mac_address()
         self.clinica_id = None
         self.config = {}
+        self.versao_firmware = None  # Será definida pelo tirilo.py ao iniciar
         self.cache_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "diretrizes_cache.json")
         self.callbacks = []
         self.running = False
@@ -246,7 +247,14 @@ class CloudManager:
             if loop_count >= 30:
                 try:
                     from datetime import datetime, timezone
-                    self.send_telemetry('SYSTEM', 'HEARTBEAT', datetime.now(timezone.utc).isoformat())
+                    now = datetime.now(timezone.utc).isoformat()
+                    self.send_telemetry('SYSTEM', 'HEARTBEAT', now)
+                    # Atualiza versão do firmware no registro do robô
+                    if self.versao_firmware:
+                        self.client.table('saas_frota_robos') \
+                            .update({'versao_firmware': self.versao_firmware}) \
+                            .eq('mac_address', self.mac_address) \
+                            .execute()
                 except Exception:
                     pass
                 loop_count = 0
