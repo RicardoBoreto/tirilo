@@ -630,6 +630,37 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                             </div>
                         </div>
 
+                        {/* PROGRAMAS ESPECIAIS */}
+                        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl mb-4">
+                            <h3 className="font-semibold mb-3 text-gray-700 dark:text-gray-200">🔬 Programas Especiais</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                <button
+                                    onClick={() => handleCommand('CALIBRAR_OLHOS')}
+                                    className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded shadow-sm hover:bg-yellow-100 font-medium"
+                                >
+                                    👁️ Calibrar Olhos
+                                </button>
+                                <button
+                                    onClick={() => handleCommand('RASTREADOR_TELA')}
+                                    className="p-2 bg-cyan-50 border border-cyan-200 text-cyan-800 text-sm rounded shadow-sm hover:bg-cyan-100 font-medium"
+                                >
+                                    📷 Rastreador Tela
+                                </button>
+                                <button
+                                    onClick={() => handleCommand('COREOGRAFIA_MACDONALD')}
+                                    className="p-2 bg-orange-50 border border-orange-200 text-orange-800 text-sm rounded shadow-sm hover:bg-orange-100 font-medium"
+                                >
+                                    🎵 Old MacDonald
+                                </button>
+                                <button
+                                    onClick={() => handleCommand('COREOGRAFIA_SEULOBATO')}
+                                    className="p-2 bg-green-50 border border-green-200 text-green-800 text-sm rounded shadow-sm hover:bg-green-100 font-medium"
+                                >
+                                    🎶 Seu Lobato
+                                </button>
+                            </div>
+                        </div>
+
                         {/* CONECTIVIDADE & SUPORTE (NOVO) */}
                         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
                             <h3 className="font-bold text-lg mb-4 flex items-center gap-2">

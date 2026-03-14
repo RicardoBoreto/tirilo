@@ -1150,6 +1150,30 @@ def loop_logica():
                                 if MODO_VISAO_TELA: gui.iniciar_jogo("visao")
                                 else: gui.parar_jogo()
                             falar("Modo visão " + ("ativado" if MODO_VISAO_TELA else "desativado"))
+                        elif payload == "CALIBRAR_OLHOS":
+                            def _calibrar_olhos():
+                                script = os.path.join(os.path.dirname(__file__), "calibrador_olhos.py")
+                                subprocess.Popen(["python3", script])
+                            threading.Thread(target=_calibrar_olhos).start()
+                            falar("Abrindo calibrador de olhos.")
+                        elif payload == "RASTREADOR_TELA":
+                            def _rastreador_tela():
+                                script = os.path.join(os.path.dirname(__file__), "rastreador_tela.py")
+                                subprocess.Popen(["python3", script])
+                            threading.Thread(target=_rastreador_tela).start()
+                            falar("Iniciando rastreador de tela.")
+                        elif payload == "COREOGRAFIA_MACDONALD":
+                            def _coreografia_mac():
+                                script = os.path.join(os.path.dirname(__file__), "coreografia_macdonald.py")
+                                subprocess.Popen(["python3", script])
+                            threading.Thread(target=_coreografia_mac).start()
+                            falar("Iniciando coreografia Old MacDonald.")
+                        elif payload == "COREOGRAFIA_SEULOBATO":
+                            def _coreografia_lobato():
+                                script = os.path.join(os.path.dirname(__file__), "coreografia_seulobato.py")
+                                subprocess.Popen(["python3", script])
+                            threading.Thread(target=_coreografia_lobato).start()
+                            falar("Iniciando coreografia Seu Lobato.")
                 except Exception as e: 
                     print(f"Erro ao processar comando: {e}")
 
