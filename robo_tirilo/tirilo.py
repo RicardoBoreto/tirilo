@@ -3,7 +3,7 @@
 =============================================================================
 PROJETO: ROBÔ TIRILO
 ARQUIVO: tirilo.py
-VERSÃO:  4.5 (Otimizações de Latência)
+VERSÃO:  4.6 (Voz Neural Terapeuta + Barge-In + Editor de Diretrizes)
 DATA:    15/03/2026
 AUTOR:   Ricardo Alonso Boreto
 
@@ -219,6 +219,7 @@ def ler_diretriz_ia(modo):
 MODO_VISAO_ATIVO = True # Controla se o robô segue rostos
 _ev_camera_livre = threading.Event() # Sinaliza que a câmera foi liberada
 _pausar_piscar = False  # Pausa piscada espontânea durante animações complexas/programas externos
+_parar_fala = threading.Event()  # Barge-in: interrompe fala ao detectar voz (modo Terapeuta)
 _processo_externo = None  # Processo filho atual (jogo/programa externo) para poder encerrar via PARAR
 HAAR_PATH = os.path.join(DIR_BASE, "robo_tirilo", "haarcascades", "haarcascade_frontalface_default.xml")
 
@@ -922,6 +923,49 @@ async def gerar_audio_edge(texto, arquivo):
     comunicador = edge_tts.Communicate(texto, voz)
     await comunicador.save(arquivo)
 
+def _monitorar_barge_in(processo_audio):
+    """Escuta o microfone via arecord enquanto o robô fala (modo Terapeuta).
+    Se detectar voz contínua, termina o processo de áudio imediatamente."""
+    import struct
+    import math
+
+    CHUNK_BYTES = 1024   # 512 amostras S16_LE
+    THRESH      = 600    # RMS mínimo para voz (ajuste se falso-positivo)
+    CONFIRMA    = 3      # chunks consecutivos ~= 100ms de voz para confirmar
+
+    proc_rec = None
+    try:
+        proc_rec = subprocess.Popen(
+            ["arecord", "-D", DISPOSITIVO_AUDIO, "-f", "S16_LE",
+             "-r", "16000", "-c", "1", "-q"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        )
+        count = 0
+        print("Barge-in: monitorando mic...")
+        while processo_audio.poll() is None and not _parar_fala.is_set():
+            data = proc_rec.stdout.read(CHUNK_BYTES)
+            if len(data) < CHUNK_BYTES:
+                break
+            samples = struct.unpack(f"<{len(data)//2}h", data)
+            rms = math.sqrt(sum(s * s for s in samples) / len(samples))
+            if rms > THRESH:
+                count += 1
+                if count >= CONFIRMA:
+                    print(f"Barge-in detectado! RMS={rms:.0f} — interrompendo fala.")
+                    _parar_fala.set()
+                    try: processo_audio.terminate()
+                    except: pass
+                    break
+            else:
+                count = max(0, count - 1)
+    except Exception as e:
+        print(f"Barge-in monitor erro: {e}")
+    finally:
+        if proc_rec and proc_rec.poll() is None:
+            try: proc_rec.terminate()
+            except: pass
+
+
 def falar(texto, local_fast=False):
     if not texto: return
 
@@ -939,23 +983,29 @@ def falar(texto, local_fast=False):
     try:
         txt = str(texto).replace('*', '').replace('#', '')
 
-        # Pipeline direto: espeak-ng --stdout | aplay  (sem gravar arquivo em disco)
-        try:
-            p_espeak = subprocess.Popen(
-                ["espeak-ng", "-v", ESPEAK_VOZ, "-s", ESPEAK_VELOCIDADE,
-                 "-p", ESPEAK_PITCH, "--stdout", txt],
-                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
-            )
-            t_anim.start()
-            subprocess.run(
-                ["aplay", "-D", DISPOSITIVO_AUDIO, "-q"],
-                stdin=p_espeak.stdout,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            p_espeak.stdout.close()
-            p_espeak.wait()
-        except Exception as e:
-            print(f"IA: Falha no Espeak: {e}")
+        if MODO_ROBO_ATUAL == "TERAPEUTA":
+            # --- Edge-TTS (voz neural Antonio) + barge-in — Modo Terapeuta ---
+            import tempfile
+            arq_mp3 = tempfile.mktemp(suffix=".mp3")
+            try:
+                asyncio.run(gerar_audio_edge(txt, arq_mp3))
+                t_anim.start()
+                proc_audio = subprocess.Popen(
+                    ["mpg123", "-a", DISPOSITIVO_AUDIO, "-q", arq_mp3],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+                threading.Thread(target=_monitorar_barge_in, args=(proc_audio,), daemon=True).start()
+                proc_audio.wait()
+            except Exception as e:
+                print(f"IA: Falha Edge-TTS ({e}), usando espeak...")
+                _falar_espeak(txt, t_anim)
+            finally:
+                if os.path.exists(arq_mp3):
+                    try: os.remove(arq_mp3)
+                    except: pass
+        else:
+            # --- espeak-ng pipeline (voz robótica) — Modo Criança ---
+            _falar_espeak(txt, t_anim)
 
     except Exception as e:
         print(f"Erro TTS: {e}")
@@ -966,6 +1016,27 @@ def falar(texto, local_fast=False):
         if gui: gui.set_status("Pronto!", CINZA)
         if olhos: olhos.mover_boca(0)
 
+
+def _falar_espeak(txt, t_anim):
+    """Pipeline espeak-ng --stdout | aplay sem arquivo em disco."""
+    try:
+        p_espeak = subprocess.Popen(
+            ["espeak-ng", "-v", ESPEAK_VOZ, "-s", ESPEAK_VELOCIDADE,
+             "-p", ESPEAK_PITCH, "--stdout", txt],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        )
+        if not t_anim.is_alive():
+            t_anim.start()
+        subprocess.run(
+            ["aplay", "-D", DISPOSITIVO_AUDIO, "-q"],
+            stdin=p_espeak.stdout,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        p_espeak.stdout.close()
+        p_espeak.wait()
+    except Exception as e:
+        print(f"IA: Falha no Espeak: {e}")
+
 def perguntar_gemini(texto):
     global TEXTO_RESPOSTA_IA, MODO_VISAO_ATIVO
     if not CLIENTE_GEMINI:
@@ -974,6 +1045,7 @@ def perguntar_gemini(texto):
 
     try:
         # --- 1. ANIMAÇÃO IMEDIATA ---
+        _parar_fala.clear()  # Reseta barge-in para esta interação
         antigo_modo_visao = MODO_VISAO_ATIVO
         MODO_VISAO_ATIVO = False
         if olhos:
@@ -1021,7 +1093,7 @@ def perguntar_gemini(texto):
         buffer = ""
         resposta_completa = ""
 
-        while True:
+        while not _parar_fala.is_set():
             try:
                 chunk_texto = chunks_fila.get(timeout=15)
             except Exception:
@@ -1039,11 +1111,15 @@ def perguntar_gemini(texto):
                     buffer = buffer[match.end():]
                     if sentenca:
                         falar(sentenca)
+                        if _parar_fala.is_set():
+                            break
                 else:
                     break
+            if _parar_fala.is_set():
+                break
 
-        # Fala o restante que não terminou com pontuação
-        if buffer.strip():
+        # Fala o restante que não terminou com pontuação (se não foi interrompido)
+        if buffer.strip() and not _parar_fala.is_set():
             falar(buffer.strip())
 
         TEXTO_RESPOSTA_IA = resposta_completa

@@ -1,5 +1,25 @@
 # Histórico de Versões - Robô Tirilo
 
+## [4.6] - 2026-03-15
+### 🗣️ Voz Neural no Modo Terapeuta + Barge-In + Editor de Diretrizes
+
+#### TTS por Modo
+- **Modo Criança**: mantém `espeak-ng --stdout | aplay` (pipeline sem arquivo, voz robótica).
+- **Modo Terapeuta**: usa **Edge-TTS** (`pt-BR-AntonioNeural`, voz neural Microsoft) com fallback automático para espeak-ng se sem internet.
+
+#### Barge-In (Modo Terapeuta)
+- `_monitorar_barge_in()`: thread daemon que abre o microfone via `arecord` enquanto o robô fala.
+- Se detectar voz contínua por ~100ms (RMS > 600 por 3 chunks), termina o processo `mpg123` imediatamente.
+- `_parar_fala` (threading.Event): flag global que interrompe o loop de streaming em `perguntar_gemini()` — robô para de falar e volta a ouvir.
+- Diagnóstico via log: `"Barge-in: monitorando mic..."` e `"Barge-in detectado! RMS=XXX"`.
+
+#### Editor de Diretrizes IA (SaaS)
+- Nova seção "Diretrizes de IA" no RobotDashboard: textareas lado a lado para Modo Criança e Modo Terapeuta.
+- `getDirectives()` e `saveDirective()` em `lib/actions/robo.ts` gravam em `saas_diretrizes_ai` (Supabase).
+- Ao salvar, envia comando `RELOAD_DIRETRIZES` ao robô automaticamente se online.
+- Comando `RELOAD_DIRETRIZES` no robô: limpa `_cache_diretriz` → próxima interação recarrega do Supabase; robô confirma em voz.
+- `install/02_setup_audio.sh`: adiciona `python3-pyaudio` via `apt`.
+
 ## [4.5] - 2026-03-15
 ### ⚡ Otimizações de Latência
 
