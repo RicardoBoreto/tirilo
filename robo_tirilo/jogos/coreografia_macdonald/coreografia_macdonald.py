@@ -85,7 +85,7 @@ def rotina_coreografia_background():
                 pygame.event.post(pygame.event.Event(pygame.QUIT))
                 break
                 
-            print(f"\n[ CICLO {ciclo} INICIADO ] - Loop de 9 compassos (~23.5s)")
+            print(f"\n[ CICLO {ciclo} INICIADO ] - Loop de 10 compassos (~26.1s)")
             
             # [Compasso 1] (1 compasso): Preparação
             if ciclo == 1:
@@ -107,7 +107,7 @@ def rotina_coreografia_background():
             print(f"Compassos 6.5-8.5 (~14.3s a ~19.5s) -> Vesgo e Normal.")
             for i in range(2):
                 # --- GRAN FINALE (COMPASSO 52) ---
-                if ciclo == 6 and i == 1:
+                if ciclo == 5 and i == 1:
                     print(f"Compasso 52 (Gran Finale) -> Piscar Sincronizado e Olhos Abertos!")
                     for _ in range(4):
                         olhos.mover_suave_ambos(p_alvo=100, duracao=beat/2.0)
@@ -121,11 +121,12 @@ def rotina_coreografia_background():
                 olhos.olhar_neutro(suave=True)
                 time.sleep((beat * 2) - 0.4)
                 
-            # [Compassos 8.5 a 9] 
-            print(f"Compasso 8.5-9 (~19.5s a ~23.5s) -> Varrida até Finalizar o Loop.")
+            # [Compassos 8.5 a 10]
+            print(f"Compasso 8.5-10 (~19.5s a ~26.1s) -> Varrida ate Finalizar o Loop.")
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
+            olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)  # +1 compasso
             
             ciclo += 1
             
