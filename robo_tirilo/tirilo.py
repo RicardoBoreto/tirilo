@@ -68,7 +68,7 @@ from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "4.5"
+VERSAO_ATUAL = "4.7"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -153,10 +153,17 @@ Siga sempre estas regras de diálogo:
 2. Responda curto e com clareza.
 3. Termine sempre com uma pergunta para engajamento.
 
-Comandos de Jogo:
-Se a criança disser 'jogar', diga 'Vamos jogar o jogo das cores!'.
-Se a criança disser 'emoções', diga 'Vamos brincar de sentimentos!'.
-Se a criança disser 'charada', diga 'Vamos brincar de adivinhação!'.
+Jogos disponíveis — você pode sugerir e iniciar um jogo quando a criança quiser brincar ou quando for terapêuticamente adequado:
+- cores: jogo das cores (toca na cor certa)
+- emocoes: jogo das emoções (identifica a emoção mostrada)
+- adivinhacao: jogo de charadas de animais
+- musica: tocar música e dançar
+- parear: jogo de parear cores (arrastar e soltar)
+
+Para iniciar um jogo, inclua a tag [JOGO:codigo] no final da sua resposta. Exemplos:
+  "Vamos brincar! [JOGO:cores]"
+  "Que tal um jogo de emoções? [JOGO:emocoes]"
+Nunca mencione a tag em voz alta — ela será removida automaticamente.
 """
     if not os.path.exists(ARQUIVO_IA_CRIANCA):
         try:
@@ -1092,6 +1099,7 @@ def perguntar_gemini(texto):
         # --- 4. FALA CADA FRASE ASSIM QUE CHEGA NO STREAM ---
         buffer = ""
         resposta_completa = ""
+        jogo_detectado = None
 
         while not _parar_fala.is_set():
             try:
@@ -1107,10 +1115,15 @@ def perguntar_gemini(texto):
             while True:
                 match = re.search(r'[^.!?]*[.!?]', buffer)
                 if match:
-                    sentenca = match.group(0).strip()
+                    sentenca = match.group(0)
                     buffer = buffer[match.end():]
-                    if sentenca:
-                        falar(sentenca)
+                    # Detecta tag [JOGO:xxx] antes de falar
+                    tag = re.search(r'\[JOGO:(\w+)\]', sentenca)
+                    if tag:
+                        jogo_detectado = tag.group(1)
+                    sentenca_limpa = re.sub(r'\[JOGO:\w+\]', '', sentenca).strip()
+                    if sentenca_limpa:
+                        falar(sentenca_limpa)
                         if _parar_fala.is_set():
                             break
                 else:
@@ -1118,11 +1131,20 @@ def perguntar_gemini(texto):
             if _parar_fala.is_set():
                 break
 
-        # Fala o restante que não terminou com pontuação (se não foi interrompido)
+        # Fala o restante sem pontuação (se não foi interrompido)
         if buffer.strip() and not _parar_fala.is_set():
-            falar(buffer.strip())
+            tag = re.search(r'\[JOGO:(\w+)\]', buffer)
+            if tag:
+                jogo_detectado = tag.group(1)
+            resto = re.sub(r'\[JOGO:\w+\]', '', buffer).strip()
+            if resto:
+                falar(resto)
 
-        TEXTO_RESPOSTA_IA = resposta_completa
+        TEXTO_RESPOSTA_IA = re.sub(r'\[JOGO:\w+\]', '', resposta_completa).strip()
+
+        # Lança o jogo escolhido pela IA (após terminar de falar)
+        if jogo_detectado and not _parar_fala.is_set():
+            _lancar_jogo(jogo_detectado)
 
         if MODO_ROBO_ATUAL == "TERAPEUTA":
             log_terapeuta(f"{NOME_ROBO}: {resposta_completa}")
@@ -1347,6 +1369,44 @@ def finalizar_modo_terapeuta():
     gui.set_status("Pronto!", CINZA)
     falar("Voltando ao modo criança.")
 
+def lancar_parear():
+    """Lança parearcor.py como subprocess (KMS/DRM exclusivo, sem pausa de câmera)."""
+    global gui, _pausar_piscar, _processo_externo
+    script = os.path.join(os.path.dirname(__file__), "parearcor.py")
+    uid = os.getuid()
+    env = os.environ.copy()
+    env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
+    env.pop('SDL_AUDIODRIVER', None)
+    _pausar_piscar = True
+    if gui:
+        gui.suspenso = True
+        gui._ev_display_livre.wait(timeout=3)
+        gui._ev_display_livre.clear()
+    _processo_externo = subprocess.Popen(["python3", script], env=env)
+    _processo_externo.wait()
+    _processo_externo = None
+    _pausar_piscar = False
+    if gui:
+        gui._ev_retomar.set()
+
+
+def _lancar_jogo(codigo):
+    """Lança um jogo pelo código retornado pela IA via tag [JOGO:codigo]."""
+    codigo = codigo.strip().lower()
+    mapa = {
+        "cores":       jogar_cores,
+        "emocoes":     jogar_emocoes,
+        "adivinhacao": jogar_adivinhacao,
+        "musica":      tocar_musica,
+        "parear":      lancar_parear,
+    }
+    if codigo in mapa:
+        print(f"IA escolheu jogo: {codigo}")
+        threading.Thread(target=mapa[codigo], daemon=True).start()
+    else:
+        print(f"Jogo desconhecido retornado pela IA: '{codigo}'")
+
+
 # --- LOOP PRINCIPAL ---
 def loop_logica():
     global modo_ia_ativo, MODO_ROBO_ATUAL, TEXTO_RESPOSTA_IA 
@@ -1562,24 +1622,14 @@ def loop_logica():
 
             # --- LÓGICA DO MODO CRIANÇA ---
             
-            # Limpa a tela ao detectar um comando que não é da IA (ex: jogos)
-            if TEXTO_RESPOSTA_IA and ("jogar" in texto_l or "emoções" in texto_l or "charada" in texto_l or "cantar" in texto_l):
-                TEXTO_RESPOSTA_IA = "" 
-
-
-            if "gemini" in texto_l: 
+            if "gemini" in texto_l:
                 TEXTO_RESPOSTA_IA = "" # Limpa a tela ao ativar IA
                 modo_ia_ativo = True; falar("Cérebro ativado!"); continue
-            
-            if "desativar" in texto_l or "eco" in texto_l: 
+
+            if "desativar" in texto_l or "eco" in texto_l:
                 TEXTO_RESPOSTA_IA = "Modo Eco: IA desativada." # Feedback na tela
                 modo_ia_ativo = False; falar("Modo Eco."); continue
 
-            if "jogar" in texto_l or "cores" in texto_l: jogar_cores(); continue
-            elif "emoções" in texto_l or "sentimentos" in texto_l: jogar_emocoes(); continue
-            elif "charada" in texto_l or "adivinha" in texto_l: jogar_adivinhacao(); continue
-            elif "cantar" in texto_l: tocar_musica(); continue
-            
             if modo_ia_ativo:
                 perguntar_gemini(texto)  # já fala internamente via streaming
             else:

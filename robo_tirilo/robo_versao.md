@@ -1,5 +1,16 @@
 # Histórico de Versões - Robô Tirilo
 
+## [4.7] - 2026-03-15
+### 🎮 Seleção de Jogos por IA (Modo Livre)
+
+#### Seleção Inteligente de Jogos
+- **Removido**: keyword matching hardcoded (`if "jogar" in texto → jogar_cores()`) que sempre lançava o mesmo jogo independente do pedido.
+- **Novo**: a IA (Gemini) escolhe o jogo contextualmente incluindo a tag `[JOGO:codigo]` na resposta.
+- **`_lancar_jogo(codigo)`**: mapeia o código recebido para a função correta (`cores`, `emocoes`, `adivinhacao`, `musica`, `parear`).
+- **Detecção no streaming**: loop de `perguntar_gemini()` detecta `[JOGO:xxx]` por regex, remove da fala (nunca é dito em voz alta) e lança o jogo após a resposta completa.
+- **`lancar_parear()`**: extraída como função top-level para poder ser referenciada pelo mapeamento.
+- **Diretriz padrão atualizada**: instrução para a IA sobre os 5 jogos disponíveis e a sintaxe `[JOGO:codigo]`.
+
 ## [4.6] - 2026-03-15
 ### 🗣️ Voz Neural no Modo Terapeuta + Barge-In + Editor de Diretrizes
 
