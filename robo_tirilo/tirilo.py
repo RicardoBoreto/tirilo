@@ -117,6 +117,7 @@ cloud_mgr = None
 # Cache de diretriz IA — evita query Supabase a cada interação
 _cache_diretriz: dict = {}   # {modo: (texto, timestamp)}
 _CACHE_DIRETRIZ_TTL = 300    # 5 minutos
+_jogos_disponiveis: list = []  # Carregado do Supabase: [{nome, codigo, descricao}]
 
 
 # --- INICIALIZAÇÃO DE ARQUIVOS ---
@@ -1076,27 +1077,37 @@ def perguntar_gemini(texto):
 
         # Garante instruções de jogo mesmo se a diretriz vier do Supabase sem elas
         if MODO_ROBO_ATUAL == "CRIANCA":
-            instrucao += """
+            # Usa jogos carregados do Supabase; fallback para lista padrão
+            if _jogos_disponiveis:
+                lista_jogos = "\n".join(
+                    f"- {j['codigo']:<14} → {j['nome']}" for j in _jogos_disponiveis
+                )
+                exemplo_codigo = _jogos_disponiveis[0]["codigo"]
+            else:
+                lista_jogos = (
+                    "- cores          → Jogo das Cores\n"
+                    "- emocoes        → Jogo das Emoções\n"
+                    "- adivinhacao    → Charadas de Animais\n"
+                    "- musica         → Tocar Música\n"
+                    "- parear         → Parear Cores"
+                )
+                exemplo_codigo = "cores"
+            instrucao += f"""
 
 REGRA OBRIGATÓRIA DE JOGOS:
 Quando a criança mencionar jogar, brincar ou qualquer jogo, você DEVE escolher um jogo e incluir a tag no final da resposta.
 NÃO faça perguntas. Escolha diretamente e inclua a tag.
 NÃO diga a tag em voz alto — ela é invisível para a criança.
 
-Jogos disponíveis (use o código exato):
-- cores       → jogo das cores (toque na cor certa)
-- emocoes     → jogo das emoções
-- adivinhacao → charadas de animais
-- musica      → tocar música
-- parear      → parear cores
+Jogos disponíveis (use o código exato da coluna esquerda):
+{lista_jogos}
 
 FORMATO OBRIGATÓRIO quando a criança quer jogar:
 Frase animada curta! [JOGO:codigo]
 
-EXEMPLOS (siga exatamente este formato):
-Criança: "quero jogar" → "Vamos brincar das cores! [JOGO:cores]"
-Criança: "brincar" → "Que divertido! Vamos parear! [JOGO:parear]"
-Criança: "jogo" → "Vamos jogar de emoções! [JOGO:emocoes]"
+EXEMPLOS:
+Criança: "quero jogar" → "Vamos brincar! [JOGO:{exemplo_codigo}]"
+Criança: "brincar" → "Que divertido! Vamos jogar! [JOGO:{exemplo_codigo}]"
 """
 
         # Conteúdo enviado ao modelo: dica explícita se for jogar
@@ -1440,8 +1451,9 @@ def lancar_parear():
 
 
 def _lancar_jogo(codigo):
-    """Lança um jogo pelo código retornado pela IA via tag [JOGO:codigo]."""
+    """Lança um jogo pelo código (comando_entrada) retornado pela IA via tag [JOGO:codigo]."""
     codigo = codigo.strip().lower()
+    # Mapa fixo: comando_entrada → função Python
     mapa = {
         "cores":       jogar_cores,
         "emocoes":     jogar_emocoes,
@@ -1449,11 +1461,16 @@ def _lancar_jogo(codigo):
         "musica":      tocar_musica,
         "parear":      lancar_parear,
     }
+    # Verifica se o código está entre os jogos carregados do Supabase
+    codigos_validos = {j["codigo"] for j in _jogos_disponiveis} if _jogos_disponiveis else set(mapa.keys())
+    if codigo not in codigos_validos:
+        print(f"Jogo '{codigo}' não está nos jogos disponíveis: {codigos_validos}")
+        return
     if codigo in mapa:
         print(f"IA escolheu jogo: {codigo}")
         threading.Thread(target=mapa[codigo], daemon=True).start()
     else:
-        print(f"Jogo desconhecido retornado pela IA: '{codigo}'")
+        print(f"Jogo '{codigo}' válido no Supabase mas sem implementação local.")
 
 
 # --- LOOP PRINCIPAL ---
@@ -1510,6 +1527,9 @@ def loop_logica():
         cloud_mgr.register_callback(on_nuvem_comando)
         cloud_mgr.start_listener()
         print(f"Listener de comandos ativado. Firmware: {VERSAO_ATUAL}")
+        # Carrega jogos disponíveis da clínica
+        global _jogos_disponiveis
+        _jogos_disponiveis = cloud_mgr.get_jogos_clinica()
 
     falar(f"Olá! Eu sou o {NOME_ROBO}. Minha inteligência artificial está ligada. Como posso ajudar você hoje?")
     

@@ -186,6 +186,56 @@ class CloudManager:
             except: pass
         return None
 
+    def get_jogos_clinica(self):
+        """
+        Retorna jogos disponíveis para a clínica via saas_clinicas_jogos JOIN saas_jogos.
+        Fallback: todos os jogos ativos em saas_jogos se a clínica não tiver licenças cadastradas.
+        Retorna lista de dicts: [{nome, codigo, descricao}]
+        """
+        if not self.clinica_id:
+            self.check_status()
+
+        jogos = []
+
+        # 1. Tenta jogos licenciados para a clínica
+        try:
+            if self.clinica_id:
+                res = self.client.table('saas_clinicas_jogos') \
+                    .select('ativo, saas_jogos(nome, comando_entrada, descricao_regras)') \
+                    .eq('clinica_id', self.clinica_id) \
+                    .eq('ativo', True) \
+                    .execute()
+                for row in (res.data or []):
+                    j = row.get('saas_jogos') or {}
+                    if j.get('comando_entrada'):
+                        jogos.append({
+                            'nome': j.get('nome', ''),
+                            'codigo': j['comando_entrada'].strip().lower(),
+                            'descricao': j.get('descricao_regras') or ''
+                        })
+        except Exception as e:
+            print(f"Cloud: erro ao buscar jogos da clínica: {e}")
+
+        # 2. Fallback: todos os jogos ativos no catálogo
+        if not jogos:
+            try:
+                res = self.client.table('saas_jogos') \
+                    .select('nome, comando_entrada, descricao_regras') \
+                    .eq('ativo', True) \
+                    .execute()
+                for j in (res.data or []):
+                    if j.get('comando_entrada'):
+                        jogos.append({
+                            'nome': j.get('nome', ''),
+                            'codigo': j['comando_entrada'].strip().lower(),
+                            'descricao': j.get('descricao_regras') or ''
+                        })
+            except Exception as e:
+                print(f"Cloud: erro ao buscar catálogo de jogos: {e}")
+
+        print(f"Cloud: {len(jogos)} jogo(s) carregado(s): {[j['codigo'] for j in jogos]}")
+        return jogos
+
     def register_callback(self, callback):
         """Registers a callback function for incoming commands."""
         self.callbacks.append(callback)
