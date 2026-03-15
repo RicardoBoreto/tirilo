@@ -1075,13 +1075,36 @@ def perguntar_gemini(texto):
         instrucao = ler_diretriz_ia(MODO_ROBO_ATUAL)
 
         # Garante instruções de jogo mesmo se a diretriz vier do Supabase sem elas
-        if MODO_ROBO_ATUAL == "CRIANCA" and "[JOGO:" not in instrucao:
-            instrucao += (
-                "\n\nJogos disponíveis: cores, emocoes, adivinhacao, musica, parear."
-                "\nQuando a criança quiser jogar, inclua [JOGO:codigo] no FINAL da resposta."
-                "\nExemplo: 'Vamos jogar! [JOGO:cores]'"
-                "\nNUNCA diga a tag em voz alta."
-            )
+        if MODO_ROBO_ATUAL == "CRIANCA":
+            instrucao += """
+
+REGRA OBRIGATÓRIA DE JOGOS:
+Quando a criança mencionar jogar, brincar ou qualquer jogo, você DEVE escolher um jogo e incluir a tag no final da resposta.
+NÃO faça perguntas. Escolha diretamente e inclua a tag.
+NÃO diga a tag em voz alto — ela é invisível para a criança.
+
+Jogos disponíveis (use o código exato):
+- cores       → jogo das cores (toque na cor certa)
+- emocoes     → jogo das emoções
+- adivinhacao → charadas de animais
+- musica      → tocar música
+- parear      → parear cores
+
+FORMATO OBRIGATÓRIO quando a criança quer jogar:
+Frase animada curta! [JOGO:codigo]
+
+EXEMPLOS (siga exatamente este formato):
+Criança: "quero jogar" → "Vamos brincar das cores! [JOGO:cores]"
+Criança: "brincar" → "Que divertido! Vamos parear! [JOGO:parear]"
+Criança: "jogo" → "Vamos jogar de emoções! [JOGO:emocoes]"
+"""
+
+        # Conteúdo enviado ao modelo: dica explícita se for jogar
+        texto_l_hint = texto.lower()
+        if MODO_ROBO_ATUAL == "CRIANCA" and any(w in texto_l_hint for w in ["jogar", "brincar", "jogo", "brincadeira"]):
+            contents_msg = f"{texto}\n(OBRIGATÓRIO: termine com [JOGO:codigo])"
+        else:
+            contents_msg = texto
 
         chunks_fila: queue.Queue = queue.Queue()
 
@@ -1089,7 +1112,7 @@ def perguntar_gemini(texto):
             try:
                 for chunk in CLIENTE_GEMINI.models.generate_content_stream(
                     model=MODELO_IA,
-                    contents=[texto],
+                    contents=[contents_msg],
                     config=types.GenerateContentConfig(system_instruction=instrucao)
                 ):
                     if chunk.text:
