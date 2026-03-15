@@ -1,15 +1,15 @@
 $DEST_USER = "boreto"
-$DEST_HOST = "100.123.54.24"     # Tailscale IP
+$DEST_HOST = "100.123.54.24"
 $DEST_DIR  = "/home/boreto/projeto_robo/robo_tirilo"
 $SOURCE_DIR = "C:\Users\Boreto\Documents\IA\antigravity\SaaS_tirilo_v2\robo_tirilo"
 
 Write-Host ""
-Write-Host "=== ENVIAR ROBO TIRILO → RASPBERRY PI ===" -ForegroundColor Cyan
+Write-Host "=== ENVIAR ROBO TIRILO -> RASPBERRY PI ===" -ForegroundColor Cyan
 Write-Host "  Destino : $DEST_USER@$DEST_HOST"
 Write-Host "  Pasta   : $DEST_DIR"
 Write-Host ""
 
-# 1. Limpa o diretório remoto antes de copiar
+# 1. Limpa o diretorio remoto antes de copiar
 Write-Host ">>> Limpando diretorio remoto..." -ForegroundColor Yellow
 ssh "${DEST_USER}@${DEST_HOST}" "rm -rf $DEST_DIR && mkdir -p $DEST_DIR"
 if ($LASTEXITCODE -ne 0) {
@@ -25,7 +25,7 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# 3. Copia o .env.local (credenciais — fica um nível acima do robo_tirilo)
+# 3. Copia o .env.local (credenciais)
 $ENV_LOCAL = "C:\Users\Boreto\Documents\IA\antigravity\SaaS_tirilo_v2\robo_tirilo\.env.local"
 if (Test-Path $ENV_LOCAL) {
     Write-Host ">>> Enviando .env.local..." -ForegroundColor Yellow
@@ -37,10 +37,10 @@ if (Test-Path $ENV_LOCAL) {
 Write-Host ""
 Write-Host "=== CONCLUIDO! ===" -ForegroundColor Green
 Write-Host ""
-Write-Host "Para iniciar o robô manualmente:" -ForegroundColor Cyan
+Write-Host "Para iniciar o robo manualmente:" -ForegroundColor Cyan
 Write-Host "  ssh $DEST_USER@$DEST_HOST"
 Write-Host "  cd $DEST_DIR"
 Write-Host "  python3 tirilo.py"
 Write-Host ""
 Write-Host "Para reativar o servico systemd:" -ForegroundColor Cyan
-Write-Host "  ssh $DEST_USER@$DEST_HOST 'sudo systemctl enable tirilo && sudo systemctl start tirilo'"
+Write-Host ('  ssh ' + $DEST_USER + '@' + $DEST_HOST + ' ''sudo systemctl enable tirilo && sudo systemctl start tirilo''')

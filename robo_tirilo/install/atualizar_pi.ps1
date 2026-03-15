@@ -1,10 +1,10 @@
 $DEST_USER = "boreto"
-$DEST_HOST = "100.123.54.24"     # Tailscale IP
+$DEST_HOST = "100.123.54.24"
 $DEST_DIR  = "/home/boreto/projeto_robo/robo_tirilo"
 $SOURCE_DIR = "C:\Users\Boreto\Documents\IA\antigravity\SaaS_tirilo_v2\robo_tirilo"
 
 Write-Host ""
-Write-Host "=== ATUALIZAR ROBO TIRILO → RASPBERRY PI ===" -ForegroundColor Cyan
+Write-Host "=== ATUALIZAR ROBO TIRILO -> RASPBERRY PI ===" -ForegroundColor Cyan
 Write-Host "  Destino : $DEST_USER@$DEST_HOST"
 Write-Host "  Pasta   : $DEST_DIR"
 Write-Host ""
@@ -25,7 +25,7 @@ Write-Host "[1/5] Arquivos principais..." -ForegroundColor White
 Enviar "$SOURCE_DIR\tirilo.py"       "$DEST_DIR/tirilo.py"       "tirilo.py"
 Enviar "$SOURCE_DIR\olhos_tirilo.py" "$DEST_DIR/olhos_tirilo.py" "olhos_tirilo.py"
 
-# --- Módulos src/ (cloud, brain) ---
+# --- Modulos src/ (cloud, brain) ---
 Write-Host "[2/5] Modulos src/..." -ForegroundColor White
 Enviar "$SOURCE_DIR\src" "$DEST_DIR/" "src/"
 
@@ -43,18 +43,18 @@ $ENV_LOCAL = "$SOURCE_DIR\.env.local"
 if (Test-Path $ENV_LOCAL) {
     Enviar $ENV_LOCAL "$DEST_DIR/.env.local" ".env.local"
 } else {
-    Write-Host "      (sem .env.local local — mantendo o do Pi)" -ForegroundColor DarkGray
+    Write-Host "      (sem .env.local local - mantendo o do Pi)" -ForegroundColor DarkGray
 }
 
 # --- Resultado ---
 Write-Host ""
 if ($erros -eq 0) {
-    Write-Host "=== ATUALIZAÇÃO CONCLUÍDA! ===" -ForegroundColor Green
+    Write-Host "=== ATUALIZACAO CONCLUIDA! ===" -ForegroundColor Green
 } else {
-    Write-Host "=== CONCLUÍDO COM $erros ERRO(S) ===" -ForegroundColor Red
+    Write-Host "=== CONCLUIDO COM $erros ERRO(S) ===" -ForegroundColor Red
 }
 
-# --- Reiniciar serviço? ---
+# --- Reiniciar servico? ---
 Write-Host ""
 $restart = Read-Host "Reiniciar o servico tirilo no Pi? (s/N)"
 if ($restart -eq "s" -or $restart -eq "S") {
@@ -69,6 +69,6 @@ if ($restart -eq "s" -or $restart -eq "S") {
     Write-Host ""
     Write-Host "Para iniciar manualmente:" -ForegroundColor Cyan
     Write-Host "  ssh $DEST_USER@$DEST_HOST"
-    Write-Host "  cd $DEST_DIR && python3 tirilo.py"
+    Write-Host ('  cd ' + $DEST_DIR + ' && python3 tirilo.py')
 }
 Write-Host ""
