@@ -85,7 +85,7 @@ def rotina_coreografia_background():
                 pygame.event.post(pygame.event.Event(pygame.QUIT))
                 break
                 
-            print(f"\n[ CICLO {ciclo} INICIADO ] - Loop de 12 compassos (~31.3s)")
+            print(f"\n[ CICLO {ciclo} INICIADO ] - Loop de 10 compassos (~26.1s)")
 
             # [Compasso 1] (1 compasso): Preparação
             if ciclo == 1:
@@ -96,23 +96,18 @@ def rotina_coreografia_background():
             print(f"Compasso 2 -> Galope!")
             olhos.alternar_piscar(batidas=4, vel=beat/2.0)
 
-            # [Compassos 3 a 6.5] (3.5 compassos): Varrida
-            print(f"Compassos 3-6.5 -> Varrida Direita/Esquerda")
-            for _ in range(3):
+            # [Compassos 3 a 5.5] (2.5 compassos): Varrida — 1 compasso a menos para adiantar vesgo
+            print(f"Compassos 3-5.5 -> Varrida Direita/Esquerda")
+            for _ in range(2):
                 olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
                 olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
 
-            # [Compassos 6.5 a 7.5] (+1 compasso antes do vesgo)
-            print(f"Compasso 6.5-7.5 -> Pre-vesgo")
-            olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
-            olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
-
-            # [Compassos 7.5 a 9.5] (2 compassos): Vesgo alternando com normal
-            print(f"Compassos 7.5-9.5 -> Vesgo e Normal.")
+            # [Compassos 5.5 a 7.5] (2 compassos): Vesgo — 1 compasso mais cedo
+            print(f"Compassos 5.5-7.5 -> Vesgo e Normal.")
             for i in range(2):
                 # --- GRAN FINALE ---
-                if ciclo == 6 and i == 1:
+                if ciclo == 5 and i == 1:
                     print(f"Gran Finale -> Piscar Sincronizado e Olhos Abertos!")
                     for _ in range(4):
                         olhos.mover_suave_ambos(p_alvo=100, duracao=beat/2.0)
@@ -126,13 +121,10 @@ def rotina_coreografia_background():
                 olhos.olhar_neutro(suave=True)
                 time.sleep((beat * 2) - 0.4)
 
-            # [Compassos 9.5 a 10.5] (+1 compasso após o vesgo)
-            print(f"Compasso 9.5-10.5 -> Pos-vesgo")
+            # [Compassos 7.5 a 10] (2.5 compassos): Varrida final — recebe o compasso deslocado
+            print(f"Compassos 7.5-10 -> Varrida final.")
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
-
-            # [Compassos 10.5 a 12] (1.5 compassos): Varrida final
-            print(f"Compasso 10.5-12 -> Varrida final.")
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
