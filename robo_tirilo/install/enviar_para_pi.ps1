@@ -1,25 +1,46 @@
 $DEST_USER = "boreto"
-$DEST_HOST = "192.168.1.112" # Pode substituir pelo IP (ex: "192.168.1.100")
-$DEST_DIR = "~/projeto_robo"
+$DEST_HOST = "100.123.54.24"     # Tailscale IP
+$DEST_DIR  = "/home/boreto/projeto_robo/robo_tirilo"
 $SOURCE_DIR = "C:\Users\Boreto\Documents\IA\antigravity\SaaS_tirilo_v2\robo_tirilo"
 
-Write-Host "=== SINCRONIZANDO ARQUIVOS COM O RASPBERRY PI ===" -ForegroundColor Cyan
-Write-Host "Destino: $DEST_USER@$DEST_HOST : $DEST_DIR"
+Write-Host ""
+Write-Host "=== ENVIAR ROBO TIRILO → RASPBERRY PI ===" -ForegroundColor Cyan
+Write-Host "  Destino : $DEST_USER@$DEST_HOST"
+Write-Host "  Pasta   : $DEST_DIR"
+Write-Host ""
 
-# Sincroniza a pasta do robô
-scp -r "$SOURCE_DIR" "${DEST_USER}@${DEST_HOST}:${DEST_DIR}"
+# 1. Limpa o diretório remoto antes de copiar
+Write-Host ">>> Limpando diretorio remoto..." -ForegroundColor Yellow
+ssh "${DEST_USER}@${DEST_HOST}" "rm -rf $DEST_DIR && mkdir -p $DEST_DIR"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERRO: Nao foi possivel acessar o Pi via SSH." -ForegroundColor Red
+    exit 1
+}
 
-# Sincroniza o .env.local (um nível acima)
-$ENV_LOCAL = Join-Path (Split-Path $SOURCE_DIR -Parent) ".env.local"
+# 2. Copia todos os arquivos do robo_tirilo
+Write-Host ">>> Copiando arquivos..." -ForegroundColor Yellow
+scp -r "${SOURCE_DIR}\*" "${DEST_USER}@${DEST_HOST}:${DEST_DIR}/"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERRO durante a copia dos arquivos." -ForegroundColor Red
+    exit 1
+}
+
+# 3. Copia o .env.local (credenciais — fica um nível acima do robo_tirilo)
+$ENV_LOCAL = "C:\Users\Boreto\Documents\IA\antigravity\SaaS_tirilo_v2\robo_tirilo\.env.local"
 if (Test-Path $ENV_LOCAL) {
-    Write-Host "Enviando .env.local..." -ForegroundColor Yellow
+    Write-Host ">>> Enviando .env.local..." -ForegroundColor Yellow
     scp "$ENV_LOCAL" "${DEST_USER}@${DEST_HOST}:${DEST_DIR}/.env.local"
+} else {
+    Write-Host "AVISO: .env.local nao encontrado em $ENV_LOCAL" -ForegroundColor DarkYellow
 }
 
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "=== SINCRONIZAÇÃO CONCLUÍDA COM SUCESSO! ===" -ForegroundColor Green
-    Write-Host "Agora acesse o Pi: ssh $DEST_USER@$DEST_HOST"
-}
-else {
-    Write-Host "!!! ERRO DURANTE A SINCRONIZAÇÃO !!!" -ForegroundColor Red
-}
+Write-Host ""
+Write-Host "=== CONCLUIDO! ===" -ForegroundColor Green
+Write-Host ""
+Write-Host "Para iniciar o robô manualmente:" -ForegroundColor Cyan
+Write-Host "  ssh $DEST_USER@$DEST_HOST"
+Write-Host "  cd $DEST_DIR"
+Write-Host "  python3 tirilo.py"
+Write-Host ""
+Write-Host "Para reativar o servico systemd:" -ForegroundColor Cyan
+Write-Host "  ssh $DEST_USER@$DEST_HOST 'sudo systemctl enable tirilo && sudo systemctl start tirilo'"
