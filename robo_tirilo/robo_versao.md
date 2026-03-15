@@ -1,5 +1,33 @@
 # Histórico de Versões - Robô Tirilo
 
+## [4.5] - 2026-03-15
+### ⚡ Otimizações de Latência
+
+#### VAD — Voice Activity Detection
+- **Gravação dinâmica**: `_capturar_com_vad()` usa `pyaudio` + `audioop` para detectar silêncio (~1.3s após o usuário parar de falar) e encerrar a gravação automaticamente, eliminando a espera fixa de 4 segundos.
+- **Fallback automático**: se `pyaudio` não estiver disponível, recai em `arecord -d 4` sem interrupção do fluxo.
+
+#### Pipeline TTS sem arquivo
+- `falar()` usa `espeak-ng --stdout` piped diretamente ao `aplay` via `subprocess.Popen` + `stdin=PIPE`, eliminando a geração e leitura de arquivo WAV temporário em disco.
+- Remoção de `uuid` (import desnecessário após mudança).
+
+#### Gemini Streaming
+- `perguntar_gemini()` usa `generate_content_stream()`; cada frase completa (`.`, `!`, `?`) é falada assim que chega, em paralelo com a geração do restante da resposta.
+- Som de pensamento ("Ummm...") é falado de forma síncrona enquanto o stream já roda em thread daemon — chegando a primeira frase logo após o "Ummm" terminar.
+- Removidos `time.sleep(0.3)` (antes da chamada IA) e `time.sleep(0.5)` (após resposta) — ganho direto de 800ms.
+
+#### Cache de Diretriz IA
+- `ler_diretriz_ia()` armazena o resultado em `_cache_diretriz` por 5 minutos, eliminando query Supabase a cada interação do usuário.
+
+#### Resumo de ganho estimado
+| Melhoria | Ganho |
+|----------|-------|
+| VAD (gravação dinâmica) | −2 a −3s |
+| Sleeps removidos | −0.8s |
+| Pipeline TTS (sem arquivo) | −0.3–0.5s |
+| Cache diretriz IA | −0.1–0.3s por interação |
+| Streaming (percepção) | −1–4s percebidos |
+
 ## [4.4] - 2026-03-14
 ### 🎮 Jogos como Subprocesso + Piscada Natural + Rastreamento Melhorado
 

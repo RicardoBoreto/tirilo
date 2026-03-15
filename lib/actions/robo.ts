@@ -43,6 +43,13 @@ export interface Telemetry {
     timestamp: string;
 }
 
+export interface Diretriz {
+    id?: string;
+    id_clinica: string | null;
+    modo: 'CRIANCA' | 'TERAPEUTA';
+    diretriz: string;
+}
+
 // --- Helpers ---
 function normalizeMac(mac: string): string {
     return mac.trim().toUpperCase().replace(/[^A-F0-9:]/g, '');
@@ -161,6 +168,60 @@ export async function registerRobot(macAddress: string, name: string, clinicaId?
         });
 
     if (error) throw new Error(error.message);
+    revalidatePath('/admin/robo');
+}
+
+export async function getDirectives(clinicaId?: string) {
+    const supabase = await createAdminClient();
+    let query = supabase
+        .from('saas_diretrizes_ai')
+        .select('*')
+        .order('modo');
+
+    if (clinicaId) {
+        query = query.eq('id_clinica', clinicaId);
+    } else {
+        query = query.is('id_clinica', null);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+        console.error("Error fetching directives:", error);
+        return [] as Diretriz[];
+    }
+    return data as Diretriz[];
+}
+
+export async function saveDirective(clinicaId: string | null, modo: 'CRIANCA' | 'TERAPEUTA', diretriz: string) {
+    const supabase = await createAdminClient();
+
+    // Verifica se já existe registro para este modo/clínica
+    let existQuery = supabase
+        .from('saas_diretrizes_ai')
+        .select('id')
+        .eq('modo', modo);
+
+    if (clinicaId) {
+        existQuery = existQuery.eq('id_clinica', clinicaId);
+    } else {
+        existQuery = existQuery.is('id_clinica', null);
+    }
+
+    const { data: existing } = await existQuery.maybeSingle();
+
+    if (existing) {
+        const { error } = await supabase
+            .from('saas_diretrizes_ai')
+            .update({ diretriz })
+            .eq('id', existing.id);
+        if (error) throw new Error(error.message);
+    } else {
+        const { error } = await supabase
+            .from('saas_diretrizes_ai')
+            .insert({ id_clinica: clinicaId ?? null, modo, diretriz });
+        if (error) throw new Error(error.message);
+    }
+
     revalidatePath('/admin/robo');
 }
 

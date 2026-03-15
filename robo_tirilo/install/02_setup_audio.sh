@@ -8,11 +8,15 @@ echo "=== [2/5] CONFIGURAÇÃO DE ÁUDIO E VOZ ==="
 echo "-> Instalando ALSA utilitários e codecs..."
 sudo apt install -y alsa-utils mpg123 libasound2-dev libportaudio2 portaudio19-dev
 
-# 2. Instalar eSpeack-NG (Voz Offline)
+# 2. Instalar espeak-NG (Voz Offline)
 echo "-> Instalando espeak-ng..."
 sudo apt install -y espeak-ng
 
-# 3. Ajustar permissões para o usuário atual (audio group)
+# 3. Instalar python3-pyaudio (necessário para VAD — gravação com detecção de silêncio)
+echo "-> Instalando python3-pyaudio (VAD)..."
+sudo apt install -y python3-pyaudio
+
+# 4. Ajustar permissões para o usuário atual (audio group)
 echo "-> Ajustando permissões de áudio..."
 sudo usermod -a -G audio $USER
 

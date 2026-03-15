@@ -11,6 +11,8 @@ import {
     registerRobot,
     toggleRobotBlock,
     updateRobot,
+    getDirectives,
+    saveDirective,
     type Robot,
     type RobotConfig,
     type Telemetry
@@ -30,6 +32,12 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
     // Config Form State
     const [prompt, setPrompt] = useState('')
     const [voice, setVoice] = useState('pt-br')
+
+    // Diretrizes IA
+    const [dirCrianca, setDirCrianca] = useState('')
+    const [dirTerapeuta, setDirTerapeuta] = useState('')
+    const [isSavingDir, setIsSavingDir] = useState(false)
+    const [dirSaveMsg, setDirSaveMsg] = useState('')
 
     // New Robot Form
     const [newMac, setNewMac] = useState('')
@@ -59,6 +67,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         loadRobots()
         loadConfig()
         loadClinics()
+        loadDirectives()
     }, [clinicaId])
 
     useEffect(() => {
@@ -125,6 +134,32 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
             loadConfig()
         } catch (e) {
             alert('Erro ao salvar config: ' + e)
+        }
+    }
+
+    async function loadDirectives() {
+        const data = await getDirectives(clinicaId)
+        for (const d of data) {
+            if (d.modo === 'CRIANCA') setDirCrianca(d.diretriz)
+            if (d.modo === 'TERAPEUTA') setDirTerapeuta(d.diretriz)
+        }
+    }
+
+    async function handleSaveDirective(modo: 'CRIANCA' | 'TERAPEUTA', texto: string) {
+        setIsSavingDir(true)
+        setDirSaveMsg('')
+        try {
+            await saveDirective(clinicaId ?? null, modo, texto)
+            // Envia comando para o robô recarregar as diretrizes imediatamente
+            if (selectedRobot) {
+                await sendCommand(selectedRobot.mac_address, 'RELOAD_DIRETRIZES')
+            }
+            setDirSaveMsg(`Diretriz ${modo === 'CRIANCA' ? 'Criança' : 'Terapeuta'} salva!`)
+            setTimeout(() => setDirSaveMsg(''), 3000)
+        } catch (e) {
+            setDirSaveMsg('Erro ao salvar: ' + e)
+        } finally {
+            setIsSavingDir(false)
         }
     }
 
@@ -674,6 +709,67 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                 >
                                     🎶 Seu Lobato
                                 </button>
+                            </div>
+                        </div>
+
+                        {/* DIRETRIZES IA */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-bold text-lg flex items-center gap-2">
+                                    <span className="bg-purple-100 text-purple-700 p-1.5 rounded-lg">🧠</span>
+                                    Diretrizes de IA
+                                </h3>
+                                {dirSaveMsg && (
+                                    <span className={`text-sm font-medium px-3 py-1 rounded-full ${dirSaveMsg.startsWith('Erro') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                        {dirSaveMsg}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs text-gray-500 mb-4">
+                                Define o comportamento e personalidade do robô em cada modo.
+                                As alterações são carregadas pelo robô em até 5 minutos ou imediatamente ao salvar (se online).
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Modo Criança */}
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-sm font-semibold text-green-700 dark:text-green-400 flex items-center gap-1">
+                                        🧒 Modo Criança
+                                    </label>
+                                    <textarea
+                                        value={dirCrianca}
+                                        onChange={e => setDirCrianca(e.target.value)}
+                                        rows={8}
+                                        className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-600 text-sm font-mono bg-gray-50 dark:bg-gray-700 resize-y focus:outline-none focus:ring-2 focus:ring-green-400"
+                                        placeholder="Ex: Você é o Robô Tirilo. Fale com crianças de forma lúdica e encorajadora..."
+                                    />
+                                    <button
+                                        onClick={() => handleSaveDirective('CRIANCA', dirCrianca)}
+                                        disabled={isSavingDir || !dirCrianca.trim()}
+                                        className="self-end px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+                                    >
+                                        {isSavingDir ? 'Salvando...' : 'Salvar Criança'}
+                                    </button>
+                                </div>
+                                {/* Modo Terapeuta */}
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
+                                        🩺 Modo Terapeuta
+                                    </label>
+                                    <textarea
+                                        value={dirTerapeuta}
+                                        onChange={e => setDirTerapeuta(e.target.value)}
+                                        rows={8}
+                                        className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-600 text-sm font-mono bg-gray-50 dark:bg-gray-700 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                        placeholder="Ex: Você é o Doutor Tirilo. Auxilie o terapeuta com análise comportamental de forma profissional..."
+                                    />
+                                    <button
+                                        onClick={() => handleSaveDirective('TERAPEUTA', dirTerapeuta)}
+                                        disabled={isSavingDir || !dirTerapeuta.trim()}
+                                        className="self-end px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium"
+                                    >
+                                        {isSavingDir ? 'Salvando...' : 'Salvar Terapeuta'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

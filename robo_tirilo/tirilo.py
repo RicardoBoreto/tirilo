@@ -3,11 +3,24 @@
 =============================================================================
 PROJETO: ROBÔ TIRILO
 ARQUIVO: tirilo.py
-VERSÃO:  4.4 (Jogos como Subprocesso + Piscada Natural + Rastreamento Melhorado)
-DATA:    14/03/2026
+VERSÃO:  4.5 (Otimizações de Latência)
+DATA:    15/03/2026
 AUTOR:   Ricardo Alonso Boreto
 
-MUDANÇAS v4.4:
+MUDANÇAS v4.5:
+- VAD (Voice Activity Detection): gravação para automaticamente ao detectar silêncio
+  (~1.3s após o usuário parar de falar) usando pyaudio + audioop, eliminando espera
+  fixa de 4s. Fallback automático para arecord 4s se pyaudio não disponível.
+- Pipeline TTS sem arquivo: espeak-ng --stdout piped diretamente ao aplay, eliminando
+  gravação e leitura de arquivo WAV temporário.
+- Gemini streaming: perguntar_gemini() usa generate_content_stream; cada frase é
+  falada assim que chega, em paralelo com a geração do restante da resposta.
+  Som de pensamento ("Ummm") roda em paralelo com o início do stream.
+- Cache de diretriz IA: ler_diretriz_ia() armazena resultado em memória por 5 min,
+  eliminando query Supabase a cada interação.
+- Removidos time.sleep(0.3) e time.sleep(0.5) desnecessários em perguntar_gemini().
+
+MUDANÇAS v4.4 (histórico):
 - JOGO_PAREAR agora executa parearcor.py como subprocesso (display KMS exclusivo),
   mantendo rastreamento facial ativo durante o jogo.
 - Piscada espontânea natural (piscar_natural): pálpebra superior fecha completamente,
@@ -35,15 +48,15 @@ MUDANÇAS v4.3 (histórico):
 import os
 import sys
 import math
+import re
 import threading
 import time
 import subprocess
-import random 
-import uuid
+import random
 import pygame
 import queue
 import speech_recognition as sr
-import socket 
+import socket
 from dotenv import load_dotenv
 import asyncio
 import edge_tts
@@ -55,7 +68,7 @@ from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "4.4"
+VERSAO_ATUAL = "4.5"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -100,6 +113,10 @@ HISTORICO_ANIMAIS = []
 # IA
 MODELO_IA = "gemini-2.5-flash"
 cloud_mgr = None
+
+# Cache de diretriz IA — evita query Supabase a cada interação
+_cache_diretriz: dict = {}   # {modo: (texto, timestamp)}
+_CACHE_DIRETRIZ_TTL = 300    # 5 minutos
 
 
 # --- INICIALIZAÇÃO DE ARQUIVOS ---
@@ -161,14 +178,23 @@ Não use emojis ou linguagem infantil.
         except: pass
 
 def ler_diretriz_ia(modo):
-    """Lê a diretriz de IA: Supabase (via CloudManager) -> Fallback Local."""
+    """Lê a diretriz de IA: cache em memória (5 min) → Supabase → arquivo local."""
+    global _cache_diretriz
+    agora = time.time()
+
+    # 1. Cache em memória (evita query Supabase a cada interação)
+    if modo in _cache_diretriz:
+        texto_cache, ts = _cache_diretriz[modo]
+        if agora - ts < _CACHE_DIRETRIZ_TTL:
+            return texto_cache
+
     diretriz = None
-    
-    # 1. Tenta buscar via CloudManager (Supabase ou Cache Local)
+
+    # 2. Tenta buscar via CloudManager (Supabase ou Cache Local)
     if cloud_mgr:
         diretriz = cloud_mgr.get_ai_directive(modo)
-    
-    # 2. Se falhar, tenta ler o arquivo de texto local antigo
+
+    # 3. Se falhar, lê o arquivo local
     if not diretriz:
         caminho = ARQUIVO_IA_TERAPEUTA if modo == "TERAPEUTA" else ARQUIVO_IA_CRIANCA
         try:
@@ -178,13 +204,15 @@ def ler_diretriz_ia(modo):
         except Exception as e:
             print(f"ERRO: Falha ao ler diretriz local para {modo}: {e}")
 
-    # 3. Processamento Final e Placeholders
+    # 4. Substitui placeholders e normaliza
     if diretriz:
-        diretriz = diretriz.replace("{NOME_ROBO}", NOME_ROBO).replace("{NOME_TERAPEUTA}", NOME_TERAPEUTA)
-        return diretriz.strip()
-    
-    # 4. Fallback absoluto
-    return "Você é o robô Tirilo. Responda de forma curta e amigável."
+        resultado = diretriz.replace("{NOME_ROBO}", NOME_ROBO).replace("{NOME_TERAPEUTA}", NOME_TERAPEUTA).strip()
+    else:
+        resultado = "Você é o robô Tirilo. Responda de forma curta e amigável."
+
+    # 5. Armazena no cache
+    _cache_diretriz[modo] = (resultado, agora)
+    return resultado
 
 
 # --- CONFIGURAÇÃO DE VISÃO ---
@@ -793,24 +821,97 @@ def animar_fala(evento_parada):
         olhos.mover_boca(0)
     if gui: gui.set_boca('fechada')
 
+def _capturar_com_vad(arquivo_saida):
+    """Grava voz com VAD por energia: para automaticamente ao detectar silêncio.
+    Requer: pyaudio, audioop (stdlib), wave (stdlib).
+    Levanta RuntimeError se nenhuma voz for detectada."""
+    import pyaudio
+    import audioop
+    import wave
+
+    CHUNK          = 1024
+    RATE           = 16000
+    SILENCE_THRESH = 400   # RMS mínimo para considerar voz ativa
+    SILENCE_CHUNKS = 20    # ~1.3s de silêncio após a fala para encerrar
+    MAX_CHUNKS     = 375   # ~24s absoluto (segurança)
+
+    pa = pyaudio.PyAudio()
+
+    # Encontra o primeiro dispositivo de entrada disponível
+    mic_idx = None
+    for i in range(pa.get_device_count()):
+        info = pa.get_device_info_by_index(i)
+        if info.get("maxInputChannels", 0) > 0:
+            mic_idx = i
+            break
+
+    stream = pa.open(format=pyaudio.paInt16, channels=1, rate=RATE,
+                     input=True, input_device_index=mic_idx,
+                     frames_per_buffer=CHUNK)
+    frames = []
+    silent_count = 0
+    speaking = False
+
+    try:
+        for _ in range(MAX_CHUNKS):
+            data = stream.read(CHUNK, exception_on_overflow=False)
+            frames.append(data)
+            rms = audioop.rms(data, 2)
+            if rms > SILENCE_THRESH:
+                speaking = True
+                silent_count = 0
+            elif speaking:
+                silent_count += 1
+                if silent_count >= SILENCE_CHUNKS:
+                    break
+    finally:
+        stream.stop_stream()
+        stream.close()
+        pa.terminate()
+
+    if not speaking:
+        raise RuntimeError("Nenhuma voz detectada")
+
+    with wave.open(arquivo_saida, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)      # paInt16 = 2 bytes
+        wf.setframerate(RATE)
+        wf.writeframes(b"".join(frames))
+
+
 def capturar_voz():
     try:
         if gui: gui.set_status("Ouvindo...", VERDE)
-        # Pequeno delay para garantir que o hardware de áudio (mpg123/aplay) foi liberado
-        time.sleep(0.4)
-        
-        subprocess.run(["arecord", "-D", DISPOSITIVO_AUDIO, "-d", "4", "-f", "cd", "-q", ARQUIVO_REC], check=True)
-        if os.path.exists(ARQUIVO_REC):
-            if gui: gui.set_status("Processando...", AZUL)
-            with sr.AudioFile(ARQUIVO_REC) as source: audio = r.record(source)
-            texto = r.recognize_google(audio, language="pt-BR").lower()
-            return texto
+        # Pequeno delay para garantir que o hardware de áudio (aplay) foi liberado
+        time.sleep(0.2)
+
+        # Tenta VAD via pyaudio; fallback para arecord 4s fixo se não disponível
+        try:
+            _capturar_com_vad(ARQUIVO_REC)
+        except RuntimeError:
+            # Silêncio total — nada a transcrever
+            if gui: gui.set_status("Pronto!", CINZA)
+            return None
+        except Exception as e_vad:
+            print(f"VAD indisponível ({e_vad}), usando arecord 4s...")
+            subprocess.run(
+                ["arecord", "-D", DISPOSITIVO_AUDIO, "-d", "4", "-f", "cd", "-q", ARQUIVO_REC],
+                check=True
+            )
+
+        if not os.path.exists(ARQUIVO_REC):
+            return None
+
+        if gui: gui.set_status("Processando...", AZUL)
+        with sr.AudioFile(ARQUIVO_REC) as source:
+            audio = r.record(source)
+        texto = r.recognize_google(audio, language="pt-BR").lower()
+        return texto
+
     except Exception as e:
-        # Se printar apenas 'Erro na captura de voz: ', pode ser erro de conexão do recognize_google
         print(f"Erro na captura de voz (pode ser internet): {e}")
-        if gui: gui.set_status(f"Erro Voz", VERMELHO)
+        if gui: gui.set_status("Erro Voz", VERMELHO)
         return None
-    return None
 
 def falar_prioridade(texto, local_fast=False): 
     threading.Thread(target=falar, args=(texto, local_fast)).start()
@@ -823,117 +924,136 @@ async def gerar_audio_edge(texto, arquivo):
 
 def falar(texto, local_fast=False):
     if not texto: return
-    
-    # Define a cor do status/olho com base no modo
+
+    # Define cor do status com base no modo
     if MODO_ROBO_ATUAL == "TERAPEUTA":
         cor_fala = AZUL_ESPECIAL
     else:
         cor_fala = gui.cor_status if gui and gui.cor_status != CINZA else AZUL
 
     if gui: gui.set_status("Falando...", cor_fala)
-    
-    # Gera nome de arquivo único para esta fala (evita colisão de threads)
-    id_unica = str(uuid.uuid4())[:8]
-    arq_wav = f"/tmp/voz_{id_unica}.wav"
-    arq_mp3 = f"/tmp/voz_{id_unica}.mp3"
-    
+
     evt = threading.Event()
     t_anim = threading.Thread(target=animar_fala, args=(evt,))
-    
+
     try:
         txt = str(texto).replace('*', '').replace('#', '')
-        
-        # --- TENTATIVA 1: ESPEAK-NG (Voz Robótica - Primária agora) ---
+
+        # Pipeline direto: espeak-ng --stdout | aplay  (sem gravar arquivo em disco)
         try:
-            subprocess.run([
-                "espeak-ng", "-v", ESPEAK_VOZ, "-s", ESPEAK_VELOCIDADE,
-                "-p", ESPEAK_PITCH, "-w", arq_wav, txt
-            ], check=True)
-
-            t_anim.start() # Inicia animação
-            subprocess.run(["aplay", "-D", DISPOSITIVO_AUDIO, "-q", arq_wav], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f"IA: Voz robótica [{id_unica}] pronta.")
-            sucesso_espeak = True
+            p_espeak = subprocess.Popen(
+                ["espeak-ng", "-v", ESPEAK_VOZ, "-s", ESPEAK_VELOCIDADE,
+                 "-p", ESPEAK_PITCH, "--stdout", txt],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+            )
+            t_anim.start()
+            subprocess.run(
+                ["aplay", "-D", DISPOSITIVO_AUDIO, "-q"],
+                stdin=p_espeak.stdout,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            p_espeak.stdout.close()
+            p_espeak.wait()
         except Exception as e:
-            print(f"IA: Falha no Espeak [{id_unica}]: {e}")
-            sucesso_espeak = False
-
-        # --- TENTATIVA 2: EDGE-TTS (Fallback apenas se o usuário quiser, ou se local_fast for False) ---
-        # Removido por preferência do usuário por voz robótica
+            print(f"IA: Falha no Espeak: {e}")
 
     except Exception as e:
-        print(f"Erro TTS [{id_unica}]: {e}")
+        print(f"Erro TTS: {e}")
         if gui: gui.set_status("Erro Voz", VERMELHO)
     finally:
-        # GARANTE QUE A BOCA PARE
         evt.set()
         if t_anim.is_alive(): t_anim.join()
-        
-        # Limpeza
-        for f in [arq_wav, arq_mp3]:
-            if os.path.exists(f): 
-                try: os.remove(f)
-                except: pass
-        
         if gui: gui.set_status("Pronto!", CINZA)
         if olhos: olhos.mover_boca(0)
 
 def perguntar_gemini(texto):
-    global TEXTO_RESPOSTA_IA
-    if not CLIENTE_GEMINI: 
+    global TEXTO_RESPOSTA_IA, MODO_VISAO_ATIVO
+    if not CLIENTE_GEMINI:
         TEXTO_RESPOSTA_IA = "Erro: Sem chave de IA."
         return "Sem chave."
-        
+
     try:
-        # --- 1. ANIMAÇÃO IMEDIATA (Antes de qualquer processamento) ---
-        global MODO_VISAO_ATIVO
+        # --- 1. ANIMAÇÃO IMEDIATA ---
         antigo_modo_visao = MODO_VISAO_ATIVO
-        MODO_VISAO_ATIVO = False # Pausa o rastreamento imediatamente
-        
-        if olhos: 
-            # Inicia movimento suave para o teto (V=90) em paralelo
-            threading.Thread(target=olhos.olhar_cima).start()
+        MODO_VISAO_ATIVO = False
+        if olhos:
+            threading.Thread(target=olhos.olhar_cima, daemon=True).start()
             olhos.mover_boca(0)
-        
-        # Sorteia um som de pensamento (Modo local_fast=True p/ latência zero)
-        # Usando 'Hummm' ou 'Um' para evitar que o Espeak soletre 'H-U-M'
-        som_pensar = random.choice([
-            "Ummm, deixa eu ver...", 
-            "Ummm, deixa eu pensar...", 
-            "Só um momento...", 
-            "Ummm, boa pergunta..."
-        ])
-        falar_prioridade(som_pensar, local_fast=True)
-        time.sleep(0.3) # Pequena pausa para o movimento começar
-        
-        # --- 2. PREPARAÇÃO E ENVIO PARA IA ---
-        instrucao = ler_diretriz_ia(MODO_ROBO_ATUAL)
-        prompt = f"{instrucao}\n\nFala: {texto}\n{NOME_ROBO}:"
-        
+
         if MODO_ROBO_ATUAL == "TERAPEUTA":
             log_terapeuta(f"Terapeuta: {texto}")
 
-        # Chama a IA (Pode demorar alguns segundos)
-        resp = CLIENTE_GEMINI.models.generate_content(model=MODELO_IA, contents=[prompt])
-        
-        if olhos: 
-            # Volta a olhar para frente suavemente após resposta
-            threading.Thread(target=olhos.olhar_frente).start()
-            time.sleep(0.5) 
-            
-        MODO_VISAO_ATIVO = antigo_modo_visao 
-        
-        resposta = resp.text if resp.text else "Não entendi."
-        
-        # EXIBIÇÃO: Atualiza a variável global antes de falar
-        TEXTO_RESPOSTA_IA = resposta
-        
+        # --- 2. PREPARA PROMPT E INICIA STREAM EM PARALELO ---
+        instrucao = ler_diretriz_ia(MODO_ROBO_ATUAL)
+        prompt = f"{instrucao}\n\nFala: {texto}\n{NOME_ROBO}:"
+
+        chunks_fila: queue.Queue = queue.Queue()
+
+        def _streamer():
+            try:
+                for chunk in CLIENTE_GEMINI.models.generate_content_stream(
+                    model=MODELO_IA, contents=[prompt]
+                ):
+                    if chunk.text:
+                        chunks_fila.put(chunk.text)
+            except Exception as e_stream:
+                print(f"ERRO stream IA: {e_stream}")
+            finally:
+                chunks_fila.put(None)  # sentinela de fim
+
+        threading.Thread(target=_streamer, daemon=True).start()
+
+        # --- 3. FALA SOM DE PENSAMENTO ENQUANTO IA PROCESSA ---
+        som_pensar = random.choice([
+            "Ummm, deixa eu ver...",
+            "Ummm, deixa eu pensar...",
+            "Só um momento...",
+            "Ummm, boa pergunta...",
+        ])
+        falar(som_pensar)  # bloqueia ~2s — stream já está rodando em paralelo
+
+        # Retoma rastreamento e olha para frente ao responder
+        MODO_VISAO_ATIVO = antigo_modo_visao
+        if olhos:
+            threading.Thread(target=olhos.olhar_frente, daemon=True).start()
+
+        # --- 4. FALA CADA FRASE ASSIM QUE CHEGA NO STREAM ---
+        buffer = ""
+        resposta_completa = ""
+
+        while True:
+            try:
+                chunk_texto = chunks_fila.get(timeout=15)
+            except Exception:
+                break
+            if chunk_texto is None:
+                break
+            buffer += chunk_texto
+            resposta_completa += chunk_texto
+
+            # Fala frases completas (termina em . ! ?)
+            while True:
+                match = re.search(r'[^.!?]*[.!?]', buffer)
+                if match:
+                    sentenca = match.group(0).strip()
+                    buffer = buffer[match.end():]
+                    if sentenca:
+                        falar(sentenca)
+                else:
+                    break
+
+        # Fala o restante que não terminou com pontuação
+        if buffer.strip():
+            falar(buffer.strip())
+
+        TEXTO_RESPOSTA_IA = resposta_completa
+
         if MODO_ROBO_ATUAL == "TERAPEUTA":
-            log_terapeuta(f"{NOME_ROBO}: {resposta}")
-        
-        return resposta
-        return resposta
-    except Exception as e: 
+            log_terapeuta(f"{NOME_ROBO}: {resposta_completa}")
+
+        return resposta_completa
+
+    except Exception as e:
         print(f"ERRO IA: {e}")
         TEXTO_RESPOSTA_IA = f"Erro IA: {str(e)[:40]}..."
         return "Tive um erro."
@@ -1226,6 +1346,11 @@ def loop_logica():
                             threading.Thread(target=iniciar_modo_terapeuta).start()
                         elif payload == "MODO_CRIANCA":
                             threading.Thread(target=finalizar_modo_terapeuta).start()
+                        elif payload == "RELOAD_DIRETRIZES":
+                            global _cache_diretriz
+                            _cache_diretriz.clear()
+                            print("Diretrizes: cache limpo, próxima interação recarrega do Supabase.")
+                            falar("Diretrizes atualizadas.")
                         elif payload == "FALAR":
                             msg = cmd.get('parametros', {}).get('texto', '')
                             if msg: falar(msg)
@@ -1356,12 +1481,7 @@ def loop_logica():
                 
                 # Conversa normal de IA no modo terapeuta
                 if modo_ia_ativo:
-                    evt = threading.Event()
-                    t = threading.Thread(target=animar_pensamento, args=(evt,))
-                    t.start()
-                    resp = perguntar_gemini(texto)
-                    evt.set(); t.join()
-                    falar(resp)
+                    perguntar_gemini(texto)  # já fala internamente via streaming
                 continue # Pula o resto do loop de criança
 
             # --- LÓGICA DO MODO CRIANÇA ---
@@ -1385,12 +1505,7 @@ def loop_logica():
             elif "cantar" in texto_l: tocar_musica(); continue
             
             if modo_ia_ativo:
-                evt = threading.Event()
-                t = threading.Thread(target=animar_pensamento, args=(evt,))
-                t.start()
-                resp = perguntar_gemini(texto)
-                evt.set(); t.join()
-                falar(resp)
+                perguntar_gemini(texto)  # já fala internamente via streaming
             else:
                 falar(f"Você disse: {texto}")
         except: pass
