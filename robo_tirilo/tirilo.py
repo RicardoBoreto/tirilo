@@ -1073,14 +1073,24 @@ def perguntar_gemini(texto):
 
         # --- 2. PREPARA PROMPT E INICIA STREAM EM PARALELO ---
         instrucao = ler_diretriz_ia(MODO_ROBO_ATUAL)
-        prompt = f"{instrucao}\n\nFala: {texto}\n{NOME_ROBO}:"
+
+        # Garante instruções de jogo mesmo se a diretriz vier do Supabase sem elas
+        if MODO_ROBO_ATUAL == "CRIANCA" and "[JOGO:" not in instrucao:
+            instrucao += (
+                "\n\nJogos disponíveis: cores, emocoes, adivinhacao, musica, parear."
+                "\nQuando a criança quiser jogar, inclua [JOGO:codigo] no FINAL da resposta."
+                "\nExemplo: 'Vamos jogar! [JOGO:cores]'"
+                "\nNUNCA diga a tag em voz alta."
+            )
 
         chunks_fila: queue.Queue = queue.Queue()
 
         def _streamer():
             try:
                 for chunk in CLIENTE_GEMINI.models.generate_content_stream(
-                    model=MODELO_IA, contents=[prompt]
+                    model=MODELO_IA,
+                    contents=[texto],
+                    config=types.GenerateContentConfig(system_instruction=instrucao)
                 ):
                     if chunk.text:
                         chunks_fila.put(chunk.text)
