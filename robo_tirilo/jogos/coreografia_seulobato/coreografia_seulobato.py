@@ -4,8 +4,10 @@ import sys
 import time
 import threading
 
-# Garante que ele ache a classe olhos_tirilo no mesmo diretório
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Adiciona raiz do robo_tirilo ao path para encontrar olhos_tirilo.py
+PASTA_JOGO = os.path.dirname(os.path.abspath(__file__))
+PASTA_ROBO = os.path.dirname(os.path.dirname(PASTA_JOGO))
+sys.path.insert(0, PASTA_ROBO)
 
 import pygame
 
@@ -39,7 +41,7 @@ def rotina_coreografia_background():
     beat = 60.0 / bpm            
     compasso = beat * 4          
     
-    caminho_audio = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seulobato.mp3")
+    caminho_audio = os.path.join(os.path.dirname(os.path.abspath(__file__)), "musica", "seulobato.mp3")
     tem_audio = tocar_musica(caminho_audio)
 
     # Marcador do inicio real da musica
@@ -150,8 +152,8 @@ def iniciar_player_visual():
     # Carrega as imagens caso elas existam na pasta (se não, fica tela preta)
     arquivos_img = ["fazenda.png", "cavalo.png", "porco.png"] # Aceita os arquivos recém criados
     imagens_carregadas = []
-    dir_atual = os.path.dirname(os.path.abspath(__file__))
-    
+    dir_atual = os.path.join(os.path.dirname(os.path.abspath(__file__)), "imagens")
+
     for arq in arquivos_img:
         caminho = os.path.join(dir_atual, arq)
         if os.path.exists(caminho):

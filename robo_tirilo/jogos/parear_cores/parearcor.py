@@ -11,8 +11,9 @@ import math
 import subprocess
 import time
 
-PASTA_ROBO = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(PASTA_ROBO)
+PASTA_JOGO = os.path.dirname(os.path.abspath(__file__))
+PASTA_ROBO = os.path.dirname(os.path.dirname(PASTA_JOGO))  # robo_tirilo/
+sys.path.insert(0, PASTA_ROBO)
 
 try:
     from olhos_tirilo import ControladorOlhos

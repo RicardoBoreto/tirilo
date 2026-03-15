@@ -8,8 +8,9 @@ import random
 import time
 
 # 1. Configurar Caminhos
-PASTA_ROBO = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(PASTA_ROBO)
+PASTA_FERRAMENTA = os.path.dirname(os.path.abspath(__file__))
+PASTA_ROBO = os.path.dirname(PASTA_FERRAMENTA)  # robo_tirilo/
+sys.path.insert(0, PASTA_ROBO)
 
 HAAR_PATH = os.path.join(PASTA_ROBO, "haarcascades", "haarcascade_frontalface_default.xml")
 

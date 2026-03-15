@@ -1253,7 +1253,7 @@ def iniciar_calibragem():
     time.sleep(1)
     # Tenta rodar o script de calibragem
     try:
-        subprocess.run(["python3", "calibrador_olhos.py"], check=False)
+        subprocess.run(["python3", os.path.join(os.path.dirname(__file__), "ferramentas", "calibrador_olhos.py")], check=False)
     except: pass
     # Após sair do calibrador, o ideal seria o sistema reiniciar o script.
     # Se não reiniciar, o usuário pode dar boot novamente.
@@ -1432,7 +1432,7 @@ def finalizar_modo_terapeuta():
 def lancar_parear():
     """Lança parearcor.py como subprocess (KMS/DRM exclusivo, sem pausa de câmera)."""
     global gui, _pausar_piscar, _processo_externo
-    script = os.path.join(os.path.dirname(__file__), "parearcor.py")
+    script = os.path.join(os.path.dirname(__file__), "jogos", "parear_cores", "parearcor.py")
     uid = os.getuid()
     env = os.environ.copy()
     env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
@@ -1604,10 +1604,10 @@ def loop_logica():
                             falar("Modo visão " + ("ativado" if MODO_VISAO_TELA else "desativado"))
                         elif payload in ("CALIBRAR_OLHOS", "RASTREADOR_TELA", "COREOGRAFIA_MACDONALD", "COREOGRAFIA_SEULOBATO"):
                             scripts_map = {
-                                "CALIBRAR_OLHOS":       "calibrador_olhos.py",
-                                "RASTREADOR_TELA":      "rastreador_tela.py",
-                                "COREOGRAFIA_MACDONALD":"coreografia_macdonald.py",
-                                "COREOGRAFIA_SEULOBATO":"coreografia_seulobato.py",
+                                "CALIBRAR_OLHOS":       "ferramentas/calibrador_olhos.py",
+                                "RASTREADOR_TELA":      "ferramentas/rastreador_tela.py",
+                                "COREOGRAFIA_MACDONALD":"jogos/coreografia_macdonald/coreografia_macdonald.py",
+                                "COREOGRAFIA_SEULOBATO":"jogos/coreografia_seulobato/coreografia_seulobato.py",
                             }
                             nome_script = scripts_map[payload]
 
