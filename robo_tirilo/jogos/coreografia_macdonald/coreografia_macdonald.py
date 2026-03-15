@@ -96,14 +96,14 @@ def rotina_coreografia_background():
             print(f"Compasso 2 -> Galope!")
             olhos.alternar_piscar(batidas=4, vel=beat/2.0)
 
-            # [Compassos 3 a 5.5] (2.5 compassos): Varrida — 1 compasso a menos para adiantar vesgo
-            print(f"Compassos 3-5.5 -> Varrida Direita/Esquerda")
-            for _ in range(2):
+            # [Compassos 3 a 7.5] (4.5 compassos): Varrida — vesgo atrasado 2 compassos
+            print(f"Compassos 3-7.5 -> Varrida Direita/Esquerda")
+            for _ in range(4):
                 olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
                 olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
 
-            # [Compassos 5.5 a 7.5] (2 compassos): Vesgo — 1 compasso mais cedo
+            # [Compassos 7.5 a 9.5] (2 compassos): Vesgo
             print(f"Compassos 5.5-7.5 -> Vesgo e Normal.")
             for i in range(2):
                 # --- GRAN FINALE ---
@@ -121,12 +121,8 @@ def rotina_coreografia_background():
                 olhos.olhar_neutro(suave=True)
                 time.sleep((beat * 2) - 0.4)
 
-            # [Compassos 7.5 a 10] (2.5 compassos): Varrida final — recebe o compasso deslocado
-            print(f"Compassos 7.5-10 -> Varrida final.")
-            olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
-            olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
-            olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
-            olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
+            # [Compassos 9.5 a 10] (0.5 compasso): Varrida final
+            print(f"Compassos 9.5-10 -> Varrida final.")
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
             
             ciclo += 1
