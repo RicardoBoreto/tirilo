@@ -13,7 +13,7 @@ except Exception as e:
     HARDWARE_DISPONIVEL = False
 
 # --------- CONFIGURAÇÃO PADRÃO ---------
-ARQUIVO_CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config_olhos.json")
+ARQUIVO_CONFIG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config_olhos.json")
 
 def carregar_config():
     if os.path.exists(ARQUIVO_CONFIG):
