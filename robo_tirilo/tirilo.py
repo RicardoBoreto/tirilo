@@ -165,10 +165,19 @@ Para iniciar um jogo, inclua a tag [JOGO:codigo] no final da sua resposta. Exemp
   "Que tal um jogo de emoções? [JOGO:emocoes]"
 Nunca mencione a tag em voz alta — ela será removida automaticamente.
 """
-    if not os.path.exists(ARQUIVO_IA_CRIANCA):
+    # Atualiza o arquivo se não existir OU se não tiver as instruções de jogo
+    _precisa_atualizar = not os.path.exists(ARQUIVO_IA_CRIANCA)
+    if not _precisa_atualizar:
+        try:
+            with open(ARQUIVO_IA_CRIANCA, "r") as f:
+                if "[JOGO:" not in f.read():
+                    _precisa_atualizar = True
+        except: _precisa_atualizar = True
+    if _precisa_atualizar:
         try:
             with open(ARQUIVO_IA_CRIANCA, "w") as f:
                 f.write(diretriz_crianca.strip())
+            print(f"Diretriz criança atualizada: {ARQUIVO_IA_CRIANCA}")
         except: pass
         
     # 2. Diretriz para Terapeuta
@@ -1141,6 +1150,13 @@ def perguntar_gemini(texto):
                 falar(resto)
 
         TEXTO_RESPOSTA_IA = re.sub(r'\[JOGO:\w+\]', '', resposta_completa).strip()
+
+        # Diagnóstico: mostra resposta completa e jogo detectado
+        print(f"[IA] Resposta: {resposta_completa[:200]}")
+        if jogo_detectado:
+            print(f"[IA] Jogo detectado: {jogo_detectado}")
+        else:
+            print("[IA] Nenhuma tag [JOGO:xxx] na resposta.")
 
         # Lança o jogo escolhido pela IA (após terminar de falar)
         if jogo_detectado and not _parar_fala.is_set():
