@@ -603,15 +603,31 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                             {/* Comandos Rapidos */}
                             <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                                 <h3 className="font-semibold mb-3 text-gray-700 dark:text-gray-200">Comandos Rápidos</h3>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button onClick={() => handleCommand('FALAR', { texto: 'Olá, amigo!' })} className="p-2 bg-white border text-sm rounded shadow-sm hover:bg-gray-50">🗣️ Dizer Olá</button>
-                                    <button onClick={() => handleCommand('JOGAR_CORES')} className="p-2 bg-white border text-sm rounded shadow-sm hover:bg-gray-50">🎨 Jogo Cores</button>
-                                    <button onClick={() => handleCommand('JOGAR_EMOCOES')} className="p-2 bg-white border text-sm rounded shadow-sm hover:bg-gray-50">😊 Jogo Emoções</button>
-                                    <button onClick={() => handleCommand('MODO_PAPAGAIO')} className="p-2 bg-purple-50 border border-purple-100 text-purple-700 text-sm rounded shadow-sm hover:bg-purple-100 font-medium">🦜 Modo Papagaio</button>
-                                    <button onClick={() => handleCommand('MODO_CONVERSA')} className="p-2 bg-blue-50 border border-blue-100 text-blue-700 text-sm rounded shadow-sm hover:bg-blue-100 font-medium">🤖 Conversar (IA)</button>
-                                    <button onClick={() => handleCommand('JOGO_PAREAR')} className="p-2 bg-white border text-sm rounded shadow-sm hover:bg-gray-50">🖐️ Jogo Parear (Arrastar)</button>
-                                    <button onClick={() => handleCommand('PARAR')} className="p-2 bg-red-50 border border-red-100 text-red-600 text-sm rounded shadow-sm hover:bg-red-100">🛑 Parar Tudo</button>
+
+                                {/* Personalidade */}
+                                <div className="mb-3">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium uppercase tracking-wide">Personalidade</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button onClick={() => handleCommand('MODO_CRIANCA')} className="p-2 bg-green-50 border border-green-200 text-green-800 text-sm rounded shadow-sm hover:bg-green-100 font-medium">🧒 Modo Criança</button>
+                                        <button onClick={() => handleCommand('MODO_TERAPEUTA')} className="p-2 bg-indigo-50 border border-indigo-200 text-indigo-800 text-sm rounded shadow-sm hover:bg-indigo-100 font-medium">🩺 Modo Terapeuta</button>
+                                    </div>
                                 </div>
+
+                                {/* Jogos e interações */}
+                                <div className="mb-3">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium uppercase tracking-wide">Jogos e Interações</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button onClick={() => handleCommand('FALAR', { texto: 'Olá, amigo!' })} className="p-2 bg-white border text-sm rounded shadow-sm hover:bg-gray-50">🗣️ Dizer Olá</button>
+                                        <button onClick={() => handleCommand('JOGAR_CORES')} className="p-2 bg-white border text-sm rounded shadow-sm hover:bg-gray-50">🎨 Jogo Cores</button>
+                                        <button onClick={() => handleCommand('JOGAR_EMOCOES')} className="p-2 bg-white border text-sm rounded shadow-sm hover:bg-gray-50">😊 Jogo Emoções</button>
+                                        <button onClick={() => handleCommand('JOGO_PAREAR')} className="p-2 bg-white border text-sm rounded shadow-sm hover:bg-gray-50">🖐️ Jogo Parear</button>
+                                        <button onClick={() => handleCommand('MODO_PAPAGAIO')} className="p-2 bg-purple-50 border border-purple-100 text-purple-700 text-sm rounded shadow-sm hover:bg-purple-100 font-medium">🦜 Modo Papagaio</button>
+                                        <button onClick={() => handleCommand('MODO_CONVERSA')} className="p-2 bg-blue-50 border border-blue-100 text-blue-700 text-sm rounded shadow-sm hover:bg-blue-100 font-medium">🤖 Conversar (IA)</button>
+                                    </div>
+                                </div>
+
+                                {/* Parar */}
+                                <button onClick={() => handleCommand('PARAR')} className="w-full p-2 bg-red-50 border border-red-100 text-red-600 text-sm rounded shadow-sm hover:bg-red-100 font-medium">🛑 Parar Tudo</button>
                             </div>
 
                             {/* Enviar Fala */}

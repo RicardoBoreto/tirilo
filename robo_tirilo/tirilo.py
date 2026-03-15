@@ -3,16 +3,31 @@
 =============================================================================
 PROJETO: ROBÔ TIRILO
 ARQUIVO: tirilo.py
-VERSÃO:  4.3 (Otimização e Precisão Mecânica)
-DATA:    13/03/2026
+VERSÃO:  4.4 (Jogos como Subprocesso + Piscada Natural + Rastreamento Melhorado)
+DATA:    14/03/2026
 AUTOR:   Ricardo Alonso Boreto
 
-MUDANÇAS TÉCNICAS:
-- Latência Zero: Via expressa de áudio local, reactão instantânea.
-- Pálpebras Independentes: Mecânica de semicerrar ao olhar para cima.
+MUDANÇAS v4.4:
+- JOGO_PAREAR agora executa parearcor.py como subprocesso (display KMS exclusivo),
+  mantendo rastreamento facial ativo durante o jogo.
+- Piscada espontânea natural (piscar_natural): pálpebra superior fecha completamente,
+  inferior sobe levemente — intervalo aleatório de 6 a 16 segundos, dupla piscada
+  com 15% de chance. Pausa automática durante programas externos.
+- Rastreamento facial melhorado: scaleFactor 1.1→1.05, minNeighbors 5→4, frame rate
+  20 FPS efetivos (timing baseado em clock, não sleep fixo).
+- Subprocessos (CALIBRAR_OLHOS, RASTREADOR_TELA, COREOGRAFIAS, JOGO_PAREAR) usam
+  Popen com referência global _processo_externo — comando PARAR os encerra
+  imediatamente via terminate().
+- Câmera liberada corretamente ao pausar VisaoThread: stop() + close() no Picamera2.
+
+MUDANÇAS v4.3 (histórico):
+- Latência Zero: via expressa de áudio local, reação instantânea.
+- Pálpebras Independentes: mecânica de semicerrar ao olhar para cima.
 - Voz Robótica Clássica: espeak-ng como voz primária.
-- Comandos SaaS: JOGAR_CORES, JOGAR_EMOCOES, MODO_PAPAGAIO, MODO_CONVERSA, JOGO_PAREAR, CALIBRAR, VISAO_TELA, PARAR.
-- Auto-start: Serviço systemd para iniciar com o Raspberry Pi.
+- Comandos SaaS: JOGAR_CORES, JOGAR_EMOCOES, MODO_PAPAGAIO, MODO_CONVERSA,
+  JOGO_PAREAR, CALIBRAR, VISAO_TELA, PARAR, CALIBRAR_OLHOS, RASTREADOR_TELA,
+  COREOGRAFIA_MACDONALD, COREOGRAFIA_SEULOBATO.
+- Auto-start: serviço systemd para iniciar com o Raspberry Pi.
 - Reporte de versão ao painel SaaS via heartbeat.
 =============================================================================
 """
@@ -40,7 +55,7 @@ from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "4.3"
+VERSAO_ATUAL = "4.4"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -174,6 +189,9 @@ def ler_diretriz_ia(modo):
 
 # --- CONFIGURAÇÃO DE VISÃO ---
 MODO_VISAO_ATIVO = True # Controla se o robô segue rostos
+_ev_camera_livre = threading.Event() # Sinaliza que a câmera foi liberada
+_pausar_piscar = False  # Pausa piscada espontânea durante animações complexas/programas externos
+_processo_externo = None  # Processo filho atual (jogo/programa externo) para poder encerrar via PARAR
 HAAR_PATH = os.path.join(DIR_BASE, "robo_tirilo", "haarcascades", "haarcascade_frontalface_default.xml")
 
 try:
@@ -212,11 +230,39 @@ class VisaoThread(threading.Thread):
 
         face_cascade = cv2.CascadeClassifier(HAAR_PATH)
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+        INTERVALO_FRAME = 1.0 / 20  # 20 FPS alvo
 
         while self.running:
+            t_inicio = time.time()
             if not MODO_VISAO_ATIVO:
+                # Libera a câmera para que programas externos possam usá-la
+                if self.cap is not None:
+                    try:
+                        if PICAMERA2_ATIVO and isinstance(self.cap, Picamera2):
+                            self.cap.stop()
+                            self.cap.close()  # Libera hardware completamente
+                        else:
+                            self.cap.release()
+                    except: pass
+                    self.cap = None
+                    _ev_camera_livre.set()
                 time.sleep(0.5)
                 continue
+
+            # Reabre a câmera se foi liberada
+            if self.cap is None:
+                try:
+                    if PICAMERA2_ATIVO:
+                        self.cap = Picamera2()
+                        config = self.cap.create_video_configuration(main={"size": (640, 480), "format": "BGR888"})
+                        self.cap.configure(config)
+                        self.cap.start()
+                    else:
+                        self.cap = cv2.VideoCapture(0)
+                except Exception as e:
+                    print(f"VisaoThread: Erro ao reabrir câmera: {e}")
+                    time.sleep(1)
+                    continue
 
             frame = None
             try:
@@ -233,7 +279,7 @@ class VisaoThread(threading.Thread):
                 gray = cv2.cvtColor(pequeno, cv2.COLOR_BGR2GRAY)
                 gray = clahe.apply(gray)
                 
-                faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+                faces = face_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=4, minSize=(30, 30))
 
                 if len(faces) > 0:
                     self.frames_sem_rosto = 0
@@ -267,7 +313,11 @@ class VisaoThread(threading.Thread):
                         FRAME_CAMERA = pygame.image.frombuffer(f_rgb.tobytes(), (320, 240), 'RGB')
                     except: pass
 
-            time.sleep(0.05) # ~20 FPS
+            # Dorme apenas o tempo restante do frame para manter 20 FPS efetivos
+            elapsed = time.time() - t_inicio
+            restante = INTERVALO_FRAME - elapsed
+            if restante > 0:
+                time.sleep(restante)
 
         if PICAMERA2_ATIVO and self.cap: self.cap.stop()
         elif self.cap: self.cap.release()
@@ -405,7 +455,11 @@ class RoboInterface:
         self.arquivos_listados = [] # Lista de arquivos para exibição
         self.offset_lista = 0 # Scroll da lista
         self.lista_ativa = False # Indica se a lista de arquivos está na tela
-        self.texto_ia = "" 
+        self.texto_ia = ""
+        # Sincronização para suspensão do display (programas externos como calibrador)
+        self.suspenso = False
+        self._ev_display_livre = threading.Event()
+        self._ev_retomar = threading.Event()
 
         cx = self.w // 2
         self.pos_olho_y = int(self.h * 0.30)
@@ -463,6 +517,25 @@ class RoboInterface:
                     else: x, y = event.pos
                     self.processar_toque_parear(x, y)
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: self.running = False
+
+            # Suspensão do display para programas externos (CALIBRAR_OLHOS, RASTREADOR_TELA etc)
+            if self.suspenso:
+                pygame.display.quit()
+                self._ev_display_livre.set()
+                self._ev_retomar.wait()
+                self._ev_retomar.clear()
+                self.suspenso = False
+                os.environ.pop('SDL_VIDEODRIVER', None)
+                for d in ['kmsdrm', 'fbcon', 'directfb', 'dummy']:
+                    os.environ['SDL_VIDEODRIVER'] = d
+                    try:
+                        pygame.display.init()
+                        info = pygame.display.Info()
+                        self.tela = pygame.display.set_mode((info.current_w, info.current_h), pygame.FULLSCREEN)
+                        print(f"Display restaurado ({d})")
+                        break
+                    except Exception: continue
+                continue
 
             if self.exibindo_splash: self._render_splash()
             elif MODO_ROBO_ATUAL == "TERAPEUTA": self._render_modo_terapeuta()
@@ -876,10 +949,17 @@ def log_terapeuta(conteudo):
 
 def finalizar_modo_geral():
     """Para tudo: jogos, música, fala e visão."""
-    global MODO_VISAO_ATIVO, TEXTO_RESPOSTA_IA, MODO_VISAO_TELA
+    global MODO_VISAO_ATIVO, TEXTO_RESPOSTA_IA, MODO_VISAO_TELA, _processo_externo
     MODO_VISAO_TELA = False
     if gui: gui.parar_jogo()
     TEXTO_RESPOSTA_IA = ""
+    # Encerra processo externo em execução (jogo, calibrador, rastreador etc.)
+    if _processo_externo and _processo_externo.poll() is None:
+        try:
+            _processo_externo.terminate()
+            _processo_externo.wait(timeout=2)
+        except Exception: pass
+        _processo_externo = None
     # Mata processos de áudio
     subprocess.run(["pkill", "-9", "aplay"], stderr=subprocess.DEVNULL)
     subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
@@ -1096,6 +1176,22 @@ def loop_logica():
     if olhos:
         visao = VisaoThread(olhos)
         visao.start()
+        # Piscada espontânea natural (daemon)
+        def _piscar_espontaneo():
+            import random as _r
+            global _pausar_piscar
+            while True:
+                time.sleep(_r.uniform(6.0, 16.0))
+                if _pausar_piscar or not olhos: continue
+                try:
+                    olhos.piscar_natural()
+                    # Dupla piscada (15% de chance)
+                    if _r.random() < 0.15:
+                        time.sleep(_r.uniform(0.1, 0.3))
+                        if not _pausar_piscar:
+                            olhos.piscar_natural()
+                except Exception: pass
+        threading.Thread(target=_piscar_espontaneo, daemon=True).start()
         
     modo_ia_ativo = True
     if gui: gui.set_splash(False)
@@ -1126,6 +1222,10 @@ def loop_logica():
                         
                         if payload == "PARAR":
                             finalizar_modo_geral()
+                        elif payload == "MODO_TERAPEUTA":
+                            threading.Thread(target=iniciar_modo_terapeuta).start()
+                        elif payload == "MODO_CRIANCA":
+                            threading.Thread(target=finalizar_modo_terapeuta).start()
                         elif payload == "FALAR":
                             msg = cmd.get('parametros', {}).get('texto', '')
                             if msg: falar(msg)
@@ -1140,7 +1240,29 @@ def loop_logica():
                             modo_ia_ativo = True
                             falar("Modo Conversa ativado. Vamos bater um papo?")
                         elif payload == "JOGO_PAREAR":
-                            if gui: threading.Thread(target=gui.iniciar_parear).start()
+                            payload = "JOGO_PAREAR"  # redireciona para subprocess
+                            nome_script = "parearcor.py"
+                            def _executar_parear(nome=nome_script, cmd=payload):
+                                global gui, _pausar_piscar, _processo_externo
+                                script = os.path.join(os.path.dirname(__file__), nome)
+                                uid = os.getuid()
+                                env = os.environ.copy()
+                                env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
+                                env.pop('SDL_AUDIODRIVER', None)
+                                # Pausa piscada (conflito de servos), mas mantém rastreamento ativo
+                                # (parearcor.py não usa câmera, apenas display e servos de reação)
+                                _pausar_piscar = True
+                                if gui:
+                                    gui.suspenso = True
+                                    gui._ev_display_livre.wait(timeout=3)
+                                    gui._ev_display_livre.clear()
+                                _processo_externo = subprocess.Popen(["python3", script], env=env)
+                                _processo_externo.wait()
+                                _processo_externo = None
+                                _pausar_piscar = False
+                                if gui:
+                                    gui._ev_retomar.set()
+                            threading.Thread(target=_executar_parear, daemon=True).start()
                         elif payload == "CALIBRAR":
                             threading.Thread(target=iniciar_calibragem).start()
                         elif payload == "VISAO_TELA":
@@ -1150,30 +1272,47 @@ def loop_logica():
                                 if MODO_VISAO_TELA: gui.iniciar_jogo("visao")
                                 else: gui.parar_jogo()
                             falar("Modo visão " + ("ativado" if MODO_VISAO_TELA else "desativado"))
-                        elif payload == "CALIBRAR_OLHOS":
-                            def _calibrar_olhos():
-                                script = os.path.join(os.path.dirname(__file__), "calibrador_olhos.py")
-                                subprocess.Popen(["python3", script])
-                            threading.Thread(target=_calibrar_olhos).start()
-                            falar("Abrindo calibrador de olhos.")
-                        elif payload == "RASTREADOR_TELA":
-                            def _rastreador_tela():
-                                script = os.path.join(os.path.dirname(__file__), "rastreador_tela.py")
-                                subprocess.Popen(["python3", script])
-                            threading.Thread(target=_rastreador_tela).start()
-                            falar("Iniciando rastreador de tela.")
-                        elif payload == "COREOGRAFIA_MACDONALD":
-                            def _coreografia_mac():
-                                script = os.path.join(os.path.dirname(__file__), "coreografia_macdonald.py")
-                                subprocess.Popen(["python3", script])
-                            threading.Thread(target=_coreografia_mac).start()
-                            falar("Iniciando coreografia Old MacDonald.")
-                        elif payload == "COREOGRAFIA_SEULOBATO":
-                            def _coreografia_lobato():
-                                script = os.path.join(os.path.dirname(__file__), "coreografia_seulobato.py")
-                                subprocess.Popen(["python3", script])
-                            threading.Thread(target=_coreografia_lobato).start()
-                            falar("Iniciando coreografia Seu Lobato.")
+                        elif payload in ("CALIBRAR_OLHOS", "RASTREADOR_TELA", "COREOGRAFIA_MACDONALD", "COREOGRAFIA_SEULOBATO"):
+                            scripts_map = {
+                                "CALIBRAR_OLHOS":       "calibrador_olhos.py",
+                                "RASTREADOR_TELA":      "rastreador_tela.py",
+                                "COREOGRAFIA_MACDONALD":"coreografia_macdonald.py",
+                                "COREOGRAFIA_SEULOBATO":"coreografia_seulobato.py",
+                            }
+                            nome_script = scripts_map[payload]
+
+                            def _executar_programa(nome=nome_script, cmd=payload):
+                                global gui
+                                script = os.path.join(os.path.dirname(__file__), nome)
+                                uid = os.getuid()
+                                env = os.environ.copy()
+                                env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
+                                env.pop('SDL_AUDIODRIVER', None)  # Deixa SDL escolher ALSA automaticamente
+                                # Pausa piscada e rastreamento; aguarda câmera ser liberada
+                                global MODO_VISAO_ATIVO, _ev_camera_livre, _pausar_piscar, _processo_externo
+                                _pausar_piscar = True
+                                visao_estava_ativa = MODO_VISAO_ATIVO
+                                if visao_estava_ativa:
+                                    _ev_camera_livre.clear()
+                                    MODO_VISAO_ATIVO = False
+                                    _ev_camera_livre.wait(timeout=3)
+                                # KMS/DRM é exclusivo: sinaliza a thread principal para liberar o display
+                                if gui:
+                                    gui.suspenso = True
+                                    gui._ev_display_livre.wait(timeout=3)
+                                    gui._ev_display_livre.clear()
+                                    print(f"Display liberado para {cmd}")
+                                # Executa o programa externo (bloqueia até terminar)
+                                _processo_externo = subprocess.Popen(["python3", script], env=env)
+                                _processo_externo.wait()
+                                _processo_externo = None
+                                # Restaura rastreamento, piscada e sinaliza thread principal
+                                _pausar_piscar = False
+                                MODO_VISAO_ATIVO = visao_estava_ativa
+                                if gui:
+                                    gui._ev_retomar.set()
+
+                            threading.Thread(target=_executar_programa, daemon=True).start()
                 except Exception as e: 
                     print(f"Erro ao processar comando: {e}")
 

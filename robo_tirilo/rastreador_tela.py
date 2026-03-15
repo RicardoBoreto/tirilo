@@ -40,7 +40,13 @@ def iniciar_pygame():
                 except: continue
             if pygame.display.get_init(): break
     pygame.init()
-    return pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
+    try:
+        info = pygame.display.Info()
+        w, h = info.current_w, info.current_h
+        tela = pygame.display.set_mode((w, h), pygame.FULLSCREEN)
+    except Exception:
+        tela = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA), pygame.FULLSCREEN)
+    return tela
 
 def main():
     print(f"--- TIRILO VISÃO INICIANDO ---")
@@ -87,6 +93,11 @@ def main():
     clock = pygame.time.Clock()
     rodando = True
 
+    # Botão SAIR (canto superior direito, grande para touchscreen)
+    W, H = tela.get_width(), tela.get_height()
+    btn_sair = pygame.Rect(W - 140, 10, 130, 60)
+    fonte_btn = pygame.font.Font(None, 48)
+
     # Variáveis para suavização de movimento (Filtro Passa-Baixa + Estabilização)
     last_x, last_y = 50.0, 50.0
     alpha = 0.15 # Movimento mais orgânico e lento
@@ -98,6 +109,10 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT: rodando = False
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: rodando = False
+            if event.type == pygame.MOUSEBUTTONDOWN and btn_sair.collidepoint(event.pos): rodando = False
+            if event.type == pygame.FINGERDOWN:
+                fx, fy = int(event.x * W), int(event.y * H)
+                if btn_sair.collidepoint(fx, fy): rodando = False
 
         frame_raw = None
         try:
@@ -174,6 +189,13 @@ def main():
                 # Texto informativo
                 txt = fonte.render(f"Faces: {len(faces)}", True, (0, 255, 0))
                 tela.blit(txt, (20, 20))
+
+                # Botão SAIR
+                pygame.draw.rect(tela, (180, 0, 0), btn_sair, border_radius=10)
+                pygame.draw.rect(tela, (255, 80, 80), btn_sair, 2, border_radius=10)
+                txt_sair = fonte_btn.render("SAIR", True, (255, 255, 255))
+                tela.blit(txt_sair, txt_sair.get_rect(center=btn_sair.center))
+
                 pygame.display.flip()
 
                 # 5. Piscada Espontânea (Efeito Humano)

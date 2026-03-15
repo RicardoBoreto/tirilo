@@ -217,6 +217,22 @@ class ControladorOlhos:
         self.fechar_palpebra("olho_direito", pc_old_d, pb_old_d)
         self.fechar_palpebra("olho_esquerdo", pc_old_e, pb_old_e)
 
+    def piscar_natural(self):
+        """Piscada natural: pálpebra superior desce completamente,
+        inferior sobe apenas levemente — como o olho humano real."""
+        pc_old_d = self.estado["olho_direito"]["pc"]
+        pb_old_d = self.estado["olho_direito"]["pb"]
+        pc_old_e = self.estado["olho_esquerdo"]["pc"]
+        pb_old_e = self.estado["olho_esquerdo"]["pb"]
+        # Fecha rápido: superior vai a 100, inferior sobe só um pouco (20)
+        self.mover_suave_ambos(pc_alvo=100, pb_alvo=20, duracao=0.12)
+        time.sleep(0.05)
+        # Abre ligeiramente mais devagar, voltando ao estado anterior
+        def abrir_dir(): self.mover_suave("olho_direito", pc_alvo=pc_old_d, pb_alvo=pb_old_d, duracao=0.15)
+        def abrir_esq(): self.mover_suave("olho_esquerdo", pc_alvo=pc_old_e, pb_alvo=pb_old_e, duracao=0.15)
+        t1 = threading.Thread(target=abrir_dir); t2 = threading.Thread(target=abrir_esq)
+        t1.start(); t2.start(); t1.join(); t2.join()
+
     def pisca_um_olho(self, olho):
         pc_old = self.estado[olho]["pc"]
         pb_old = self.estado[olho]["pb"]
