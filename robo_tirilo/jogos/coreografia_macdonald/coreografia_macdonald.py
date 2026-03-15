@@ -9,6 +9,7 @@ PASTA_JOGO = os.path.dirname(os.path.abspath(__file__))
 PASTA_ROBO = os.path.dirname(os.path.dirname(PASTA_JOGO))
 sys.path.insert(0, PASTA_ROBO)
 
+import subprocess
 import pygame
 
 try:
@@ -19,18 +20,20 @@ except ImportError:
 
 
 def tocar_musica(arquivo_mp3):
+    print(f"[Audio] Procurando: {arquivo_mp3}")
     if not os.path.exists(arquivo_mp3):
-        return False
+        print(f"[Audio] ERRO: arquivo nao encontrado: {arquivo_mp3}")
+        return None
     try:
-        pygame.mixer.init()
-        pygame.mixer.music.load(arquivo_mp3)
-        # Toca a música apenas 1 vez (0) ao invés de loop infinito (-1)
-        pygame.mixer.music.play(0) 
-        print(f"🎵 Tocando: {arquivo_mp3}")
-        return True
+        print(f"[Audio] Tocando com mpg123: {arquivo_mp3}")
+        proc = subprocess.Popen(
+            ["mpg123", "-q", arquivo_mp3],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        return proc
     except Exception as e:
-        print(f"Erro ao tentar tocar a música: {e}")
-        return False
+        print(f"[Audio] Erro ao iniciar mpg123: {e}")
+        return None
 
 def rotina_coreografia_background():
     """Roda em uma TREAD SEPARADA totalmente protegida dos travamentos da tela"""
@@ -50,8 +53,8 @@ def rotina_coreografia_background():
     import random
     def animar_boca_canto():
         """Move a boca suavemente enquanto a música toca, respeitando compassos mudos."""
-        time.sleep(0.1) # Pequeno atraso pro mixer registrar get_busy()
-        while tem_audio and pygame.mixer.music.get_busy():
+        time.sleep(0.1)
+        while tem_audio and tem_audio.poll() is None:  # poll() is None = ainda tocando
             decorrido = time.time() - tempo_inicio_musica
             # Descobre em qual compasso global estamos (tempo total dividido pelo tempo de 1 compasso)
             compasso_atual_global = int(decorrido / compasso) + 1 # +1 pois começa do Compasso 1
@@ -76,8 +79,8 @@ def rotina_coreografia_background():
     try:
         ciclo = 1
         while True:
-            if tem_audio and not pygame.mixer.music.get_busy():
-                print("\n🎵 A música acabou! Encerrando o ciclo atual e finalizando a rotina.")
+            if tem_audio and tem_audio.poll() is not None:  # processo encerrou = música acabou
+                print("\n[Audio] Musica encerrada. Finalizando coreografia.")
                 # Envia um evento pro PyGame da tela principal fechar as imagens
                 pygame.event.post(pygame.event.Event(pygame.QUIT))
                 break
