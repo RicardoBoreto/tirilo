@@ -7,6 +7,24 @@ import { GEMINI_MODEL_VERSION } from '@/lib/constants/ai_models'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '')
 
+async function getGlobalAIModel() {
+    try {
+        const supabase = await createClient()
+        const { data } = await supabase
+            .from('saas_config_global')
+            .select('value')
+            .eq('key', 'gemini_model_default')
+            .single()
+        
+        if (data?.value && typeof data.value === 'string') {
+            return data.value
+        }
+    } catch (e) {
+        console.error('Erro ao buscar modelo global:', e)
+    }
+    return GEMINI_MODEL_VERSION
+}
+
 // --- Anonymization Helpers ---
 function anonymize(text: string, map: Record<string, string>) {
     if (!text) return text
@@ -230,15 +248,30 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
 
     // 7. Call Gemini API
     try {
-        const model = genAI.getGenerativeModel({ model: promptData.modelo_gemini || GEMINI_MODEL_VERSION })
+        const activeModel = await getGlobalAIModel()
+        const model = genAI.getGenerativeModel({ 
+            model: promptData.modelo_gemini || activeModel,
+            // Gemini 3.1 Flash Lite recommendation: MINIMAL thinking
+            // config: { thinkingConfig: { include_thoughts: true } } // If needed explicitly
+        })
+        
         const result = await model.generateContent(promptFinal)
         const response = await result.response
         const text = response.text()
+        
+        // Obter assinatura de pensamento (se disponível no modelo 3.1+)
+        const thoughtSignature = (response as any).thoughtSignature || 
+                                (response.candidates?.[0]?.content?.parts?.find((p: any) => 'thought_signature' in p) as any)?.thought_signature
 
         // --- DEANONYMIZE RESPONSE ---
         const finalText = deanonymize(text, anonymizationMap)
 
-        return { success: true, plan: finalText, promptUsed: promptFinal }
+        return { 
+            success: true, 
+            plan: finalText, 
+            promptUsed: promptFinal,
+            thoughtSignature // Retornar para ser salvo se necessário
+        }
     } catch (error: any) {
         console.error('Erro na API Gemini:', error)
         return { success: false, error: 'Erro ao gerar plano com IA: ' + error.message }
@@ -258,7 +291,8 @@ export async function saveInterventionPlan(pacienteId: number, promptId: number,
             id_prompt_ia: promptId,
             id_terapeuta: user.id,
             plano_original: planoOriginal,
-            plano_final: planoFinal
+            plano_final: planoFinal,
+            modelo_ia: await getGlobalAIModel()
         })
 
     if (error) {
@@ -431,15 +465,25 @@ export async function generateSessionReport(promptId: number, pacienteId: number
 
     // 7. Call Gemini API
     try {
-        const model = genAI.getGenerativeModel({ model: promptData.modelo_gemini || GEMINI_MODEL_VERSION })
+        const activeModel = await getGlobalAIModel()
+        const model = genAI.getGenerativeModel({ model: promptData.modelo_gemini || activeModel })
         const result = await model.generateContent(promptFinal)
         const response = await result.response
         const text = response.text()
+        
+        // Obter assinatura de pensamento
+        const thoughtSignature = (response as any).thoughtSignature || 
+                                (response.candidates?.[0]?.content?.parts?.find((p: any) => 'thought_signature' in p) as any)?.thought_signature
 
         // --- DEANONYMIZE RESPONSE ---
         const finalText = deanonymize(text, anonymizationMap)
 
-        return { success: true, report: finalText, promptUsed: promptFinal }
+        return { 
+            success: true, 
+            report: finalText, 
+            promptUsed: promptFinal,
+            thoughtSignature 
+        }
     } catch (error: any) {
         console.error('Erro na API Gemini:', error)
         return { success: false, error: 'Erro ao gerar relatório com IA: ' + error.message }
@@ -467,35 +511,45 @@ export async function refineSessionReport(relatorioAtual: string, feedbackUsuari
     const feedbackAnon = anonymize(feedbackUsuario, mapRealToFake)
 
     // 2. Call IA
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL_VERSION })
-
-    const promptRefinamento = `
-    ATUAÇÃO: Você é um supervisor clínico revisando um relatório de atendimento.
-    OBJETIVO: Refinar o relatório abaixo com base no feedback fornecido.
-    
-    RELATÓRIO ATUAL:
-    """
-    ${relatorioAtualAnon}
-    """
-    
-    FEEDBACK DO TERAPEUTA (Ajustes):
-    "${feedbackAnon}"
-    
-    INSTRUÇÕES:
-    1. Retorne o texto do relatório COMPLETO e REVISADO.
-    2. Aplique estritamente as mudanças solicitadas.
-    3. Mantenha o tom profissional e técnico.
-    4. Mantenha a formatação original (se houver).
-    `
-
     try {
+        const activeModel = await getGlobalAIModel()
+        const model = genAI.getGenerativeModel({ model: activeModel })
+
+        const promptRefinamento = `
+        ATUAÇÃO: Você é um supervisor clínico revisando um relatório de atendimento.
+        OBJETIVO: Refinar o relatório abaixo com base no feedback fornecido.
+        
+        RELATÓRIO ATUAL:
+        """
+        ${relatorioAtualAnon}
+        """
+        
+        FEEDBACK DO TERAPEUTA (Ajustes):
+        "${feedbackAnon}"
+        
+        INSTRUÇÕES:
+        1. Retorne o texto do relatório COMPLETO e REVISADO.
+        2. Aplique estritamente as mudanças solicitadas.
+        3. Mantenha o formato clínico profissional.
+        4. Retorne apenas o texto final sem introduções.
+        `
+
         const result = await model.generateContent(promptRefinamento)
-        const text = result.response.text()
+        const response = result.response
+        const text = response.text()
+        
+        const nextThoughtSignature = (response as any).thoughtSignature || 
+                                    (response.candidates?.[0]?.content?.parts?.find((p: any) => 'thought_signature' in p) as any)?.thought_signature
+
         const finalReport = deanonymize(text, mapRealToFake)
 
-        return { success: true, report: finalReport }
+        return { 
+            success: true, 
+            report: finalReport,
+            thoughtSignature: nextThoughtSignature
+        }
     } catch (e: any) {
-        console.error('Erro ao refinar relatório (in-memory):', e)
+        console.error('Erro ao refinar relatório:', e)
         return { success: false, error: e.message }
     }
 }
@@ -694,8 +748,6 @@ export async function refineInterventionPlan(planoId: number, feedbackUsuario: s
     const feedbackAnon = anonymize(feedbackUsuario, mapRealToFake)
 
     // 4. Configurar IA
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL_VERSION })
-
     const promptRefinamento = `
     ATUAÇÃO: Você é um supervisor clínico rigoroso especialista em ABA.
     OBJETIVO: MODIFICAR o plano atual seguindo ESTRITAMENTE o feedback recebido.
@@ -718,15 +770,25 @@ export async function refineInterventionPlan(planoId: number, feedbackUsuario: s
     `
 
     try {
+        const activeModel = await getGlobalAIModel()
+        const model = genAI.getGenerativeModel({ model: activeModel })
+
+        // No Gemini 3.1, o refinamento ideal seria via ChatSession passando as assinaturas
+        // Para manter compatibilidade com o histórico atual, enviamos o prompt de supervisão
+        // mas tentamos capturar a nova assinatura.
         const result = await model.generateContent(promptRefinamento)
-        const responseText = result.response.text()
+        const response = result.response
+        const responseText = response.text()
+        
+        const nextThoughtSignature = (response as any).thoughtSignature || 
+                                    (response.candidates?.[0]?.content?.parts?.find((p: any) => 'thought_signature' in p) as any)?.thought_signature
 
         // 5. Deanonimizar
         const novoplano = deanonymize(responseText, mapRealToFake)
 
         // 6. Atualizar Histórico e Plano
         const novoHistorico = [
-            ...(planoRecord.historico_chat || []), // Existing history
+            ...(planoRecord.historico_chat || []),
             {
                 role: 'user',
                 text: feedbackUsuario,
@@ -743,7 +805,8 @@ export async function refineInterventionPlan(planoId: number, feedbackUsuario: s
             .from('planos_intervencao_ia')
             .update({
                 plano_final: novoplano,
-                historico_chat: novoHistorico
+                historico_chat: novoHistorico,
+                last_thought_signature: nextThoughtSignature || planoRecord.last_thought_signature
             })
             .eq('id', planoId)
 
@@ -778,27 +841,28 @@ export async function refineGeneratedPlan(planoAtual: string, feedbackUsuario: s
     const feedbackAnon = anonymize(feedbackUsuario, mapRealToFake)
 
     // 2. Chamar IA
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL_VERSION })
-
-    const promptRefinamento = `
-    ATUAÇÃO: Você é um supervisor clínico.
-    OBJETIVO: Refinar o plano de intervenção abaixo com base no feedback.
-    
-    PLANO ATUAL:
-    """
-    ${planoAtualAnon}
-    """
-    
-    FEEDBACK DO TERAPEUTA:
-    "${feedbackAnon}"
-    
-    INSTRUÇÕES:
-    1. Retorne o plano COMPLETO e REVISADO.
-    2. Aplique as mudanças solicitadas.
-    3. Mantenha a formatação Markdown.
-    `
-
     try {
+        const activeModel = await getGlobalAIModel()
+        const model = genAI.getGenerativeModel({ model: activeModel })
+
+        const promptRefinamento = `
+        ATUAÇÃO: Você é um supervisor clínico.
+        OBJETIVO: Refinar o plano de intervenção abaixo com base no feedback.
+        
+        PLANO ATUAL:
+        """
+        ${planoAtualAnon}
+        """
+        
+        FEEDBACK DO TERAPEUTA:
+        "${feedbackAnon}"
+        
+        INSTRUÇÕES:
+        1. Retorne o plano COMPLETO e REVISADO.
+        2. Aplique as mudanças solicitadas.
+        3. Mantenha a formatação Markdown.
+        `
+
         const result = await model.generateContent(promptRefinamento)
         const text = result.response.text()
         const finalPlan = deanonymize(text, mapRealToFake)

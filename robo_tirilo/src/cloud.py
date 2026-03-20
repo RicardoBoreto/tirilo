@@ -119,6 +119,17 @@ class CloudManager:
             print(f"Error fetching config: {e}")
             return {}
 
+    def get_global_config(self):
+        """Busca configurações globais do sistema de saas_config_global."""
+        try:
+            res = self.client.table('saas_config_global').select('*').limit(1).execute()
+            if res.data:
+                return res.data[0]
+            return {}
+        except Exception as e:
+            print(f"CloudManager: erro ao buscar config global: {e}")
+            return {}
+
     def get_ai_directive(self, modo):
         """
         Busca a diretriz de IA no Supabase com hierarquia:

@@ -96,33 +96,34 @@ def rotina_coreografia_background():
             print(f"Compasso 2 (~2.6s) -> Galope!")
             olhos.alternar_piscar(batidas=4, vel=beat/2.0)
             
-            # [Compassos 3 a 6.5] (14 tempos): Varrida
-            print(f"Compassos 3-6.5 (~5.2s a ~14.3s) -> Varrida Direita/Esquerda")
-            for _ in range(3): 
+            # [Compassos 3 a 6] (4 compassos): Varrida
+            print(f"Compassos 3-6 -> Varrida Direita/Esquerda")
+            for _ in range(4):
                 olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
                 olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
-            olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
-                
-            # [Compassos 6.5 a 8.5] (2 compassos): Vesgo alternando com normal
-            print(f"Compassos 6.5-8.5 (~14.3s a ~19.5s) -> Vesgo e Normal.")
+
+            # [Compassos 7 a 8] (2 compassos): Vesgo alternando com normal
+            print(f"Compassos 7-8 -> Vesgo e Normal.")
             for i in range(2):
                 # --- GRAN FINALE (COMPASSO 52) ---
-                if ciclo == 6 and i == 1:
-                    print(f"Compasso 52 (Gran Finale) -> Piscar Sincronizado e Olhos Abertos!")
+                if ciclo == 5 and i == 1:
+                    print(f"Gran Finale -> Piscar Sincronizado e Olhos Abertos!")
                     for _ in range(4):
                         olhos.mover_suave_ambos(p_alvo=100, duracao=beat/2.0)
                         olhos.mover_suave_ambos(p_alvo=20, duracao=beat/2.0)
-                    olhos.abrir_olhos() 
+                    olhos.abrir_olhos()
+                    if tem_audio and tem_audio.poll() is None:
+                        tem_audio.terminate()
                     pygame.event.post(pygame.event.Event(pygame.QUIT))
-                    return 
-                    
+                    return
+
                 olhos.olhar_vesgo()
                 time.sleep((beat * 2) - 0.3)
                 olhos.olhar_neutro(suave=True)
                 time.sleep((beat * 2) - 0.4)
-                
-            # [Compassos 8.5 a 9] 
-            print(f"Compasso 8.5-9 (~19.5s a ~23.5s) -> Varrida até Finalizar o Loop.")
+
+            # [Compassos 9 a 9.5] (1.5 compassos): Varrida final
+            print(f"Compassos 9-9.5 -> Varrida final.")
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)

@@ -111,7 +111,8 @@ AZUL_ESPECIAL = (0, 50, 100) # Cor para o modo Doutor Tirilo
 HISTORICO_ANIMAIS = []
 
 # IA
-MODELO_IA = "gemini-2.5-flash"
+MODELO_IA = "gemini-3.1-flash-lite"
+ULTIMO_THOUGHT_SIGNATURE = None
 cloud_mgr = None
 
 # Cache de diretriz IA — evita query Supabase a cada interação
@@ -1120,14 +1121,30 @@ Criança: "brincar" → "Que divertido! Vamos jogar! [JOGO:{exemplo_codigo}]"
         chunks_fila: queue.Queue = queue.Queue()
 
         def _streamer():
+            global ULTIMO_THOUGHT_SIGNATURE
             try:
+                # Prepara o conteúdo da mensagem
+                mensagens = [types.Content(role="user", parts=[types.Part(text=contents_msg)])]
+                
+                # Se temos uma assinatura de pensamento anterior, incluimos para manter o contexto
+                if ULTIMO_THOUGHT_SIGNATURE:
+                    mensagens.insert(0, types.Content(role="model", parts=[types.Part(thought_signature=ULTIMO_THOUGHT_SIGNATURE)]))
+
                 for chunk in CLIENTE_GEMINI.models.generate_content_stream(
                     model=MODELO_IA,
-                    contents=[contents_msg],
+                    contents=mensagens,
                     config=types.GenerateContentConfig(system_instruction=instrucao)
                 ):
                     if chunk.text:
                         chunks_fila.put(chunk.text)
+                    
+                    # Tenta capturar a assinatura de pensamento da resposta
+                    if chunk.candidates:
+                        for candidate in chunk.candidates:
+                            if candidate.content and candidate.content.parts:
+                                for part in candidate.content.parts:
+                                    if part.thought_signature:
+                                        ULTIMO_THOUGHT_SIGNATURE = part.thought_signature
             except Exception as e_stream:
                 print(f"ERRO stream IA: {e_stream}")
             finally:
@@ -1322,7 +1339,10 @@ def jogar_adivinhacao():
         usados = ", ".join(HISTORICO_ANIMAIS) if HISTORICO_ANIMAIS else "nenhum"
         p = f"Crie {QTD_CHARADAS} charadas curtas sobre animais para criança. Não repita: {usados}. Formato obrigatório: DICA|ANIMAL em cada linha. Sem numeração."
         
-        r = CLIENTE_GEMINI.models.generate_content(model=MODELO_IA, contents=[p])
+        r = CLIENTE_GEMINI.models.generate_content(
+            model=MODELO_IA, 
+            contents=[types.Content(role="user", parts=[types.Part(text=p)])]
+        )
         linhas = r.text.strip().split('\n')
         
         for linha in linhas:
@@ -1527,8 +1547,14 @@ def loop_logica():
         cloud_mgr.register_callback(on_nuvem_comando)
         cloud_mgr.start_listener()
         print(f"Listener de comandos ativado. Firmware: {VERSAO_ATUAL}")
-        # Carrega jogos disponíveis da clínica
+        # Carrega configurações globais (Modelo IA)
+        global MODELO_IA
         global _jogos_disponiveis
+        config_global = cloud_mgr.get_global_config()
+        if config_global and config_global.get('gemini_model'):
+            MODELO_IA = config_global['gemini_model']
+            print(f"Cloud: Modelo IA configurado: {MODELO_IA}")
+            
         _jogos_disponiveis = cloud_mgr.get_jogos_clinica()
 
     falar(f"Olá! Eu sou o {NOME_ROBO}. Minha inteligência artificial está ligada. Como posso ajudar você hoje?")

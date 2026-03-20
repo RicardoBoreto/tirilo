@@ -1,6 +1,6 @@
-export const GEMINI_MODEL_VERSION = 'gemini-2.5-flash'
+export const GEMINI_MODEL_VERSION = 'gemini-3.1-flash-lite' // Fallback pattern
 
 // Configuration notes:
-// Do NOT downgrade this version to 1.5.
-// The user explicitly verified that 2.5 is working and required.
-// See: Conversation ID 365.
+// Since 20/03/2026, the active model is primarily fetched from the 
+// 'saas_config_global' table in the database (key: 'gemini_model_default').
+// This constant serves as a safe local fallback if the database is unreachable.

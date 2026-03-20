@@ -195,3 +195,33 @@ sys.path.insert(0, PASTA_ROBO)
 | Usuário SSH | `boreto` |
 | Diretório no Pi | `~/projeto_robo/robo_tirilo` |
 | Serviço systemd | `tirilo` |
+
+---
+
+## Segurança Supabase (RLS)
+
+O robô acessa o Supabase usando a **anon key** (chave pública), sem usuário autenticado (`role = anon`).
+O SaaS (Next.js) acessa com usuários autenticados (`role = authenticated`).
+
+### Regra geral de RLS por tabela
+
+| Quem acessa | Policy |
+|-------------|--------|
+| Robô (anon) | `TO anon USING (true)` — apenas nas tabelas que o robô lê |
+| SaaS (authenticated) | `TO authenticated USING (true)` |
+| Nenhum dos dois | Habilitar RLS sem policy (só service_role bypassa) |
+
+### Tabelas e suas policies
+
+| Tabela | RLS | Acesso |
+|--------|-----|--------|
+| `saas_operadoras` | Habilitado | Apenas `authenticated` (SaaS) |
+
+### SQL aplicado
+
+```sql
+-- saas_operadoras (2026-03-18)
+ALTER TABLE public.saas_operadoras ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Apenas autenticados" ON public.saas_operadoras
+    FOR ALL TO authenticated USING (true);
+```

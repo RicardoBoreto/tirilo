@@ -1,7 +1,7 @@
 
 -- ============================================================================
--- TIRILO SAAS - SCHEMA DE BANCO DE DADOS (V2.0)
--- Atualizado em: 10/12/2025
+-- TIRILO SAAS - SCHEMA DE BANCO DE DADOS (V2.1)
+-- Atualizado em: 20/03/2026
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -72,6 +72,13 @@ CREATE TABLE public.saas_clinicas (
     endereco_completo TEXT -- Adicionado para compatibilidade com produção
 );
 
+-- Configuração Global (Adicionado V2.1)
+CREATE TABLE public.saas_config_global (
+    id SERIAL PRIMARY KEY,
+    gemini_model TEXT DEFAULT 'gemini-3.1-flash-lite',
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE public.clinicas_salas (
     id SERIAL PRIMARY KEY,
     id_clinica INTEGER REFERENCES public.saas_clinicas(id),
@@ -107,6 +114,10 @@ CREATE TABLE public.saas_operadoras (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.saas_operadoras ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Apenas autenticados" ON public.saas_operadoras
+    FOR ALL TO authenticated USING (true);
 
 -- ----------------------------------------------------------------------------
 -- 2. USUÁRIOS & PERMISSÕES
@@ -471,7 +482,7 @@ CREATE TABLE public.prompts_ia (
     nome_prompt TEXT NOT NULL,
     descricao TEXT,
     prompt_texto TEXT NOT NULL,
-    modelo_gemini TEXT DEFAULT 'gemini-2.5-flash',
+    modelo_gemini TEXT DEFAULT 'gemini-3.1-flash-lite',
     temperatura NUMERIC DEFAULT 0.7,
     ativo BOOLEAN DEFAULT TRUE,
     categoria TEXT DEFAULT 'plano',
@@ -491,6 +502,7 @@ CREATE TABLE public.planos_intervencao_ia (
     plano_original TEXT, -- Texto raw da IA
     recursos_sugeridos JSONB DEFAULT '[]'::jsonb, -- Lista de materiais/recursos (Adicionado V1.7.5)
     modelo_ia TEXT, -- Versão do modelo usado
+    last_thought_signature TEXT, -- Assinatura para manter contexto Gemini 3.1 (Adicionado V2.1)
     historico_chat JSONB DEFAULT '[]'::jsonb, -- Histórico de conversa para refinamento
     
     created_at TIMESTAMPTZ DEFAULT NOW()
