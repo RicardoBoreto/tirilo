@@ -72,13 +72,6 @@ CREATE TABLE public.saas_clinicas (
     endereco_completo TEXT -- Adicionado para compatibilidade com produção
 );
 
--- Configuração Global (Adicionado V2.1)
-CREATE TABLE public.saas_config_global (
-    id SERIAL PRIMARY KEY,
-    gemini_model TEXT DEFAULT 'gemini-3.1-flash-lite',
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
 CREATE TABLE public.clinicas_salas (
     id SERIAL PRIMARY KEY,
     id_clinica INTEGER REFERENCES public.saas_clinicas(id),
@@ -392,6 +385,9 @@ CREATE TABLE public.saas_frota_robos (
     versao_firmware TEXT DEFAULT NULL -- Versão do firmware tirilo.py (atualizada via heartbeat)
 );
 
+COMMENT ON COLUMN public.saas_frota_robos.versao_firmware 
+IS 'Versão do firmware tirilo.py em execução. Atualizada automaticamente via heartbeat a cada 60s.';
+
 -- Configuração de IA da Clínica (Personalidade)
 CREATE TABLE public.clinica_config_ia (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -413,6 +409,17 @@ CREATE TABLE public.saas_diretrizes_ai (
     atualizado_em TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(id_clinica, modo)
 );
+
+-- Configuração Global de IA
+CREATE TABLE public.saas_config_global (
+    id SERIAL PRIMARY KEY,
+    gemini_model TEXT DEFAULT 'gemini-3.1-flash-lite',
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RLS para Configuração Global
+ALTER TABLE public.saas_config_global ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Leitura pública para robôs" ON public.saas_config_global FOR SELECT USING (true);
 
 -- ----------------------------------------------------------------------------
 -- 6. SESSÕES LÚDICAS (HISTÓRICO)
@@ -502,7 +509,7 @@ CREATE TABLE public.planos_intervencao_ia (
     plano_original TEXT, -- Texto raw da IA
     recursos_sugeridos JSONB DEFAULT '[]'::jsonb, -- Lista de materiais/recursos (Adicionado V1.7.5)
     modelo_ia TEXT, -- Versão do modelo usado
-    last_thought_signature TEXT, -- Assinatura para manter contexto Gemini 3.1 (Adicionado V2.1)
+    last_thought_signature TEXT, -- Assinatura para manter contexto Gemini 3.1
     historico_chat JSONB DEFAULT '[]'::jsonb, -- Histórico de conversa para refinamento
     
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -740,17 +747,10 @@ CREATE POLICY "Users can manage their own google tokens" ON public.saas_integrac
 -- ALTER TABLE public.agendamentos ADD COLUMN google_event_id TEXT;
 
 -- ----------------------------------------------------------------------------
--- 11. FIRMWARE DO ROBÔ (MIGRATIONS ADICIONAIS)
+-- 11. FIRMWARE DO ROBÔ (INTEGRADO NA FROTA)
 -- ----------------------------------------------------------------------------
 
--- Adiciona coluna de versão do firmware (executar se não existir)
-ALTER TABLE public.saas_frota_robos
-ADD COLUMN IF NOT EXISTS versao_firmware TEXT DEFAULT NULL;
-
-COMMENT ON COLUMN public.saas_frota_robos.versao_firmware 
-IS 'Versão do firmware tirilo.py em execução. Atualizada automaticamente via heartbeat a cada 60s.';
-
--- Habilita RLS na tabela de frota (se ainda não estiver)
+-- Habilita RLS na tabela de frota
 ALTER TABLE public.saas_frota_robos ENABLE ROW LEVEL SECURITY;
 
 -- Permite leitura pública (robôs e dashboard)
