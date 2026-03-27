@@ -44,7 +44,6 @@ CREATE TABLE public.saas_clinicas (
     telefone_fixo TEXT,
     endereco JSONB, -- { "rua": "...", "numero": "...", ... } (Legado/Alternativo)
     
-    -- Endereço Estruturado (Adicionado em 12/12/2025)
     end_logradouro TEXT,
     end_numero TEXT,
     end_complemento TEXT,
@@ -55,7 +54,6 @@ CREATE TABLE public.saas_clinicas (
 
     logo_url TEXT,
     
-    -- Dados Adicionais (Adicionado em 12/12/2025)
     inscricao_estadual TEXT,
     inscricao_municipal TEXT,
     missao TEXT,
@@ -88,7 +86,6 @@ CREATE TABLE public.saas_operadoras (
     cnpj TEXT,
     registro_ans TEXT,
     
-    -- Endereço e Contato (Adicionado 1.10.0)
     endereco_logradouro TEXT,
     endereco_numero TEXT,
     endereco_complemento TEXT,
@@ -107,10 +104,6 @@ CREATE TABLE public.saas_operadoras (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-ALTER TABLE public.saas_operadoras ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Apenas autenticados" ON public.saas_operadoras
-    FOR ALL TO authenticated USING (true);
 
 -- ----------------------------------------------------------------------------
 -- 2. USUÁRIOS & PERMISSÕES
@@ -412,14 +405,16 @@ CREATE TABLE public.saas_diretrizes_ai (
 
 -- Configuração Global de IA
 CREATE TABLE public.saas_config_global (
-    id SERIAL PRIMARY KEY,
-    gemini_model TEXT DEFAULT 'gemini-3.1-flash-lite',
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- RLS para Configuração Global
-ALTER TABLE public.saas_config_global ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Leitura pública para robôs" ON public.saas_config_global FOR SELECT USING (true);
+-- Inserir o modelo Gemini padrão
+INSERT INTO public.saas_config_global (key, value)
+VALUES ('gemini_model_default', '"gemini-3.1-flash-lite-preview"')
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 -- ----------------------------------------------------------------------------
 -- 6. SESSÕES LÚDICAS (HISTÓRICO)
@@ -489,7 +484,7 @@ CREATE TABLE public.prompts_ia (
     nome_prompt TEXT NOT NULL,
     descricao TEXT,
     prompt_texto TEXT NOT NULL,
-    modelo_gemini TEXT DEFAULT 'gemini-3.1-flash-lite',
+    modelo_gemini TEXT DEFAULT 'gemini-3.1-flash-lite-preview',
     temperatura NUMERIC DEFAULT 0.7,
     ativo BOOLEAN DEFAULT TRUE,
     categoria TEXT DEFAULT 'plano',
@@ -504,10 +499,10 @@ CREATE TABLE public.planos_intervencao_ia (
     id_terapeuta UUID REFERENCES public.usuarios(id),
     id_prompt_ia BIGINT REFERENCES public.prompts_ia(id), -- Pode ser NULL
     
-    titulo TEXT, -- Título do plano (Adicionado V1.7.5)
+    titulo TEXT,
     plano_final TEXT, -- Texto gerado/importado
     plano_original TEXT, -- Texto raw da IA
-    recursos_sugeridos JSONB DEFAULT '[]'::jsonb, -- Lista de materiais/recursos (Adicionado V1.7.5)
+    recursos_sugeridos JSONB DEFAULT '[]'::jsonb,
     modelo_ia TEXT, -- Versão do modelo usado
     last_thought_signature TEXT, -- Assinatura para manter contexto Gemini 3.1
     historico_chat JSONB DEFAULT '[]'::jsonb, -- Histórico de conversa para refinamento
@@ -627,101 +622,12 @@ CREATE TABLE public.help_desk_mensagens (
     anexo_nome TEXT,
     anexo_tipo TEXT
 );
--- ----------------------------------------------------------------------------
--- 9. PERMISSÕES BÁSICAS (RESTAURAÇÃO PÓS-CLEANUP)
--- ----------------------------------------------------------------------------
-
--- Garantir que as roles padrão do Supabase tenham acesso ao schema public
-GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
-
--- Garantir acesso a todas as tabelas, sequências e funções
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
-
--- Configurar o schema public como padrão para as roles (opcional, mas recomendado)
-ALTER ROLE anon SET search_path TO public;
-ALTER ROLE authenticated SET search_path TO public;
-ALTER ROLE service_role SET search_path TO public;
 
 -- ----------------------------------------------------------------------------
--- POLÍTICAS DE SEGURANÇA (RLS) - PROMPTS IA
+-- 9. INTEGRAÇÕES (GOOGLE CALENDAR)
 -- ----------------------------------------------------------------------------
 
-ALTER TABLE public.prompts_ia ENABLE ROW LEVEL SECURITY;
-
--- Política de Leitura (SELECT):
--- Permite que qualquer usuário da mesma clínica leia os prompts.
--- Isso inclui terapeutas vendo prompts de admins (para clonagem).
-DROP POLICY IF EXISTS "Prompts Policy Select" ON prompts_ia;
-CREATE POLICY "Prompts Policy Select" ON prompts_ia
-FOR SELECT
-USING (
-  id_clinica IN (
-    SELECT id_clinica FROM usuarios WHERE id = auth.uid()
-  )
-);
-
--- Política de Inserção (INSERT):
--- Usuários podem criar prompts para sua clínica.
--- Se for Admin/Super, pode criar em nome de outros (mas a aplicação decide).
-DROP POLICY IF EXISTS "Prompts Policy Insert" ON prompts_ia;
-CREATE POLICY "Prompts Policy Insert" ON prompts_ia
-FOR INSERT
-WITH CHECK (
-  id_clinica IN (
-    SELECT id_clinica FROM usuarios WHERE id = auth.uid()
-  )
-);
-
--- Política de Atualização (UPDATE):
--- Permite editar apenas os PRÓPRIOS prompts ou se for Admin não-terapeuta.
-DROP POLICY IF EXISTS "Prompts Policy Update" ON prompts_ia;
-CREATE POLICY "Prompts Policy Update" ON prompts_ia
-FOR UPDATE
-USING (
-  id_clinica IN (
-    SELECT id_clinica FROM usuarios WHERE id = auth.uid()
-  )
-  AND (
-    terapeuta_id = auth.uid()
-    OR
-    EXISTS (
-      SELECT 1 FROM usuarios 
-      WHERE id = auth.uid() 
-      AND tipo_perfil != 'terapeuta'
-    )
-  )
-);
-
--- Política de Exclusão (DELETE):
--- Mesma regra de atualização: Dono ou Admin.
-);
-
--- ----------------------------------------------------------------------------
--- POLÍTICAS DE SEGURANÇA (RLS) - DIRETRIZES IA ROBÔ
--- ----------------------------------------------------------------------------
-
-ALTER TABLE public.saas_diretrizes_ai ENABLE ROW LEVEL SECURITY;
-
--- Robôs podem ler via chave anônima (SELECT público)
-CREATE POLICY "Diretrizes Policy Select Public" ON saas_diretrizes_ai
-FOR SELECT USING (true);
-
--- Apenas Super Admin (sem id_clinica) pode gerenciar
-CREATE POLICY "Diretrizes Policy Admin" ON saas_diretrizes_ai
-FOR ALL TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM usuarios WHERE id = auth.uid() AND id_clinica IS NULL
-  )
-);
-
--- ----------------------------------------------------------------------------
--- 10. INTEGRAÇÕES (GOOGLE CALENDAR)
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS public.saas_integracoes_google (
+CREATE TABLE public.saas_integracoes_google (
     id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     access_token TEXT NOT NULL,
@@ -737,38 +643,40 @@ CREATE TABLE IF NOT EXISTS public.saas_integracoes_google (
     CONSTRAINT unique_user_integration UNIQUE (user_id)
 );
 
+-- ----------------------------------------------------------------------------
+-- 10. PERMISSÕES BÁSICAS & SEGURANÇA (RLS)
+-- ----------------------------------------------------------------------------
+
+-- Garantir acesso ao schema public
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
+
+-- Habilitar RLS
+ALTER TABLE public.saas_operadoras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.saas_diretrizes_ai ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.saas_config_global ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.prompts_ia ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saas_integracoes_google ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can manage their own google tokens" ON public.saas_integracoes_google
-    FOR ALL
-    USING (auth.uid() = user_id);
-
--- Alteração na tabela de agendamentos para suportar integração
--- ALTER TABLE public.agendamentos ADD COLUMN google_event_id TEXT;
-
--- ----------------------------------------------------------------------------
--- 11. FIRMWARE DO ROBÔ (INTEGRADO NA FROTA)
--- ----------------------------------------------------------------------------
-
--- Habilita RLS na tabela de frota
 ALTER TABLE public.saas_frota_robos ENABLE ROW LEVEL SECURITY;
 
--- Permite leitura pública (robôs e dashboard)
-DROP POLICY IF EXISTS "frota_select_all" ON public.saas_frota_robos;
-CREATE POLICY "frota_select_all" ON public.saas_frota_robos
-FOR SELECT USING (true);
+-- Políticas de Segurança
+CREATE POLICY "Apenas autenticados" ON public.saas_operadoras FOR ALL TO authenticated USING (true);
 
--- Permite que o próprio robô (anon key) atualize seu próprio registro (firmware, heartbeat)
-DROP POLICY IF EXISTS "robots_can_update_own_firmware" ON public.saas_frota_robos;
-CREATE POLICY "robots_can_update_own_firmware" ON public.saas_frota_robos
-FOR UPDATE TO anon
-USING (true)
-WITH CHECK (true);
+CREATE POLICY "Prompts Policy Select" ON prompts_ia FOR SELECT USING (id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid()));
+CREATE POLICY "Prompts Policy Insert" ON prompts_ia FOR INSERT WITH CHECK (id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid()));
+CREATE POLICY "Prompts Policy Update" ON prompts_ia FOR UPDATE USING (id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid()) AND (terapeuta_id = auth.uid() OR EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND tipo_perfil != 'terapeuta')));
+CREATE POLICY "Prompts Policy Delete" ON prompts_ia FOR DELETE USING (id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid()) AND (terapeuta_id = auth.uid() OR EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND tipo_perfil != 'terapeuta')));
 
--- Permite que admins autenticados façam todas as operações
-DROP POLICY IF EXISTS "admins_manage_frota" ON public.saas_frota_robos;
-CREATE POLICY "admins_manage_frota" ON public.saas_frota_robos
-FOR ALL TO authenticated
-USING (true)
-WITH CHECK (true);
+CREATE POLICY "Diretrizes Policy Select Public" ON saas_diretrizes_ai FOR SELECT USING (true);
+CREATE POLICY "Diretrizes Policy Admin" ON saas_diretrizes_ai FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND id_clinica IS NULL));
+
+CREATE POLICY "Leitura pública para robôs" ON public.saas_config_global FOR SELECT USING (true);
+
+CREATE POLICY "Users can manage their own google tokens" ON public.saas_integracoes_google FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "frota_select_all" ON public.saas_frota_robos FOR SELECT USING (true);
+CREATE POLICY "robots_can_update_own_firmware" ON public.saas_frota_robos FOR UPDATE TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "admins_manage_frota" ON public.saas_frota_robos FOR ALL TO authenticated USING (true) WITH CHECK (true);
 

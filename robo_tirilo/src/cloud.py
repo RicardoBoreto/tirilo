@@ -119,16 +119,16 @@ class CloudManager:
             print(f"Error fetching config: {e}")
             return {}
 
-    def get_global_config(self):
-        """Busca configurações globais do sistema de saas_config_global."""
+    def get_global_config_value(self, key):
+        """Busca um valor específico de configuração global."""
         try:
-            res = self.client.table('saas_config_global').select('*').limit(1).execute()
+            res = self.client.table('saas_config_global').select('value').eq('key', key).execute()
             if res.data:
-                return res.data[0]
-            return {}
+                return res.data[0]['value']
+            return None
         except Exception as e:
-            print(f"CloudManager: erro ao buscar config global: {e}")
-            return {}
+            print(f"CloudManager: erro ao buscar config global '{key}': {e}")
+            return None
 
     def get_ai_directive(self, modo):
         """

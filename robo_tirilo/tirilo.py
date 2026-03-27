@@ -111,7 +111,7 @@ AZUL_ESPECIAL = (0, 50, 100) # Cor para o modo Doutor Tirilo
 HISTORICO_ANIMAIS = []
 
 # IA
-MODELO_IA = "gemini-3.1-flash-lite"
+MODELO_IA = "gemini-3.1-flash-lite-preview"
 ULTIMO_THOUGHT_SIGNATURE = None
 cloud_mgr = None
 
@@ -1550,9 +1550,9 @@ def loop_logica():
         # Carrega configurações globais (Modelo IA)
         global MODELO_IA
         global _jogos_disponiveis
-        config_global = cloud_mgr.get_global_config()
-        if config_global and config_global.get('gemini_model'):
-            MODELO_IA = config_global['gemini_model']
+        model_db = cloud_mgr.get_global_config_value('gemini_model_default')
+        if model_db:
+            MODELO_IA = model_db
             print(f"Cloud: Modelo IA configurado: {MODELO_IA}")
             
         _jogos_disponiveis = cloud_mgr.get_jogos_clinica()

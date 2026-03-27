@@ -10,11 +10,11 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
-## [1.13.0] - 20/03/2026
+## [1.13.0] - 20/03/2026 (Atualizado em 27/03/2026)
 
 ### 🤖 Migração Gemini 3.1 & Configuração Dinâmica
 - **SaaS (Cérebro do Tirilo):**
-  - Suporte nativo ao modelo `gemini-3.1-flash-lite`.
+  - Suporte nativo ao modelo `gemini-3.1-flash-lite-preview`.
   - Implementada circulação de `last_thought_signature` para persistir o raciocínio da IA entre interações.
   - Criada tabela `saas_config_global` para gerenciamento dinâmico de modelos via banco de dados (SaaS → Robô).
 - **Robô (Firmware v4.0):**
@@ -22,6 +22,7 @@ Cada versão segue o formato:
   - Lógica de persistência e envio de `thought_signature` integrada à telemetria.
 - **Documentação e Banco de Dados:**
   - `docs/TABELAS.sql` refatorado para representar o estado efetivo (limpo) do sistema.
+  - Correção: Nome do modelo atualizado para `gemini-3.1-flash-lite-preview` para compatibilidade com o endpoint v1beta.
   - Nova migração SQL (`20260320_migrate_gemini_31.sql`) para provisionamento automático.
 
 ---
