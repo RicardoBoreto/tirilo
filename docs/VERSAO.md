@@ -19,6 +19,8 @@ Cada versão segue o formato:
   - Criada tabela `saas_config_global` para gerenciamento dinâmico de modelos via banco de dados (SaaS → Robô).
 - **Robô (Firmware v4.0):**
   - Atualização do módulo `brain.py` para consulta dinâmica do modelo ativo no Supabase.
+    - Atualizado `MODELO_IA` no firmware e implementado `get_global_config_value` no `CloudManager`.
+    - Criado [Manual de Configuração Dinâmica de IA](file:///c:/Users/Boreto/Documents/IA/antigravity/SaaS_tirilo_v2/docs/MANUAL_IA_CONFIG.md) para facilitar futuras trocas de modelo sem código.
   - Lógica de persistência e envio de `thought_signature` integrada à telemetria.
 - **Documentação e Banco de Dados:**
   - `docs/TABELAS.sql` refatorado para representar o estado efetivo (limpo) do sistema.
