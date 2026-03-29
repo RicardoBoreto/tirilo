@@ -1357,13 +1357,13 @@ def log_terapeuta(conteudo):
     except: pass # Ignora falha de log
 
 def desligar_motores():
-    """Desativa todos os canais do PCA9685 (sem torque, sem ruído)."""
-    if olhos and olhos.kit:
-        for i in range(16):
-            try:
-                olhos.kit._pca.channels[i].duty_cycle = 0
-            except Exception:
-                pass
+    """Desativa todos os canais do PCA9685 via script externo."""
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ferramentas", "desligar_servos.py")
+    try:
+        subprocess.run(["python3", script], timeout=5, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+        print("desligar_motores: todos os servos desativados.")
+    except Exception as e:
+        print(f"desligar_motores: erro ao desligar servos: {e}")
 
 def finalizar_modo_geral():
     """Para tudo: jogos, música, fala e visão."""
