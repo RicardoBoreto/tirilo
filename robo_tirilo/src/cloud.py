@@ -247,6 +247,51 @@ class CloudManager:
         print(f"Cloud: {len(jogos)} jogo(s) carregado(s): {[j['codigo'] for j in jogos]}")
         return jogos
 
+    def get_perfis_clinica(self):
+        """Retorna todos os perfis de personalidade ativos para a clínica."""
+        if not self.clinica_id:
+            self.check_status()
+        try:
+            res = self.client.table('saas_perfis_robo') \
+                .select('id, nome, descricao, prompt_instrucao, modo_base, ativo') \
+                .eq('clinica_id', self.clinica_id) \
+                .eq('ativo', True) \
+                .order('nome') \
+                .execute()
+            return res.data or []
+        except Exception as e:
+            print(f"Cloud: erro ao buscar perfis: {e}")
+            return []
+
+    def get_perfil_ativo(self):
+        """Retorna o perfil ativo do robô buscando perfil_ativo_id em saas_frota_robos."""
+        try:
+            res = self.client.table('saas_frota_robos') \
+                .select('perfil_ativo_id') \
+                .eq('mac_address', self.mac_address) \
+                .maybeSingle() \
+                .execute()
+            if not res.data or not res.data.get('perfil_ativo_id'):
+                return {}
+            perfil_id = res.data['perfil_ativo_id']
+            return self.get_perfil_por_id(perfil_id)
+        except Exception as e:
+            print(f"Cloud: erro ao buscar perfil ativo: {e}")
+            return {}
+
+    def get_perfil_por_id(self, perfil_id):
+        """Retorna um perfil pelo ID."""
+        try:
+            res = self.client.table('saas_perfis_robo') \
+                .select('id, nome, descricao, prompt_instrucao, modo_base') \
+                .eq('id', perfil_id) \
+                .maybeSingle() \
+                .execute()
+            return res.data or {}
+        except Exception as e:
+            print(f"Cloud: erro ao buscar perfil {perfil_id}: {e}")
+            return {}
+
     def register_callback(self, callback):
         """Registers a callback function for incoming commands."""
         self.callbacks.append(callback)

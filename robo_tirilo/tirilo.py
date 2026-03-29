@@ -75,6 +75,24 @@ AUTOR = "Ricardo Alonso Boreto"
 QTD_CHARADAS = 5 
 
 DISPOSITIVO_AUDIO = "plughw:0,0"
+
+# Testa suporte a PyAudio/VAD uma única vez no startup
+def _testar_vad():
+    try:
+        import pyaudio
+        pa = pyaudio.PyAudio()
+        mic_idx = next((i for i in range(pa.get_device_count())
+                        if pa.get_device_info_by_index(i).get("maxInputChannels", 0) > 0), None)
+        s = pa.open(format=pyaudio.paInt16, channels=1, rate=16000,
+                    input=True, input_device_index=mic_idx, frames_per_buffer=1024)
+        s.close(); pa.terminate()
+        return True
+    except Exception:
+        return False
+
+_VAD_DISPONIVEL = _testar_vad()
+if not _VAD_DISPONIVEL:
+    print("Audio: PyAudio/VAD indisponivel neste hardware, usando arecord.")
 ARQUIVO_REC = "/tmp/voz_usuario.wav"
 ARQUIVO_TTS = "/tmp/resposta_robo.wav" # Alterado para WAV
 DIR_BASE_SCRIPT = os.path.dirname(os.path.abspath(__file__))
@@ -119,6 +137,7 @@ cloud_mgr = None
 _cache_diretriz: dict = {}   # {modo: (texto, timestamp)}
 _CACHE_DIRETRIZ_TTL = 300    # 5 minutos
 _jogos_disponiveis: list = []  # Carregado do Supabase: [{nome, codigo, descricao}]
+_perfil_ativo: dict = {}       # Perfil ativo: {id, nome, prompt_instrucao, modo_base}
 
 
 # --- INICIALIZAÇÃO DE ARQUIVOS ---
@@ -864,9 +883,17 @@ def _capturar_com_vad(arquivo_saida):
             mic_idx = i
             break
 
-    stream = pa.open(format=pyaudio.paInt16, channels=1, rate=RATE,
-                     input=True, input_device_index=mic_idx,
-                     frames_per_buffer=CHUNK)
+    # Tenta 16000 Hz; se falhar, usa 44100 Hz (compatível com C-Media USB)
+    taxa_real = RATE
+    try:
+        stream = pa.open(format=pyaudio.paInt16, channels=1, rate=RATE,
+                         input=True, input_device_index=mic_idx,
+                         frames_per_buffer=CHUNK)
+    except Exception:
+        taxa_real = 44100
+        stream = pa.open(format=pyaudio.paInt16, channels=1, rate=taxa_real,
+                         input=True, input_device_index=mic_idx,
+                         frames_per_buffer=CHUNK)
     frames = []
     silent_count = 0
     speaking = False
@@ -905,16 +932,23 @@ def capturar_voz():
         time.sleep(0.2)
 
         # Tenta VAD via pyaudio; fallback para arecord 4s fixo se não disponível
-        try:
-            _capturar_com_vad(ARQUIVO_REC)
-        except RuntimeError:
-            # Silêncio total — nada a transcrever
-            if gui: gui.set_status("Pronto!", CINZA)
-            return None
-        except Exception as e_vad:
-            print(f"VAD indisponível ({e_vad}), usando arecord 4s...")
+        if _VAD_DISPONIVEL:
+            try:
+                _capturar_com_vad(ARQUIVO_REC)
+            except RuntimeError:
+                if gui: gui.set_status("Pronto!", CINZA)
+                return None
+            except Exception as e_vad:
+                print(f"VAD falhou ({e_vad}), usando arecord 4s...")
+                subprocess.run(
+                    ["arecord", "-D", DISPOSITIVO_AUDIO, "-d", "4",
+                     "-f", "S16_LE", "-r", "44100", "-c", "1", "-q", ARQUIVO_REC],
+                    check=True
+                )
+        else:
             subprocess.run(
-                ["arecord", "-D", DISPOSITIVO_AUDIO, "-d", "4", "-f", "cd", "-q", ARQUIVO_REC],
+                ["arecord", "-D", DISPOSITIVO_AUDIO, "-d", "4",
+                 "-f", "S16_LE", "-r", "44100", "-c", "1", "-q", ARQUIVO_REC],
                 check=True
             )
 
@@ -1064,7 +1098,7 @@ def perguntar_gemini(texto):
     try:
         # --- 1. ANIMAÇÃO IMEDIATA ---
         _parar_fala.clear()  # Reseta barge-in para esta interação
-        antigo_modo_visao = MODO_VISAO_ATIVO
+        antigo_modo_visao = True  # sempre restaura para True ao sair
         MODO_VISAO_ATIVO = False
         if olhos:
             threading.Thread(target=olhos.olhar_cima, daemon=True).start()
@@ -1074,7 +1108,11 @@ def perguntar_gemini(texto):
             log_terapeuta(f"Terapeuta: {texto}")
 
         # --- 2. PREPARA PROMPT E INICIA STREAM EM PARALELO ---
-        instrucao = ler_diretriz_ia(MODO_ROBO_ATUAL)
+        # Usa prompt do perfil ativo se disponível, senão fallback para diretriz legacy
+        if _perfil_ativo and _perfil_ativo.get("prompt_instrucao"):
+            instrucao = _perfil_ativo["prompt_instrucao"]
+        else:
+            instrucao = ler_diretriz_ia(MODO_ROBO_ATUAL)
 
         # Garante instruções de jogo mesmo se a diretriz vier do Supabase sem elas
         if MODO_ROBO_ATUAL == "CRIANCA":
@@ -1231,7 +1269,83 @@ Criança: "brincar" → "Que divertido! Vamos jogar! [JOGO:{exemplo_codigo}]"
     except Exception as e:
         print(f"ERRO IA: {e}")
         TEXTO_RESPOSTA_IA = f"Erro IA: {str(e)[:40]}..."
+        MODO_VISAO_ATIVO = True  # garante que tracking volta mesmo em erro
         return "Tive um erro."
+
+def executar_movimento_voz(texto_l):
+    """Detecta comandos de movimento corporal por voz e executa.
+    Retorna True se um movimento foi executado, False caso contrário."""
+    if not olhos:
+        return False
+
+    if any(x in texto_l for x in ["piscar olho direito", "pisca olho direito", "pisca o direito", "olho direito pisca"]):
+        falar("Piscando o olho direito!")
+        olhos.piscar_aleatorio("olho_direito"); return True
+
+    if any(x in texto_l for x in ["piscar olho esquerdo", "pisca olho esquerdo", "pisca o esquerdo", "olho esquerdo pisca"]):
+        falar("Piscando o olho esquerdo!")
+        olhos.piscar_aleatorio("olho_esquerdo"); return True
+
+    if any(x in texto_l for x in ["piscar", "pisca os olhos", "pisca olhos"]):
+        falar("Piscando!")
+        olhos.piscar(); return True
+
+    if any(x in texto_l for x in ["abra a boca", "abre a boca", "abre boca", "abrir boca"]):
+        falar("Abrindo a boca!")
+        olhos.mover_boca(100); return True
+
+    if any(x in texto_l for x in ["fecha a boca", "fecha boca", "fechar boca", "feche a boca"]):
+        falar("Fechando a boca!")
+        olhos.mover_boca(0); return True
+
+    if any(x in texto_l for x in ["olhe para a direita", "olha para a direita", "olha direita", "olhe direita", "vire para a direita"]):
+        falar("Olhando para a direita!")
+        olhos.mover_suave_ambos(h_alvo=0, v_alvo=50, duracao=0.4); return True
+
+    if any(x in texto_l for x in ["olhe para a esquerda", "olha para a esquerda", "olha esquerda", "olhe esquerda", "vire para a esquerda"]):
+        falar("Olhando para a esquerda!")
+        olhos.mover_suave_ambos(h_alvo=100, v_alvo=50, duracao=0.4); return True
+
+    if any(x in texto_l for x in ["olhe para cima", "olha para cima", "olha cima", "olhe cima"]):
+        falar("Olhando para cima!")
+        olhos.olhar_cima(); return True
+
+    if any(x in texto_l for x in ["olhe para baixo", "olha para baixo", "olha baixo", "olhe baixo"]):
+        falar("Olhando para baixo!")
+        olhos.mover_suave_ambos(h_alvo=50, v_alvo=90, duracao=0.4); return True
+
+    if any(x in texto_l for x in ["olhe para mim", "olha para mim", "me olhe", "me olha", "olhe para frente", "olha frente", "posição neutra", "fique normal", "fica normal"]):
+        falar("Olhando para você!")
+        olhos.olhar_neutro(); return True
+
+    if any(x in texto_l for x in ["fique vesgo", "fica vesgo", "olhos vesgos", "fique de vesgo"]):
+        falar("Ficando vesgo!")
+        olhos.olhar_vesgo()
+        time.sleep(1.5)
+        olhos.olhar_neutro(suave=True); return True
+
+    if any(x in texto_l for x in ["fique triste", "fica triste", "expressão triste", "cara triste"]):
+        falar("Estou triste...")
+        olhos.olhar_triste(); return True
+
+    if any(x in texto_l for x in ["fique surpreso", "fica surpreso", "expressão de surpresa", "olhos arregalados"]):
+        falar("Que surpresa!")
+        olhos.surpresa(); return True
+
+    if any(x in texto_l for x in ["acorde", "animação acordar", "animacao acordar"]):
+        falar("Acordando!")
+        olhos.animacao_acordar(); return True
+
+    if any(x in texto_l for x in ["durma", "animação dormir", "animacao dormir"]):
+        falar("Estou com sono...")
+        olhos.animacao_dormir(); return True
+
+    if any(x in texto_l for x in ["galope", "galopa", "galopa os olhos"]):
+        falar("Galopando!")
+        olhos.alternar_piscar(batidas=4, vel=0.15); return True
+
+    return False
+
 
 def log_terapeuta(conteudo):
     """Grava interações ou modificações em um arquivo de log para análise."""
@@ -1319,6 +1433,7 @@ def jogar_emocoes():
     if gui.ultimo_toque: gui.ultimo_toque = None; gui.parar_jogo(); falar("Parando."); return
     if resp and ("surpreso" in resp or "assustado" in resp): falar("Acertou!")
     else: falar("Estou surpreso!")
+    if olhos: olhos.olhar_neutro()
     gui.parar_jogo(); falar("Foi divertido!")
 
 def jogar_adivinhacao():
@@ -1395,6 +1510,7 @@ def jogar_adivinhacao():
         gui.texto_jogo = "?"
     
     falar(f"Fim de jogo! Você fez {pontos} pontos.")
+    if olhos: olhos.olhar_neutro()
     gui.parar_jogo();
 
 def tocar_musica():
@@ -1556,11 +1672,23 @@ def loop_logica():
             print(f"Cloud: Modelo IA configurado: {MODELO_IA}")
             
         _jogos_disponiveis = cloud_mgr.get_jogos_clinica()
+        global _perfil_ativo
+        _perfil_ativo = cloud_mgr.get_perfil_ativo() or {}
+        if _perfil_ativo:
+            modo_base = _perfil_ativo.get('modo_base', 'CRIANCA').upper()
+            MODO_ROBO_ATUAL = modo_base
+            print(f"Cloud: Perfil ativo: {_perfil_ativo.get('nome')} (modo {modo_base})")
+        else:
+            print("Cloud: Nenhum perfil ativo configurado, usando diretriz padrão.")
 
     falar(f"Olá! Eu sou o {NOME_ROBO}. Minha inteligência artificial está ligada. Como posso ajudar você hoje?")
     
     while gui.running:
         try:
+            # Pausa o loop principal enquanto um jogo está capturando voz
+            if gui and gui.modo_jogo:
+                time.sleep(0.3)
+                continue
             texto = capturar_voz()
             
             if not texto: 
@@ -1582,6 +1710,20 @@ def loop_logica():
                             _cache_diretriz.clear()
                             print("Diretrizes: cache limpo, próxima interação recarrega do Supabase.")
                             falar("Diretrizes atualizadas.")
+                        elif payload == "MUDAR_PERFIL":
+                            global _perfil_ativo
+                            perfil_id = cmd.get('parametros', {}).get('perfil_id')
+                            if perfil_id and cloud_mgr:
+                                novo = cloud_mgr.get_perfil_por_id(perfil_id)
+                                if novo:
+                                    _perfil_ativo = novo
+                                    modo_base = novo.get('modo_base', 'CRIANCA').upper()
+                                    if modo_base == 'TERAPEUTA':
+                                        threading.Thread(target=iniciar_modo_terapeuta).start()
+                                    else:
+                                        threading.Thread(target=finalizar_modo_terapeuta).start()
+                                    falar(f"Perfil alterado para {novo['nome']}.")
+                                    print(f"Perfil ativo: {novo['nome']} (modo {modo_base})")
                         elif payload == "FALAR":
                             msg = cmd.get('parametros', {}).get('texto', '')
                             if msg: falar(msg)
@@ -1710,6 +1852,9 @@ def loop_logica():
                     falar("Listando arquivos de logs.")
                     continue
                 
+                # Comandos de movimento corporal por voz
+                if executar_movimento_voz(texto_l):
+                    continue
                 # Conversa normal de IA no modo terapeuta
                 if modo_ia_ativo:
                     perguntar_gemini(texto)  # já fala internamente via streaming
@@ -1724,6 +1869,10 @@ def loop_logica():
             if "desativar" in texto_l or "eco" in texto_l:
                 TEXTO_RESPOSTA_IA = "Modo Eco: IA desativada." # Feedback na tela
                 modo_ia_ativo = False; falar("Modo Eco."); continue
+
+            # Comandos de movimento corporal por voz
+            if executar_movimento_voz(texto_l):
+                continue
 
             if modo_ia_ativo:
                 perguntar_gemini(texto)  # já fala internamente via streaming

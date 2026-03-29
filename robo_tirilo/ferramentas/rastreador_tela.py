@@ -64,6 +64,9 @@ def main():
             print("Iniciando motores (olhos)...")
             olhos = ControladorOlhos()
             olhos.olhar_neutro()
+            time.sleep(0.5)
+            olhos.fechar_palpebra("olho_direito", 30)
+            olhos.fechar_palpebra("olho_esquerdo", 30)
         except Exception as e:
             print(f"Erro ao ligar motores: {e}")
 

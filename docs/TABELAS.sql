@@ -1,7 +1,7 @@
 
 -- ============================================================================
--- TIRILO SAAS - SCHEMA DE BANCO DE DADOS (V2.1)
--- Atualizado em: 20/03/2026
+-- TIRILO SAAS - SCHEMA DE BANCO DE DADOS (V2.2)
+-- Atualizado em: 29/03/2026
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -679,4 +679,27 @@ CREATE POLICY "Users can manage their own google tokens" ON public.saas_integrac
 CREATE POLICY "frota_select_all" ON public.saas_frota_robos FOR SELECT USING (true);
 CREATE POLICY "robots_can_update_own_firmware" ON public.saas_frota_robos FOR UPDATE TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "admins_manage_frota" ON public.saas_frota_robos FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- ----------------------------------------------------------------------------
+-- PERFIS DE PERSONALIDADE DO ROBÔ (V1.14)
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE public.saas_perfis_robo (
+    id          SERIAL PRIMARY KEY,
+    clinica_id  INTEGER REFERENCES public.saas_clinicas(id),
+    nome        TEXT NOT NULL,
+    descricao   TEXT,
+    prompt_instrucao TEXT NOT NULL,
+    modo_base   TEXT NOT NULL DEFAULT 'CRIANCA' CHECK (modo_base IN ('CRIANCA', 'TERAPEUTA')),
+    ativo       BOOLEAN DEFAULT TRUE,
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.saas_perfis_robo ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Perfis leitura anon" ON public.saas_perfis_robo FOR SELECT USING (true);
+CREATE POLICY "Perfis gestao autenticados" ON public.saas_perfis_robo FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Coluna de perfil ativo no robô
+ALTER TABLE public.saas_frota_robos ADD COLUMN IF NOT EXISTS perfil_ativo_id INTEGER REFERENCES public.saas_perfis_robo(id);
 

@@ -13,9 +13,14 @@ import {
     updateRobot,
     getDirectives,
     saveDirective,
+    getPerfis,
+    savePerfil,
+    deletePerfil,
+    ativarPerfil,
     type Robot,
     type RobotConfig,
-    type Telemetry
+    type Telemetry,
+    type PerfilRobo
 } from '@/lib/actions/robo'
 import { getAllClinics } from '@/lib/actions/clinicas'
 import MaintenancePanel from './MaintenancePanel'
@@ -33,11 +38,18 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
     const [prompt, setPrompt] = useState('')
     const [voice, setVoice] = useState('pt-br')
 
-    // Diretrizes IA
+    // Diretrizes IA (legado)
     const [dirCrianca, setDirCrianca] = useState('')
     const [dirTerapeuta, setDirTerapeuta] = useState('')
     const [isSavingDir, setIsSavingDir] = useState(false)
     const [dirSaveMsg, setDirSaveMsg] = useState('')
+
+    // Perfis de Personalidade
+    const [perfis, setPerfis] = useState<PerfilRobo[]>([])
+    const [perfilEdit, setPerfilEdit] = useState<Partial<PerfilRobo> | null>(null)
+    const [isSavingPerfil, setIsSavingPerfil] = useState(false)
+    const [perfilMsg, setPerfilMsg] = useState('')
+    const [perfilAtivoId, setPerfilAtivoId] = useState<number | null>(null)
 
     // New Robot Form
     const [newMac, setNewMac] = useState('')
@@ -68,6 +80,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         loadConfig()
         loadClinics()
         loadDirectives()
+        loadPerfis()
     }, [clinicaId])
 
     useEffect(() => {
@@ -142,6 +155,51 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         for (const d of data) {
             if (d.modo === 'CRIANCA') setDirCrianca(d.diretriz)
             if (d.modo === 'TERAPEUTA') setDirTerapeuta(d.diretriz)
+        }
+    }
+
+    async function loadPerfis() {
+        if (!clinicaId) return
+        const data = await getPerfis(clinicaId)
+        setPerfis(data)
+    }
+
+    async function handleSavePerfil() {
+        if (!clinicaId || !perfilEdit) return
+        setIsSavingPerfil(true)
+        setPerfilMsg('')
+        try {
+            await savePerfil(clinicaId, perfilEdit as Omit<PerfilRobo, 'clinica_id'>)
+            setPerfilMsg('Perfil salvo!')
+            setPerfilEdit(null)
+            await loadPerfis()
+            setTimeout(() => setPerfilMsg(''), 3000)
+        } catch (e) {
+            setPerfilMsg('Erro: ' + e)
+        } finally {
+            setIsSavingPerfil(false)
+        }
+    }
+
+    async function handleDeletePerfil(id: number) {
+        if (!confirm('Excluir este perfil?')) return
+        try {
+            await deletePerfil(id)
+            await loadPerfis()
+        } catch (e) {
+            alert('Erro ao excluir: ' + e)
+        }
+    }
+
+    async function handleAtivarPerfil(perfil: PerfilRobo) {
+        if (!selectedRobot) return
+        try {
+            await ativarPerfil(selectedRobot.mac_address, perfil.id!, selectedRobot.id)
+            setPerfilAtivoId(perfil.id!)
+            setPerfilMsg(`Perfil "${perfil.nome}" ativado no robô!`)
+            setTimeout(() => setPerfilMsg(''), 3000)
+        } catch (e) {
+            setPerfilMsg('Erro ao ativar: ' + e)
         }
     }
 
@@ -771,6 +829,137 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                     </button>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* PERFIS DE PERSONALIDADE */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-bold text-lg flex items-center gap-2">
+                                    <span className="bg-blue-100 text-blue-700 p-1.5 rounded-lg">🎭</span>
+                                    Perfis de Personalidade
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                    {perfilMsg && (
+                                        <span className={`text-sm font-medium px-3 py-1 rounded-full ${perfilMsg.startsWith('Erro') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                            {perfilMsg}
+                                        </span>
+                                    )}
+                                    <button
+                                        onClick={() => setPerfilEdit({ nome: '', descricao: '', prompt_instrucao: '', modo_base: 'CRIANCA', ativo: true })}
+                                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 font-medium"
+                                    >
+                                        + Novo Perfil
+                                    </button>
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-500 mb-4">
+                                Crie quantos perfis quiser com nomes e prompts personalizados. Ative um perfil no robô com um clique.
+                            </p>
+
+                            {/* Lista de Perfis */}
+                            <div className="space-y-2 mb-4">
+                                {perfis.length === 0 && (
+                                    <p className="text-sm text-gray-400 italic">Nenhum perfil criado ainda.</p>
+                                )}
+                                {perfis.map(p => (
+                                    <div key={p.id} className={`flex items-center justify-between p-3 rounded-lg border ${perfilAtivoId === p.id ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700'}`}>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-semibold text-sm">{p.nome}</span>
+                                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.modo_base === 'TERAPEUTA' ? 'bg-indigo-100 text-indigo-700' : 'bg-green-100 text-green-700'}`}>
+                                                    {p.modo_base === 'TERAPEUTA' ? '🩺 Terapeuta' : '🧒 Criança'}
+                                                </span>
+                                                {perfilAtivoId === p.id && <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">● Ativo</span>}
+                                            </div>
+                                            {p.descricao && <p className="text-xs text-gray-500 mt-0.5 truncate">{p.descricao}</p>}
+                                        </div>
+                                        <div className="flex items-center gap-1 ml-2 shrink-0">
+                                            <button
+                                                onClick={() => handleAtivarPerfil(p)}
+                                                disabled={!selectedRobot}
+                                                className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40 font-medium"
+                                            >
+                                                Ativar
+                                            </button>
+                                            <button
+                                                onClick={() => setPerfilEdit({ ...p })}
+                                                className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300"
+                                            >
+                                                Editar
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeletePerfil(p.id!)}
+                                                className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Formulário de Edição/Criação */}
+                            {perfilEdit !== null && (
+                                <div className="border border-blue-200 rounded-xl p-4 bg-blue-50 dark:bg-blue-900/20">
+                                    <h4 className="font-semibold text-sm mb-3">{perfilEdit.id ? 'Editar Perfil' : 'Novo Perfil'}</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">Nome do Perfil *</label>
+                                            <input
+                                                value={perfilEdit.nome || ''}
+                                                onChange={e => setPerfilEdit(prev => ({ ...prev!, nome: e.target.value }))}
+                                                className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm bg-white dark:bg-gray-700"
+                                                placeholder="Ex: Autismo Leve, Fonoaudiologia..."
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-600 mb-1">Modo Base</label>
+                                            <select
+                                                value={perfilEdit.modo_base || 'CRIANCA'}
+                                                onChange={e => setPerfilEdit(prev => ({ ...prev!, modo_base: e.target.value as 'CRIANCA' | 'TERAPEUTA' }))}
+                                                className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm bg-white dark:bg-gray-700"
+                                            >
+                                                <option value="CRIANCA">🧒 Criança (voz robótica, jogos)</option>
+                                                <option value="TERAPEUTA">🩺 Terapeuta (voz neural, log clínico)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Descrição (opcional)</label>
+                                        <input
+                                            value={perfilEdit.descricao || ''}
+                                            onChange={e => setPerfilEdit(prev => ({ ...prev!, descricao: e.target.value }))}
+                                            className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm bg-white dark:bg-gray-700"
+                                            placeholder="Ex: Perfil para crianças com TEA nível 1"
+                                        />
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">Prompt de Instrução (System Prompt) *</label>
+                                        <textarea
+                                            value={perfilEdit.prompt_instrucao || ''}
+                                            onChange={e => setPerfilEdit(prev => ({ ...prev!, prompt_instrucao: e.target.value }))}
+                                            rows={8}
+                                            className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-600 text-sm font-mono bg-white dark:bg-gray-700 resize-y"
+                                            placeholder="Você é o Robô Tirilo. Fale de forma clara e pausada para crianças com dificuldades de comunicação..."
+                                        />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                        <button
+                                            onClick={() => setPerfilEdit(null)}
+                                            className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            onClick={handleSavePerfil}
+                                            disabled={isSavingPerfil || !perfilEdit.nome?.trim() || !perfilEdit.prompt_instrucao?.trim()}
+                                            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                                        >
+                                            {isSavingPerfil ? 'Salvando...' : 'Salvar Perfil'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* CONECTIVIDADE & SUPORTE (NOVO) */}

@@ -50,6 +50,16 @@ export interface Diretriz {
     diretriz: string;
 }
 
+export interface PerfilRobo {
+    id?: number;
+    clinica_id: number | null;
+    nome: string;
+    descricao?: string;
+    prompt_instrucao: string;
+    modo_base: 'CRIANCA' | 'TERAPEUTA';
+    ativo?: boolean;
+}
+
 // --- Helpers ---
 function normalizeMac(mac: string): string {
     return mac.trim().toUpperCase().replace(/[^A-F0-9:]/g, '');
@@ -245,3 +255,51 @@ export async function updateRobot(id: string, data: Partial<Robot>) {
     revalidatePath('/admin/robo');
 }
 
+
+// --- Perfis de Personalidade ---
+
+export async function getPerfis(clinicaId: string) {
+    const supabase = await createAdminClient();
+    const { data, error } = await supabase
+        .from('saas_perfis_robo')
+        .select('*')
+        .eq('clinica_id', clinicaId)
+        .order('nome');
+    if (error) return [] as PerfilRobo[];
+    return data as PerfilRobo[];
+}
+
+export async function savePerfil(clinicaId: string, perfil: Omit<PerfilRobo, 'clinica_id'>) {
+    const supabase = await createAdminClient();
+    if (perfil.id) {
+        const { error } = await supabase
+            .from('saas_perfis_robo')
+            .update({ nome: perfil.nome, descricao: perfil.descricao, prompt_instrucao: perfil.prompt_instrucao, modo_base: perfil.modo_base, ativo: perfil.ativo ?? true })
+            .eq('id', perfil.id);
+        if (error) throw new Error(error.message);
+    } else {
+        const { error } = await supabase
+            .from('saas_perfis_robo')
+            .insert({ clinica_id: parseInt(clinicaId), nome: perfil.nome, descricao: perfil.descricao, prompt_instrucao: perfil.prompt_instrucao, modo_base: perfil.modo_base, ativo: true });
+        if (error) throw new Error(error.message);
+    }
+    revalidatePath('/admin/robo');
+}
+
+export async function deletePerfil(perfilId: number) {
+    const supabase = await createAdminClient();
+    const { error } = await supabase.from('saas_perfis_robo').delete().eq('id', perfilId);
+    if (error) throw new Error(error.message);
+    revalidatePath('/admin/robo');
+}
+
+export async function ativarPerfil(robotMac: string, perfilId: number, robotId: string) {
+    const supabase = await createAdminClient();
+    const { error } = await supabase
+        .from('saas_frota_robos')
+        .update({ perfil_ativo_id: perfilId })
+        .eq('id', robotId);
+    if (error) throw new Error(error.message);
+    await sendCommand(robotMac, 'MUDAR_PERFIL', { perfil_id: perfilId });
+    revalidatePath('/admin/robo');
+}
