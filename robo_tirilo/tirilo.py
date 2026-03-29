@@ -1804,6 +1804,13 @@ def loop_logica():
                                 # Pausa piscada e rastreamento; aguarda câmera ser liberada
                                 global MODO_VISAO_ATIVO, _ev_camera_livre, _pausar_piscar, _processo_externo
                                 _pausar_piscar = True
+                                # Encerra qualquer programa externo em execução (ex: rastreador)
+                                if _processo_externo and _processo_externo.poll() is None:
+                                    _processo_externo.terminate()
+                                    try: _processo_externo.wait(timeout=2)
+                                    except Exception: pass
+                                    _processo_externo = None
+                                    time.sleep(0.3)  # aguarda servos estabilizarem
                                 visao_estava_ativa = MODO_VISAO_ATIVO
                                 if visao_estava_ativa:
                                     _ev_camera_livre.clear()
