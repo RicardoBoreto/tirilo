@@ -10,6 +10,24 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.14.0] - 29/03/2026
+
+### 🎭 Perfis de Personalidade do Robô
+- **SaaS:** nova seção "Perfis de Personalidade" no RobotDashboard — crie, edite, exclua e ative perfis ilimitados por clínica, cada um com nome, modo base (Criança/Terapeuta) e prompt personalizado.
+- **Robô (Firmware v4.1):** ao receber comando `MUDAR_PERFIL`, exibe o nome do perfil na tela antes de falar, depois ativa o prompt correspondente.
+- **Banco de Dados:** nova tabela `saas_perfis_robo` + coluna `perfil_ativo_id` em `saas_frota_robos`.
+- **Correções de firmware:**
+  - Fechamento: ao dizer "tchau/sair" fecha as pálpebras e desativa todos os servos via subprocess.
+  - Coreografia: encerra processo externo anterior antes de iniciar novo (resolve trembling dos olhos quando rastreador e coreografia rodavam juntos).
+  - `maybeSingle()` substituído por `.execute()` no CloudManager Python (inexistente no SDK Python).
+  - `global _perfil_ativo` duplicado removido (SyntaxError Python 3).
+  - VAD (`_VAD_DISPONIVEL`), arecord `-f S16_LE`, conflito de captura de voz em jogos, pálpebras após jogos, MODO_VISAO_ATIVO hardcoded True.
+- **Ferramentas:** `desligar_servos.py` e `teste_movimentos.py`.
+- **RLS:** `saas_operadoras` e `saas_perfis_robo` com políticas de segurança.
+- **Docs:** `TABELAS.sql` consolidado (V2.3) — sem ALTER TABLE de colunas, pronto para ambiente novo.
+
+---
+
 ## [1.13.0] - 20/03/2026 (Atualizado em 27/03/2026)
 
 ### 🤖 Migração Gemini 3.1 & Configuração Dinâmica

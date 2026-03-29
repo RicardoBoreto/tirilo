@@ -1,7 +1,9 @@
 
 -- ============================================================================
--- TIRILO SAAS - SCHEMA DE BANCO DE DADOS (V2.2)
+-- TIRILO SAAS - SCHEMA DE BANCO DE DADOS (V2.3 - Consolidado)
 -- Atualizado em: 29/03/2026
+-- ATENÇÃO: Este arquivo é o schema consolidado para provisionamento de ambiente novo.
+-- Não deve conter ALTER TABLE para adicionar colunas — tudo já está no CREATE TABLE.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -375,11 +377,26 @@ CREATE TABLE public.saas_frota_robos (
     usuario_ssh TEXT DEFAULT 'pi',
     modelo_contrato TEXT DEFAULT 'VENDA',
     status_financeiro TEXT DEFAULT 'ADIMPLENTE',
-    versao_firmware TEXT DEFAULT NULL -- Versão do firmware tirilo.py (atualizada via heartbeat)
+    versao_firmware TEXT DEFAULT NULL, -- Versão do firmware tirilo.py (atualizada via heartbeat)
+    perfil_ativo_id INTEGER -- FK para saas_perfis_robo (definida após criação da tabela)
 );
 
-COMMENT ON COLUMN public.saas_frota_robos.versao_firmware 
+COMMENT ON COLUMN public.saas_frota_robos.versao_firmware
 IS 'Versão do firmware tirilo.py em execução. Atualizada automaticamente via heartbeat a cada 60s.';
+
+-- Perfis de Personalidade do Robô (V1.14)
+CREATE TABLE public.saas_perfis_robo (
+    id               SERIAL PRIMARY KEY,
+    clinica_id       INTEGER REFERENCES public.saas_clinicas(id),
+    nome             TEXT NOT NULL,
+    descricao        TEXT,
+    prompt_instrucao TEXT NOT NULL,
+    modo_base        TEXT NOT NULL DEFAULT 'CRIANCA'
+                         CHECK (modo_base IN ('CRIANCA', 'TERAPEUTA')),
+    ativo            BOOLEAN DEFAULT TRUE,
+    created_at       TIMESTAMPTZ DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ DEFAULT NOW()
+);
 
 -- Configuração de IA da Clínica (Personalidade)
 CREATE TABLE public.clinica_config_ia (
@@ -660,6 +677,11 @@ ALTER TABLE public.saas_config_global ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.prompts_ia ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saas_integracoes_google ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saas_frota_robos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.saas_perfis_robo ENABLE ROW LEVEL SECURITY;
+
+-- FK de perfil_ativo_id (definida após criação de saas_perfis_robo)
+ALTER TABLE public.saas_frota_robos
+    ADD CONSTRAINT fk_perfil_ativo FOREIGN KEY (perfil_ativo_id) REFERENCES public.saas_perfis_robo(id);
 
 -- Políticas de Segurança
 CREATE POLICY "Apenas autenticados" ON public.saas_operadoras FOR ALL TO authenticated USING (true);
@@ -680,26 +702,7 @@ CREATE POLICY "frota_select_all" ON public.saas_frota_robos FOR SELECT USING (tr
 CREATE POLICY "robots_can_update_own_firmware" ON public.saas_frota_robos FOR UPDATE TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "admins_manage_frota" ON public.saas_frota_robos FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- ----------------------------------------------------------------------------
--- PERFIS DE PERSONALIDADE DO ROBÔ (V1.14)
--- ----------------------------------------------------------------------------
-
-CREATE TABLE public.saas_perfis_robo (
-    id          SERIAL PRIMARY KEY,
-    clinica_id  INTEGER REFERENCES public.saas_clinicas(id),
-    nome        TEXT NOT NULL,
-    descricao   TEXT,
-    prompt_instrucao TEXT NOT NULL,
-    modo_base   TEXT NOT NULL DEFAULT 'CRIANCA' CHECK (modo_base IN ('CRIANCA', 'TERAPEUTA')),
-    ativo       BOOLEAN DEFAULT TRUE,
-    created_at  TIMESTAMPTZ DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.saas_perfis_robo ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Perfis leitura anon" ON public.saas_perfis_robo FOR SELECT USING (true);
 CREATE POLICY "Perfis gestao autenticados" ON public.saas_perfis_robo FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- Coluna de perfil ativo no robô
-ALTER TABLE public.saas_frota_robos ADD COLUMN IF NOT EXISTS perfil_ativo_id INTEGER REFERENCES public.saas_perfis_robo(id);
 
