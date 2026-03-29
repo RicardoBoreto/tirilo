@@ -44,7 +44,7 @@ export default async function RoboPage() {
             </header>
 
             <main className="flex-1 min-h-0">
-                <RobotDashboard clinicaId={userProfile?.id_clinica || ''} />
+                <RobotDashboard clinicaId={userProfile?.id_clinica ? String(userProfile.id_clinica) : ''} />
             </main>
         </div>
     )

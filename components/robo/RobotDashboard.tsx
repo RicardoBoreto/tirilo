@@ -165,7 +165,11 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
     }
 
     async function handleSavePerfil() {
-        if (!clinicaId || !perfilEdit) return
+        if (!perfilEdit) return
+        if (!clinicaId) {
+            setPerfilMsg('Erro: Clínica não identificada. Contate o suporte.')
+            return
+        }
         setIsSavingPerfil(true)
         setPerfilMsg('')
         try {
@@ -952,7 +956,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                         </button>
                                         <button
                                             onClick={handleSavePerfil}
-                                            disabled={isSavingPerfil || !perfilEdit.nome?.trim() || !perfilEdit.prompt_instrucao?.trim()}
+                                            disabled={isSavingPerfil || !perfilEdit.nome?.trim() || !perfilEdit.prompt_instrucao?.trim() || !clinicaId}
                                             className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
                                         >
                                             {isSavingPerfil ? 'Salvando...' : 'Salvar Perfil'}
