@@ -1356,6 +1356,15 @@ def log_terapeuta(conteudo):
             f.write(f"[{timestamp}] {conteudo}\n")
     except: pass # Ignora falha de log
 
+def desligar_motores():
+    """Desativa todos os canais do PCA9685 (sem torque, sem ruído)."""
+    if olhos and olhos.kit:
+        for i in range(16):
+            try:
+                olhos.kit._pca.channels[i].duty_cycle = 0
+            except Exception:
+                pass
+
 def finalizar_modo_geral():
     """Para tudo: jogos, música, fala e visão."""
     global MODO_VISAO_ATIVO, TEXTO_RESPOSTA_IA, MODO_VISAO_TELA, _processo_externo
@@ -1835,7 +1844,14 @@ def loop_logica():
             
             # 2. ENCERRAMENTO
             if "tchau" in texto_l or "sair" in texto_l:
-                falar("Tchau!")
+                falar("Tchau! Até logo!")
+                time.sleep(0.5)
+                if olhos:
+                    olhos.fechar_palpebra("olho_direito", 100)
+                    olhos.fechar_palpebra("olho_esquerdo", 100)
+                    olhos.mover_boca(0)
+                    time.sleep(1.0)
+                    desligar_motores()
                 gui.running = False
                 break
             
