@@ -23,6 +23,9 @@ def carregar_config():
             if "boca" not in cfg["olho_direito"]:
                 cfg["olho_direito"]["boca"] = {"porta": 8, "min": 0, "max": 180, "centro": 90}
                 cfg["olho_esquerdo"]["boca"] = {"porta": -1, "min": 0, "max": 180, "centro": 90}
+            if "sobrancelha" not in cfg["olho_direito"]:
+                cfg["olho_direito"]["sobrancelha"] = {"porta": 9, "min": 60, "max": 120, "centro": 90}
+                cfg["olho_esquerdo"]["sobrancelha"] = {"porta": 10, "min": 60, "max": 120, "centro": 90}
             return cfg
     else:
         # Configuração inicial caso o arquivo não exista
@@ -32,14 +35,16 @@ def carregar_config():
                 "horizontal": {"porta": 1, "min": 0, "max": 180, "centro": 90},
                 "palpebra_cima": {"porta": 2, "min": 0, "max": 180, "centro": 90},
                 "palpebra_baixo": {"porta": 3, "min": 0, "max": 180, "centro": 90},
-                "boca": {"porta": 8, "min": 0, "max": 180, "centro": 90}
+                "boca": {"porta": 8, "min": 0, "max": 180, "centro": 90},
+                "sobrancelha": {"porta": 9, "min": 60, "max": 120, "centro": 90}
             },
             "olho_esquerdo": {
                 "vertical": {"porta": 4, "min": 0, "max": 180, "centro": 90},
                 "horizontal": {"porta": 5, "min": 0, "max": 180, "centro": 90},
                 "palpebra_cima": {"porta": 6, "min": 0, "max": 180, "centro": 90},
                 "palpebra_baixo": {"porta": 7, "min": 0, "max": 180, "centro": 90},
-                "boca": {"porta": -1, "min": 0, "max": 180, "centro": 90}
+                "boca": {"porta": -1, "min": 0, "max": 180, "centro": 90},
+                "sobrancelha": {"porta": 10, "min": 60, "max": 120, "centro": 90}
             }
         }
 
@@ -117,7 +122,7 @@ def iniciar_gui():
     AMARELO = (200, 180, 0)
 
     # Estado
-    mecanismos = ["vertical", "horizontal", "palpebra_cima", "palpebra_baixo", "boca"]
+    mecanismos = ["vertical", "horizontal", "palpebra_cima", "palpebra_baixo", "boca", "sobrancelha"]
     idx_mecanismo = 0
     mecanismo_atual = mecanismos[idx_mecanismo]
     

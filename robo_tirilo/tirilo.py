@@ -1332,6 +1332,26 @@ def executar_movimento_voz(texto_l):
         falar("Que surpresa!")
         olhos.surpresa(); return True
 
+    if any(x in texto_l for x in ["fique bravo", "fica bravo", "expressão de raiva", "cara de bravo", "franzir sobrancelha"]):
+        falar("Grrr!")
+        olhos.olhar_bravo(); return True
+
+    if any(x in texto_l for x in ["fique feliz", "fica feliz", "expressão feliz", "cara feliz"]):
+        falar("Estou feliz!")
+        olhos.olhar_feliz(); return True
+
+    if any(x in texto_l for x in ["desconfiado", "fique desconfiado", "cara de dúvida"]):
+        falar("Hmmm...")
+        olhos.desconfiado(); return True
+
+    if any(x in texto_l for x in ["levante as sobrancelhas", "sobrancelhas para cima"]):
+        falar("Assim?")
+        olhos.mover_sobrancelhas(100); return True
+
+    if any(x in texto_l for x in ["abaixe as sobrancelhas", "sobrancelhas para baixo", "franza"]):
+        falar("Assim?")
+        olhos.mover_sobrancelhas(0); return True
+
     if any(x in texto_l for x in ["acorde", "animação acordar", "animacao acordar"]):
         falar("Acordando!")
         olhos.animacao_acordar(); return True
