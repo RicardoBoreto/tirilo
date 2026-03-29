@@ -1711,7 +1711,6 @@ def loop_logica():
                             print("Diretrizes: cache limpo, próxima interação recarrega do Supabase.")
                             falar("Diretrizes atualizadas.")
                         elif payload == "MUDAR_PERFIL":
-                            global _perfil_ativo
                             perfil_id = cmd.get('parametros', {}).get('perfil_id')
                             if perfil_id and cloud_mgr:
                                 novo = cloud_mgr.get_perfil_por_id(perfil_id)
