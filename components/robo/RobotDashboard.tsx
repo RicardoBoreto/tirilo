@@ -50,7 +50,6 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
     const [isSavingPerfil, setIsSavingPerfil] = useState(false)
     const [perfilMsg, setPerfilMsg] = useState('')
     const [perfilAtivoId, setPerfilAtivoId] = useState<number | null>(null)
-    const [perfilClinicaId, setPerfilClinicaId] = useState<string>('')
 
     // New Robot Form
     const [newMac, setNewMac] = useState('')
@@ -83,6 +82,10 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         loadDirectives()
         loadPerfis()
     }, [clinicaId])
+
+    useEffect(() => {
+        if (!clinicaId && selectedRobot) loadPerfis()
+    }, [selectedRobot])
 
     useEffect(() => {
         let interval: NodeJS.Timeout
@@ -159,8 +162,8 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         }
     }
 
-    async function loadPerfis(overrideClinicaId?: string) {
-        const cid = overrideClinicaId ?? perfilClinicaId || clinicaId
+    async function loadPerfis() {
+        const cid = clinicaId || (selectedRobot?.id_clinica ? String(selectedRobot.id_clinica) : '')
         if (!cid) return
         const data = await getPerfis(cid)
         setPerfis(data)
@@ -168,9 +171,9 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
 
     async function handleSavePerfil() {
         if (!perfilEdit) return
-        const cid = perfilClinicaId || clinicaId
+        const cid = clinicaId || (selectedRobot?.id_clinica ? String(selectedRobot.id_clinica) : '')
         if (!cid) {
-            setPerfilMsg('Erro: Selecione uma clínica antes de salvar.')
+            setPerfilMsg('Erro: Selecione um robô para identificar a clínica.')
             return
         }
         setIsSavingPerfil(true)
@@ -863,27 +866,11 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                 Crie quantos perfis quiser com nomes e prompts personalizados. Ative um perfil no robô com um clique.
                             </p>
 
-                            {/* Seletor de clínica para superadmin */}
-                            {!clinicaId && (
-                                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
-                                    <label className="block text-xs font-semibold text-yellow-800 dark:text-yellow-300 mb-1">
-                                        Selecione a clínica para gerenciar os perfis
-                                    </label>
-                                    <select
-                                        value={perfilClinicaId}
-                                        onChange={e => {
-                                            setPerfilClinicaId(e.target.value)
-                                            if (e.target.value) loadPerfis(e.target.value)
-                                            else setPerfis([])
-                                        }}
-                                        className="w-full p-2 rounded-lg border border-yellow-300 dark:border-yellow-600 text-sm bg-white dark:bg-gray-700"
-                                    >
-                                        <option value="">-- Escolha uma clínica --</option>
-                                        {clinics.map(c => (
-                                            <option key={c.id} value={String(c.id)}>{c.nome_fantasia}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                            {/* Aviso para superadmin sem robô selecionado */}
+                            {!clinicaId && !selectedRobot && (
+                                <p className="text-sm text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg px-3 py-2 mb-4">
+                                    Selecione um robô na lista acima para gerenciar os perfis da clínica vinculada.
+                                </p>
                             )}
 
                             {/* Lista de Perfis */}
@@ -982,7 +969,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                         </button>
                                         <button
                                             onClick={handleSavePerfil}
-                                            disabled={isSavingPerfil || !perfilEdit.nome?.trim() || !perfilEdit.prompt_instrucao?.trim() || !(perfilClinicaId || clinicaId)}
+                                            disabled={isSavingPerfil || !perfilEdit.nome?.trim() || !perfilEdit.prompt_instrucao?.trim() || !(clinicaId || selectedRobot?.id_clinica)}
                                             className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
                                         >
                                             {isSavingPerfil ? 'Salvando...' : 'Salvar Perfil'}
