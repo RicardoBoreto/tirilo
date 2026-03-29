@@ -269,11 +269,10 @@ class CloudManager:
             res = self.client.table('saas_frota_robos') \
                 .select('perfil_ativo_id') \
                 .eq('mac_address', self.mac_address) \
-                .maybeSingle() \
                 .execute()
-            if not res.data or not res.data.get('perfil_ativo_id'):
+            if not res.data or not res.data[0].get('perfil_ativo_id'):
                 return {}
-            perfil_id = res.data['perfil_ativo_id']
+            perfil_id = res.data[0]['perfil_ativo_id']
             return self.get_perfil_por_id(perfil_id)
         except Exception as e:
             print(f"Cloud: erro ao buscar perfil ativo: {e}")
@@ -285,9 +284,8 @@ class CloudManager:
             res = self.client.table('saas_perfis_robo') \
                 .select('id, nome, descricao, prompt_instrucao, modo_base') \
                 .eq('id', perfil_id) \
-                .maybeSingle() \
                 .execute()
-            return res.data or {}
+            return res.data[0] if res.data else {}
         except Exception as e:
             print(f"Cloud: erro ao buscar perfil {perfil_id}: {e}")
             return {}
