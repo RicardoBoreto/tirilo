@@ -1726,12 +1726,16 @@ def loop_logica():
                                 if novo:
                                     _perfil_ativo = novo
                                     modo_base = novo.get('modo_base', 'CRIANCA').upper()
+                                    nome_perfil = novo.get('nome', '?')
+                                    modo_label = 'Terapeuta' if modo_base == 'TERAPEUTA' else 'Criança'
+                                    TEXTO_RESPOSTA_IA = f"🎭 Perfil ativo: {nome_perfil}\nModo: {modo_label}"
+                                    if gui: gui.set_status(f"Perfil: {nome_perfil}", AZUL)
                                     if modo_base == 'TERAPEUTA':
                                         threading.Thread(target=iniciar_modo_terapeuta).start()
                                     else:
                                         threading.Thread(target=finalizar_modo_terapeuta).start()
-                                    falar(f"Perfil alterado para {novo['nome']}.")
-                                    print(f"Perfil ativo: {novo['nome']} (modo {modo_base})")
+                                    falar(f"Perfil alterado para {nome_perfil}.")
+                                    print(f"Perfil ativo: {nome_perfil} (modo {modo_base})")
                         elif payload == "FALAR":
                             msg = cmd.get('parametros', {}).get('texto', '')
                             if msg: falar(msg)
