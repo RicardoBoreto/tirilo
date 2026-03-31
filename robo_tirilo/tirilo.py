@@ -1049,7 +1049,7 @@ def falar(texto, local_fast=False):
                 asyncio.run(gerar_audio_edge(txt, arq_mp3))
                 t_anim.start()
                 proc_audio = subprocess.Popen(
-                    ["mpg123", "-a", DISPOSITIVO_AUDIO, "-q", arq_mp3],
+                    ["mpg123", "-o", "alsa", "-a", "default", "-q", arq_mp3],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                 )
                 threading.Thread(target=_monitorar_barge_in, args=(proc_audio,), daemon=True).start()
@@ -1559,7 +1559,7 @@ def tocar_musica():
         t = threading.Thread(target=animar_fala, args=(evt,))
         t.start()
         # Mantém mpg123 pois música geralmente é MP3
-        proc = subprocess.Popen(["mpg123", "-a", DISPOSITIVO_AUDIO, "-q", ARQUIVO_MUSICA], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        proc = subprocess.Popen(["mpg123", "-o", "alsa", "-a", "default", "-q", ARQUIVO_MUSICA], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         while proc.poll() is None: 
             if gui and gui.ultimo_toque:
                 gui.ultimo_toque = None; proc.terminate(); falar_prioridade("Parei."); break
