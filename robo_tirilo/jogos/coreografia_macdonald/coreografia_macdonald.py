@@ -19,6 +19,8 @@ except ImportError:
     sys.exit(1)
 
 
+DISPOSITIVO_AUDIO = "plughw:CARD=M1A,DEV=0"
+
 def tocar_musica(arquivo_mp3):
     print(f"[Audio] Procurando: {arquivo_mp3}")
     if not os.path.exists(arquivo_mp3):
@@ -27,7 +29,7 @@ def tocar_musica(arquivo_mp3):
     try:
         print(f"[Audio] Tocando com mpg123: {arquivo_mp3}")
         proc = subprocess.Popen(
-            ["mpg123", "-q", arquivo_mp3],
+            ["mpg123", "-a", DISPOSITIVO_AUDIO, "-q", arquivo_mp3],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
         return proc
