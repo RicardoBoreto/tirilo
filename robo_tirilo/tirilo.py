@@ -74,7 +74,13 @@ AUTOR = "Ricardo Alonso Boreto"
 # Configurações de Jogo
 QTD_CHARADAS = 5 
 
-DISPOSITIVO_AUDIO = "plughw:0,0"
+# EMEET Office Core M1A (E1102) — USB speakerphone
+# Use nome da placa para não depender da ordem de detecção do kernel:
+#   arecord -l    → procure "card X: M1A" ou "EMEET"
+#   aplay   -l    → mesmo dispositivo para saída
+# Se o nome não funcionar, substitua por "plughw:1,0" com o card correto.
+DISPOSITIVO_AUDIO = "plughw:CARD=M1A,DEV=0"
+TAXA_CAPTURA      = 48000   # EMEET M1A opera nativamente em 48 kHz
 
 # Testa suporte a PyAudio/VAD uma única vez no startup
 def _testar_vad():
@@ -883,14 +889,14 @@ def _capturar_com_vad(arquivo_saida):
             mic_idx = i
             break
 
-    # Tenta 16000 Hz; se falhar, usa 44100 Hz (compatível com C-Media USB)
+    # Tenta 16000 Hz; se falhar, usa TAXA_CAPTURA do dispositivo (EMEET: 48000 Hz)
     taxa_real = RATE
     try:
         stream = pa.open(format=pyaudio.paInt16, channels=1, rate=RATE,
                          input=True, input_device_index=mic_idx,
                          frames_per_buffer=CHUNK)
     except Exception:
-        taxa_real = 44100
+        taxa_real = TAXA_CAPTURA
         stream = pa.open(format=pyaudio.paInt16, channels=1, rate=taxa_real,
                          input=True, input_device_index=mic_idx,
                          frames_per_buffer=CHUNK)
@@ -942,13 +948,13 @@ def capturar_voz():
                 print(f"VAD falhou ({e_vad}), usando arecord 4s...")
                 subprocess.run(
                     ["arecord", "-D", DISPOSITIVO_AUDIO, "-d", "4",
-                     "-f", "S16_LE", "-r", "44100", "-c", "1", "-q", ARQUIVO_REC],
+                     "-f", "S16_LE", "-r", str(TAXA_CAPTURA), "-c", "1", "-q", ARQUIVO_REC],
                     check=True
                 )
         else:
             subprocess.run(
                 ["arecord", "-D", DISPOSITIVO_AUDIO, "-d", "4",
-                 "-f", "S16_LE", "-r", "44100", "-c", "1", "-q", ARQUIVO_REC],
+                 "-f", "S16_LE", "-r", str(TAXA_CAPTURA), "-c", "1", "-q", ARQUIVO_REC],
                 check=True
             )
 
