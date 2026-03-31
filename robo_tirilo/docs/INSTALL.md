@@ -87,11 +87,26 @@ O sistema está organizado da seguinte forma:
 
 ## 4. Testes Básicos de Hardware
 
-### Áudio
+### Áudio (EMEET Office Core M1A — E1102)
+
+O script `02_setup_audio.sh` já configura o EMEET como dispositivo padrão e ajusta o volume.
+Para verificar e testar manualmente:
+
 ```bash
-aplay -l  # Verifica se o EMEET M1A aparece como card 2
+# Confirmar que o EMEET foi detectado:
+arecord -l
+# Deve mostrar: card 0: M1A [EMEET OfficeCore M1A]
+
 # Teste de reprodução:
-speaker-test -D plughw:2,0 -t wav -c 2
+aplay -D plughw:CARD=M1A,DEV=0 /usr/share/sounds/alsa/Front_Center.wav
+
+# Teste de gravação (fale algo nos 3 segundos):
+arecord -D plughw:CARD=M1A,DEV=0 -f S16_LE -r 48000 -c 1 -d 3 /tmp/teste.wav
+aplay /tmp/teste.wav
+
+# Se o volume estiver baixo:
+alsamixer -c M1A   # Use ↑↓ para ajustar Speaker e Mic, ESC para sair
+sudo alsactl store # Salva o volume para persistir após reboot
 ```
 
 ### I2C e Calibração de Servos
@@ -121,5 +136,5 @@ Como instalamos tudo globalmente, basta dar o comando:
 
 ```bash
 cd ~/projeto_robo/
-python3 tiriloV324.py
+python3 robo_tirilo/tirilo.py
 ```
