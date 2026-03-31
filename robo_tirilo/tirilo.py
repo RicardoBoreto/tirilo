@@ -1837,6 +1837,10 @@ def loop_logica():
                                     except Exception: pass
                                     _processo_externo = None
                                     time.sleep(0.3)  # aguarda servos estabilizarem
+                                # Libera dispositivo de áudio antes da coreografia
+                                subprocess.run(["pkill", "-9", "aplay"],  stderr=subprocess.DEVNULL)
+                                subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
+                                time.sleep(0.3)
                                 visao_estava_ativa = MODO_VISAO_ATIVO
                                 if visao_estava_ativa:
                                     _ev_camera_livre.clear()
