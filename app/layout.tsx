@@ -31,7 +31,7 @@ export default async function RootLayout({
     const env = cookieStore.get('tirilo-env')?.value || 'prod'
 
     return (
-        <html lang="pt-BR">
+        <html lang="pt-BR" suppressHydrationWarning>
             <body className={`${poppins.variable} ${inter.variable} font-sans antialiased bg-background text-foreground`}>
                 <EnvironmentBanner env={env} />
                 {children}

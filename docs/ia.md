@@ -112,6 +112,11 @@ Diferenciação visual imediata por categoria:
 - 🟣 **Roxo (Relatórios):** Prompts focados em relato de sessões passadas.
 - 🔶 **Borda Dourada + Badge "Padrão":** Indica Templates da Clínica (Oficiais), que se destacam dos prompts pessoais do terapeuta.
 
+#### Interface Híbrida (Responsividade)
+O modal de geração de planos se adapta dinamicamente ao dispositivo:
+- 📱 **Mobile (< 1024px):** Interface por **Abas** ("Ver Plano" / "Refinar com IA"). Maximiza o espaço para leitura e escrita em telas pequenas.
+- 🖥️ **Desktop (>= 1024px):** Interface **Split-View** (Lado a Lado). Permite revisar o plano enquanto interage com o chat simultaneamente para máxima produtividade.
+
 ## 🔒 Privacidade e Segurança (IA)
 
 Para garantir a proteção dos dados sensíveis de pacientes e profissionais, o sistema implementa um rigoroso processo de **Anonimização e Pseudonimização** antes de qualquer interação com a API externa (Google Gemini).

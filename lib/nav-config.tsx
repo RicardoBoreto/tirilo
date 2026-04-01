@@ -25,7 +25,7 @@ export function getSidebarLinks(
         {
             href: '/admin/clinicas',
             label: 'Clínicas',
-            icon: <CuteBuilding className="w-6 h-6" />,
+            icon: <Building2 className="w-6 h-6" />,
         },
         {
             href: '/admin/help-desk',

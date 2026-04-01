@@ -86,10 +86,10 @@ export default function BackupSection() {
     }
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-100 dark:border-gray-700 shadow-sm">
-            <div className="flex items-start gap-4">
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                    <ShieldCheck className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm transition-all">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-6 text-center sm:text-left">
+                <div className="p-4 sm:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl sm:rounded-xl shadow-inner">
+                    <ShieldCheck className="w-10 h-10 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="flex-1 space-y-6">
                     <div>
@@ -102,18 +102,18 @@ export default function BackupSection() {
                         </p>
                     </div>
 
-                    <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-lg p-4 flex gap-3">
-                        <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0" />
-                        <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                    <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-xl p-4 flex flex-col sm:flex-row items-center sm:items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 shrink-0" />
+                        <p className="text-xs sm:text-sm text-yellow-700 dark:text-yellow-400">
                             Este arquivo contém dados sensíveis de pacientes. Armazene-o em local seguro e criptografado.
                         </p>
                     </div>
 
-                    <div className="flex flex-col gap-6 p-6 border border-blue-100 dark:border-blue-900/30 rounded-2xl bg-blue-50/30 dark:bg-blue-900/10">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h3 className="font-semibold text-gray-900 dark:text-white">Ambiente de Operação</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex flex-col gap-6 p-5 sm:p-6 border border-blue-100 dark:border-blue-900/30 rounded-2xl bg-blue-50/30 dark:bg-blue-900/10">
+                        <div className="flex flex-col sm:flex-row items-center sm:items-center justify-between gap-4">
+                            <div className="text-center sm:text-left">
+                                <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Ambiente de Operação</h3>
+                                <p className="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">
                                     {isStaging ? 'Operando sobre o banco de TESTES' : 'Operando sobre o banco de PRODUÇÃO'}
                                 </p>
                             </div>
@@ -135,11 +135,11 @@ export default function BackupSection() {
                             </div>
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="flex flex-col sm:flex-row gap-3 mt-2">
                             <Button
                                 onClick={handleBackup}
                                 disabled={loading || isStaging}
-                                className="h-12 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
+                                className="h-12 w-full sm:w-auto px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 font-bold"
                             >
                                 {loading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Download className="w-5 h-5 mr-2" />}
                                 Fazer Backup Completo
@@ -149,7 +149,7 @@ export default function BackupSection() {
                                 onClick={handleSync}
                                 disabled={loading || isStaging}
                                 variant="outline"
-                                className="h-12 px-6 rounded-xl border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+                                className="h-12 w-full sm:w-auto px-6 rounded-xl border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800 font-bold"
                             >
                                 <ShieldCheck className="w-5 h-5 mr-2" />
                                 Clonar Banco para Staging

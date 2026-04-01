@@ -10,6 +10,24 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.15.0] - 01/04/2026
+
+### 📱 Modernização UI/UX & Responsividade Mobile
+- **Assistente IA (Gerar Plano):**
+  - Sistema híbrido inteligente: **Abas no Mobile** (Ver Plano / Refinar com IA) e **Split-View no Desktop** (1100px).
+  - Melhoria na área de toque e legibilidade de formulários.
+- **Gerenciar Jogos:**
+  - Substituição de tabelas por **Cards Responsivos** em telas pequenas.
+  - Diálogos de edição otimizados para fluxo vertical.
+- **Dashboard de Robôs & Clínicas:**
+  - Interface de backup e listagem de robôs adaptada para visualização em cards.
+  - Eliminação de rolagem horizontal em dispositivos de 375px.
+- **Sidebar & Navegação:**
+  - Fix de alinhamento no menu lateral mobile.
+  - Garantia de suporte a rolagem em menus com itens extensos.
+
+---
+
 ## [1.14.0] - 29/03/2026
 
 ### 🎭 Perfis de Personalidade do Robô

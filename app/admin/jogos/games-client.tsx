@@ -277,39 +277,107 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Gerenciar Jogos</h2>
-                    <p className="text-muted-foreground">Administre os jogos e suas versões na frota de robôs.</p>
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Gerenciar Jogos</h2>
+                    <p className="text-sm sm:text-base text-muted-foreground">Administre os jogos e suas versões na frota de robôs.</p>
                 </div>
-                <Button onClick={() => { setEditingGame(null); setIsReadOnly(false); setIsOpen(true); }}>
+                <Button onClick={() => { setEditingGame(null); setIsReadOnly(false); setIsOpen(true); }} className="w-full sm:w-auto shadow-lg shadow-primary/20">
                     <Plus className="mr-2 h-4 w-4" /> Novo Jogo
                 </Button>
             </div>
 
             <div className="flex items-center space-x-2">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <div className="relative w-full sm:max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Buscar por nome ou categoria..."
-                        className="pl-8"
+                        className="pl-10 h-11 sm:h-10"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
             </div>
 
-            <div className="rounded-md border overflow-x-auto">
+            {/* Mobile Card View */}
+            <div className="grid grid-cols-1 gap-4 md:hidden">
+                {filteredGames.length === 0 ? (
+                    <div className="p-12 text-center text-muted-foreground bg-gray-50/50 rounded-2xl border-2 border-dashed">
+                        Nenhum jogo encontrado.
+                    </div>
+                ) : (
+                    filteredGames.map((game) => (
+                        <div key={game.id} className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
+                            <div className="flex items-start gap-4">
+                                <div className="h-16 w-16 rounded-xl bg-gray-100 dark:bg-gray-800 relative overflow-hidden flex-shrink-0 border shadow-inner">
+                                    {game.thumbnail_url ? (
+                                        <Image src={game.thumbnail_url} alt={game.nome} fill className="object-cover" />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full w-full">
+                                            <Gamepad2 className="h-8 w-8 text-gray-400" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className="font-bold text-gray-900 dark:text-gray-100 truncate">{game.nome}</h3>
+                                        <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${game.ativo
+                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                            }`}>
+                                            {game.ativo ? 'Ativo' : 'Inativo'}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                                        <span className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 px-1.5 py-0.5 rounded font-medium">v{game.versao_atual}</span>
+                                        <span className="text-gray-300">•</span>
+                                        <span className="truncate">{game.categoria || 'Geral'}</span>
+                                    </div>
+                                    <div className="text-sm font-bold text-green-600">
+                                        {game.preco > 0 ? (
+                                            new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(game.preco)
+                                        ) : (
+                                            'Gratuito'
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
+                                <div className="flex gap-1.5">
+                                    <Button variant="ghost" size="sm" className="h-9 px-3 text-blue-600 hover:bg-blue-50 font-medium rounded-lg" onClick={() => handleOpenView(game)}>
+                                        <Eye className="h-4 w-4 mr-1.5" /> Ver
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-9 px-3 text-gray-600 hover:bg-gray-50 font-medium rounded-lg" onClick={() => handleOpenEdit(game)}>
+                                        <Edit className="h-4 w-4 mr-1.5" /> Editar
+                                    </Button>
+                                </div>
+                                <div className="flex gap-1.5">
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-purple-600 hover:bg-purple-100" onClick={() => handleOpenHistory(game)}>
+                                         <History className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className={`h-9 w-9 ${game.ativo ? 'text-red-500 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`} onClick={() => handleToggleStatus(game)}>
+                                         <Power className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="rounded-xl border border-gray-100 bg-white dark:bg-gray-800 shadow-sm hidden md:block overflow-hidden">
                 <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-50 dark:bg-gray-800 border-b">
+                    <thead className="bg-gray-50/50 dark:bg-gray-800 border-b">
                         <tr>
-                            <th className="p-4 font-medium text-gray-500 dark:text-gray-400">Jogo</th>
-                            <th className="p-4 font-medium text-gray-500 dark:text-gray-400 hidden md:table-cell">Versão</th>
-                            <th className="p-4 font-medium text-gray-500 dark:text-gray-400">Preço</th>
-                            <th className="p-4 font-medium text-gray-500 dark:text-gray-400 hidden md:table-cell">Categoria</th>
-                            <th className="p-4 font-medium text-gray-500 dark:text-gray-400 hidden md:table-cell">Comando (Script)</th>
-                            <th className="p-4 font-medium text-gray-500 dark:text-gray-400">Status</th>
-                            <th className="p-4 font-medium text-gray-500 dark:text-gray-400 text-right">Ações</th>
+                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Jogo</th>
+                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Versão</th>
+                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Preço</th>
+                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Categoria</th>
+                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Comando (Script)</th>
+                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Status</th>
+                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px] text-right">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -416,23 +484,23 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                     </DialogHeader>
 
                     <Tabs defaultValue="details" className="w-full">
-                        <TabsList className="grid w-full grid-cols-4">
-                            <TabsTrigger value="details">Detalhes</TabsTrigger>
-                            <TabsTrigger value="competencies" disabled={!editingGame}>Competências</TabsTrigger>
-                            <TabsTrigger value="distribution" disabled={!editingGame}>Distribuição</TabsTrigger>
-                            {!isReadOnly && editingGame && <TabsTrigger value="update">Atualizar</TabsTrigger>}
+                        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto p-1 bg-gray-100/50 dark:bg-gray-800/50">
+                            <TabsTrigger value="details" className="py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">Detalhes</TabsTrigger>
+                            <TabsTrigger value="competencies" className="py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm" disabled={!editingGame}>Competências</TabsTrigger>
+                            <TabsTrigger value="distribution" className="py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm" disabled={!editingGame}>Distribuição</TabsTrigger>
+                            {!isReadOnly && editingGame && <TabsTrigger value="update" className="py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">Atualizar</TabsTrigger>}
                         </TabsList>
 
-                        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                            <TabsContent value="details" forceMount={true} className="space-y-4 data-[state=inactive]:hidden">
-                                <div className="grid grid-cols-2 gap-4">
+                        <form onSubmit={handleSubmit} className="space-y-4 mt-6">
+                            <TabsContent value="details" forceMount={true} className="space-y-4 data-[state=inactive]:hidden outline-none">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="nome">Nome do Jogo</Label>
-                                        <Input id="nome" name="nome" required defaultValue={editingGame?.nome} placeholder="Ex: Parear Cores" disabled={isReadOnly} />
+                                        <Label htmlFor="nome" className="font-bold">Nome do Jogo</Label>
+                                        <Input id="nome" name="nome" required defaultValue={editingGame?.nome} placeholder="Ex: Parear Cores" disabled={isReadOnly} className="h-11 sm:h-10" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="categoria">Categoria</Label>
-                                        <Input id="categoria" name="categoria" defaultValue={editingGame?.categoria || ''} placeholder="Ex: Educativo, Motor" disabled={isReadOnly} />
+                                        <Label htmlFor="categoria" className="font-bold">Categoria</Label>
+                                        <Input id="categoria" name="categoria" defaultValue={editingGame?.categoria || ''} placeholder="Ex: Educativo, Motor" disabled={isReadOnly} className="h-11 sm:h-10" />
                                     </div>
                                 </div>
 
@@ -655,12 +723,12 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                                 </div>
                             </TabsContent>
 
-                            <DialogFooter className="pt-4">
-                                <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+                             <DialogFooter className="pt-6 border-t mt-6 flex flex-col sm:flex-row gap-3">
+                                <Button type="button" variant="outline" onClick={() => setIsOpen(false)} className="w-full sm:w-auto h-11 sm:h-10 order-2 sm:order-1">
                                     {isReadOnly ? 'Fechar' : 'Cancelar'}
                                 </Button>
                                 {!isReadOnly && (
-                                    <Button type="submit" disabled={isLoading}>
+                                    <Button type="submit" disabled={isLoading} className="w-full sm:w-auto h-11 sm:h-10 order-1 sm:order-2 shadow-lg shadow-primary/20 font-bold">
                                         {isLoading ? 'Salvando...' : (editingGame ? 'Salvar Alterações' : 'Criar Jogo')}
                                     </Button>
                                 )}

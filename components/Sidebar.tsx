@@ -27,7 +27,7 @@ export default function Sidebar({ clinic, userRole, userId, className, onLinkCli
     return (
         <aside className={`relative z-20 h-screen bg-white/90 backdrop-blur-xl supports-[backdrop-filter]:bg-white/70 ${className || ''} ${collapsed ? 'w-24' : 'w-72'} transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-xl shadow-slate-200/60 border-r border-slate-100`}>
             <div className="h-full flex flex-col">
-                <div className={`flex flex-col items-center text-center transition-all duration-300 ${collapsed ? 'p-6' : 'p-10'}`}>
+                <div className={`flex flex-col items-center text-center transition-all duration-300 ${collapsed ? 'p-6' : 'p-6 lg:p-10'}`}>
                     {clinic?.logo_url ? (
                         <div className={`relative mb-6 rounded-[2rem] overflow-hidden shadow-lg shadow-slate-100 ring-1 ring-slate-100 transition-all duration-300 ${collapsed ? 'w-12 h-12 rounded-xl' : 'w-32 h-32'}`}>
                             <Image
@@ -56,7 +56,7 @@ export default function Sidebar({ clinic, userRole, userId, className, onLinkCli
                     )}
                 </div>
 
-                <nav className={`flex-1 space-y-2 overflow-y-auto ${collapsed ? 'px-3 py-4' : 'px-8 py-6'}`}>
+                <nav className={`flex-1 space-y-2 overflow-y-auto ${collapsed ? 'px-3 py-4' : 'px-4 lg:px-8 py-4 lg:py-6'}`}>
                     {links.map((link) => {
                         const isActive = pathname.startsWith(link.href)
                         return (
@@ -67,8 +67,8 @@ export default function Sidebar({ clinic, userRole, userId, className, onLinkCli
                                 className={`flex items-center gap-4 rounded-2xl transition-all duration-300 group relative
                                     ${collapsed ? 'justify-center px-0 py-4' : 'px-5 py-4'}
                                     ${isActive
-                                        ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 translate-x-1'
-                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1'
+                                        ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
+                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                                     }`}
                                 title={collapsed ? link.label : ''}
                             >

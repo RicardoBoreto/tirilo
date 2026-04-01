@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(scp \"c:/Users/Boreto/Documents/IA/antigravity/SaaS_tirilo_v2/robo_tirilo/tirilo.py\" \"c:/Users/Boreto/Documents/IA/antigravity/SaaS_tirilo_v2/robo_tirilo/src/cloud.py\" boreto@100.123.54.24:/home/boreto/projeto_robo/robo_tirilo/src/)",
+      "Bash(scp \"c:/Users/Boreto/Documents/IA/antigravity/SaaS_tirilo_v2/robo_tirilo/tirilo.py\" boreto@100.123.54.24:/home/boreto/projeto_robo/robo_tirilo/tirilo.py)"
+    ]
+  }
+}

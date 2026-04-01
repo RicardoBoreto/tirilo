@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -24,7 +23,27 @@ import {
 } from '@/lib/actions/robo'
 import { getAllClinics } from '@/lib/actions/clinicas'
 import MaintenancePanel from './MaintenancePanel'
+import { getLojaJogos } from '@/lib/actions/ludoterapia'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { 
+    Search, Plus, Settings, Play, Shield, Cpu, 
+    ExternalLink, Copy, Check, Info, Gamepad2, 
+    Wrench, LayoutDashboard, Bug, Radio, 
+    Power, Activity, Signal, Terminal, Menu
+} from 'lucide-react'
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from "@/components/ui/sheet"
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 
 export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
     const [robots, setRobots] = useState<Robot[]>([])
@@ -50,6 +69,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
     const [isSavingPerfil, setIsSavingPerfil] = useState(false)
     const [perfilMsg, setPerfilMsg] = useState('')
     const [perfilAtivoId, setPerfilAtivoId] = useState<number | null>(null)
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
     // New Robot Form
     const [newMac, setNewMac] = useState('')
@@ -74,6 +94,27 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         tailscaleIp: '',
         sshUser: ''
     })
+
+    // Refactor State
+    const [allGames, setAllGames] = useState<any[]>([])
+    const [robotSearch, setRobotSearch] = useState('')
+    const [appSearch, setAppSearch] = useState('')
+    const [activeTab, setActiveTab] = useState('dashboard')
+
+    useEffect(() => {
+        loadRobots()
+        loadConfig()
+        loadClinics()
+        loadDirectives()
+        loadPerfis()
+        if (clinicaId) loadLoja()
+    }, [clinicaId])
+
+    async function loadLoja() {
+        if (!clinicaId) return
+        const data = await getLojaJogos(parseInt(clinicaId))
+        setAllGames(data || [])
+    }
 
     useEffect(() => {
         loadRobots()
@@ -313,763 +354,820 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         }
     }
 
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-            {/* Sidebar List */}
+    const filteredRobots = robots.filter(r => 
+        r.nome_identificacao.toLowerCase().includes(robotSearch.toLowerCase()) ||
+        r.mac_address.toLowerCase().includes(robotSearch.toLowerCase())
+    )
+
+    const filteredApps = allGames.filter(g => 
+        g.nome.toLowerCase().includes(appSearch.toLowerCase()) ||
+        g.categoria?.toLowerCase().includes(appSearch.toLowerCase())
+    )
+
+    function RenderRobotSidebar() {
+        return (
             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col h-full">
-                <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-gray-100">Frota de Robôs</h2>
-
-                <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <h3 className="text-sm font-semibold mb-2">Adicionar Novo</h3>
-                    <input
-                        className="w-full mb-2 p-2 rounded border dark:bg-gray-700 dark:border-gray-600"
-                        placeholder="Endereço MAC"
-                        value={newMac}
-                        onChange={e => setNewMac(e.target.value)}
-                    />
-                    <input
-                        className="w-full mb-2 p-2 rounded border dark:bg-gray-700 dark:border-gray-600"
-                        placeholder="Nome (ex: Tirilo Sala 1)"
-                        value={newName}
-                        onChange={e => setNewName(e.target.value)}
-                    />
-                    <select
-                        className="w-full mb-2 p-2 rounded border dark:bg-gray-700 dark:border-gray-600 text-sm"
-                        value={newClinicId}
-                        onChange={e => setNewClinicId(e.target.value)}
-                        disabled={!!clinicaId}
-                    >
-                        <option value="">Selecione a Clínica...</option>
-                        {clinics.map(c => (
-                            <option key={c.id} value={c.id}>{c.nome_fantasia}</option>
-                        ))}
-                    </select>
-                    <button
-                        onClick={handleRegister}
-                        className="w-full bg-primary text-primary-foreground py-2 rounded-lg font-medium hover:opacity-90 transition-opacity"
-                    >
-                        Registrar
-                    </button>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                        <Cpu className="w-5 h-5 text-primary" />
+                        Frota de Robôs
+                    </h2>
+                    <Badge variant="outline" className="font-mono">{robots.length}</Badge>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-2">
-                    {robots.map(r => (
-                        <div
-                            key={r.id}
-                            onClick={() => setSelectedRobot(r)}
-                            className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedRobot?.id === r.id
-                                ? 'border-primary bg-primary/5'
-                                : 'border-gray-100 hover:border-gray-300 dark:border-gray-700'
-                                }`}
-                        >
-                            <div className="flex justify-between items-center">
-                                <span className="font-bold text-gray-700 dark:text-gray-200">{r.nome_identificacao}</span>
-                                <span className={`w-2 h-2 rounded-full ${r.status_bloqueio ? 'bg-red-500' : 'bg-green-500'}`} />
-                            </div>
-                            <div className="flex justify-between items-center mt-1">
-                                <div className="text-xs text-gray-500 truncate text-nowrap mr-2">{r.mac_address}</div>
-                                {r.id_clinica && (
-                                    <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full truncate max-w-[120px]">
-                                        {clinics.find(c => c.id.toString() == r.id_clinica?.toString())?.nome_fantasia || 'Clínica ???'}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                    {robots.length === 0 && <p className="text-gray-400 text-center py-4">Nenhum robô encontrado.</p>}
+                <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                        placeholder="Buscar por nome ou MAC..."
+                        className="pl-9"
+                        value={robotSearch}
+                        onChange={e => setRobotSearch(e.target.value)}
+                    />
                 </div>
-            </div>
 
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6 flex flex-col h-full overflow-y-auto">
-
-                {/* GLOBAL CONFIG */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                    <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-gray-100">Configuração da Personalidade (Global)</h2>
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prompt do Sistema (Persona)</label>
-                            <textarea
-                                className="w-full p-3 rounded-lg border dark:bg-gray-700 dark:border-gray-600 min-h-[100px]"
-                                value={prompt}
-                                onChange={e => setPrompt(e.target.value)}
-                            />
-                            <p className="text-xs text-gray-500 mt-1">Este prompt define como o robô se comporta em todas as interações.</p>
-                        </div>
-                        <div className="flex justify-end">
-                            <button
-                                onClick={handleSaveConfig}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                <ScrollArea className="flex-1 pr-2">
+                    <div className="space-y-2">
+                        {filteredRobots.map(r => (
+                            <div
+                                key={r.id}
+                                onClick={() => {
+                                    setSelectedRobot(r)
+                                    setIsDrawerOpen(false)
+                                }}
+                                className={`p-3 rounded-lg border cursor-pointer transition-all group ${selectedRobot?.id === r.id
+                                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                    : 'border-gray-100 hover:border-primary/30 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50'
+                                    }`}
                             >
-                                Salvar Configuração
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* SELECTED ROBOT DETAILS */}
-                {selectedRobot ? (
-                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex-1">
-                        <div className="flex justify-between items-start mb-6">
-                            <div className="flex-1">
-                                {isEditing ? (
-                                    <div className="space-y-4 mb-2 p-4 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg border border-yellow-200">
-                                        <h3 className="font-bold text-yellow-800 dark:text-yellow-200 border-b border-yellow-200 pb-2 mb-2">Editando Robô</h3>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {/* Basic Info */}
-                                            <div>
-                                                <label className="text-xs font-semibold block mb-1">Nome</label>
-                                                <input
-                                                    className="w-full p-2 border rounded text-sm"
-                                                    value={editForm.nome}
-                                                    onChange={e => setEditForm({ ...editForm, nome: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-semibold block mb-1">MAC Address</label>
-                                                <input
-                                                    className="w-full p-2 border rounded text-sm bg-gray-100"
-                                                    value={editForm.mac}
-                                                    onChange={e => setEditForm({ ...editForm, mac: e.target.value })}
-                                                />
-                                            </div>
-
-                                            {/* Clinic */}
-                                            <div className="md:col-span-2">
-                                                <label className="text-xs font-semibold block mb-1">Clínica Vinculada</label>
-                                                <select
-                                                    className="w-full p-2 border rounded text-sm"
-                                                    value={editForm.clinicaId}
-                                                    onChange={e => setEditForm({ ...editForm, clinicaId: e.target.value })}
-                                                    disabled={!!clinicaId}
-                                                >
-                                                    <option value="">Nenhuma (Estoque / Global)</option>
-                                                    {clinics.map(c => (
-                                                        <option key={c.id} value={c.id}>{c.nome_fantasia}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
-                                            {/* Hardware Details */}
-                                            <div>
-                                                <label className="text-xs font-semibold block mb-1">Modelo Hardware</label>
-                                                <input
-                                                    className="w-full p-2 border rounded text-sm"
-                                                    placeholder="Ex: Raspberry Pi 4 + Case V1"
-                                                    value={editForm.modelo}
-                                                    onChange={e => setEditForm({ ...editForm, modelo: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-semibold block mb-1">Versão Hardware</label>
-                                                <input
-                                                    className="w-full p-2 border rounded text-sm"
-                                                    placeholder="Ex: v2.0"
-                                                    value={editForm.versao}
-                                                    onChange={e => setEditForm({ ...editForm, versao: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-semibold block mb-1">Número de Série</label>
-                                                <input
-                                                    className="w-full p-2 border rounded text-sm"
-                                                    placeholder="Ex: SN-123456"
-                                                    value={editForm.serial}
-                                                    onChange={e => setEditForm({ ...editForm, serial: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-semibold block mb-1">Status Operacional</label>
-                                                <select
-                                                    className="w-full p-2 border rounded text-sm"
-                                                    value={editForm.statusOp}
-                                                    onChange={e => setEditForm({ ...editForm, statusOp: e.target.value })}
-                                                >
-                                                    <option value="disponivel">Disponível</option>
-                                                    <option value="em_uso">Em Uso</option>
-                                                    <option value="manutencao">Em Manutenção</option>
-                                                    <option value="indisponivel">Indisponível</option>
-                                                </select>
-                                            </div>
-
-                                            {/* Financials */}
-                                            <div>
-                                                <label className="text-xs font-semibold block mb-1">Valor de Venda (R$)</label>
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    className="w-full p-2 border rounded text-sm"
-                                                    value={editForm.venda}
-                                                    onChange={e => setEditForm({ ...editForm, venda: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-semibold block mb-1">Valor de Aluguel (R$)</label>
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    className="w-full p-2 border rounded text-sm"
-                                                    value={editForm.aluguel}
-                                                    onChange={e => setEditForm({ ...editForm, aluguel: e.target.value })}
-                                                />
-                                            </div>
-
-                                            {/* Other */}
-                                            <div className="md:col-span-2">
-                                                <label className="text-xs font-semibold block mb-1">Foto URL</label>
-                                                <input
-                                                    className="w-full p-2 border rounded text-sm"
-                                                    placeholder="https://..."
-                                                    value={editForm.foto}
-                                                    onChange={e => setEditForm({ ...editForm, foto: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Conectividade */}
-                                        <div className="md:col-span-2 pt-2 border-t border-yellow-200 mt-2">
-                                            <h4 className="text-xs font-bold text-yellow-800 uppercase mb-2">Conectividade (Admin)</h4>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="text-xs font-semibold block mb-1">Tailscale IP (100.x.y.z)</label>
-                                                    <input
-                                                        className="w-full p-2 border rounded text-sm font-mono"
-                                                        placeholder="100.100.100.100"
-                                                        value={editForm.tailscaleIp}
-                                                        onChange={e => setEditForm({ ...editForm, tailscaleIp: e.target.value })}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs font-semibold block mb-1">Usuário SSH</label>
-                                                    <input
-                                                        className="w-full p-2 border rounded text-sm font-mono"
-                                                        placeholder="pi"
-                                                        value={editForm.sshUser}
-                                                        onChange={e => setEditForm({ ...editForm, sshUser: e.target.value })}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-
-                                        <div className="flex gap-2 mt-4 pt-2 border-t border-yellow-200 justify-end">
-                                            <button onClick={handleUpdateRobot} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition">Salvar Alterações</button>
-                                            <button onClick={() => setIsEditing(false)} className="px-4 py-2 bg-gray-400 text-white rounded-lg text-sm font-medium hover:bg-gray-500 transition">Cancelar</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="flex flex-col gap-4 mb-2">
-                                            <div className="flex items-start justify-between">
-                                                <div>
-                                                    <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                                                        {selectedRobot.nome_identificacao}
-
-                                                        <span className={`text-xs px-2 py-1 rounded-full border ${selectedRobot.status_operacional === 'disponivel' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                            selectedRobot.status_operacional === 'em_uso' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                                                selectedRobot.status_operacional === 'manutencao' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                                                                    'bg-gray-100 text-gray-600 border-gray-200'
-                                                            }`}>
-                                                            {selectedRobot.status_operacional?.toUpperCase() || 'DISPONÍVEL'}
-                                                        </span>
-                                                    </h2>
-                                                    <p className="text-sm text-gray-500 font-mono mt-1">MAC: {selectedRobot.mac_address}</p>
-                                                    {selectedRobot.versao_firmware && (
-                                                        <p className="text-xs mt-0.5">
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono font-semibold">
-                                                                🔧 Firmware: v{selectedRobot.versao_firmware}
-                                                            </span>
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => setIsMaintenanceOpen(true)}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors border border-orange-100"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.703-.127 1.5.168 2.372 1.966 2.372 1.966a9.052 9.052 0 0 1-2.401 2.598s-1.83.916-2.429 1.258c-.598.342-1.28.431-1.841.139m-.73-.242a.56.56 0 0 1-.365-.968l2.64-2.64a.56.56 0 0 1 .84.73l-1.076 1.306c-.05.06-.05.151.002.211.336.398.816.638 1.328.627.513-.01.995-.262 1.317-.677l1.325-1.706a.56.56 0 0 0-.256-.855l-1.751-.624a.56.56 0 0 0-.687.202l-1.39 1.792a.56.56 0 0 0 .524.966" />
-                                                        </svg>
-                                                        Manutenção
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setIsEditing(true)}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                                                        </svg>
-                                                        Editar
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleToggleBlock(selectedRobot)}
-                                                        className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border ${selectedRobot.status_bloqueio
-                                                            ? 'text-green-600 bg-green-50 hover:bg-green-100 border-green-100'
-                                                            : 'text-red-600 bg-red-50 hover:bg-red-100 border-red-100'
-                                                            }`}
-                                                    >
-                                                        {selectedRobot.status_bloqueio ? (
-                                                            <>
-                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                                                                </svg>
-                                                                Desbloquear
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                                                                </svg>
-                                                                Bloquear
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-col md:flex-row gap-6">
-                                                {/* Left Column: Photo & Status */}
-                                                <div className="w-full md:w-1/3">
-                                                    <div className="aspect-square bg-gray-100 dark:bg-gray-700/30 rounded-lg flex items-center justify-center overflow-hidden border">
-                                                        {selectedRobot.foto_url ? (
-                                                            <img src={selectedRobot.foto_url} alt="Robô" className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <div className="text-gray-400 text-center p-4">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-16 h-16 mx-auto mb-2 opacity-50">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
-                                                                </svg>
-                                                                <span className="text-sm">Sem Foto</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* Right Column: Specs */}
-                                                <div className="flex-1 space-y-4">
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded border">
-                                                            <p className="text-xs text-gray-500 uppercase font-semibold">Preço Venda</p>
-                                                            <p className="text-lg font-bold text-green-700 dark:text-green-400">
-                                                                {selectedRobot.valor_venda ?
-                                                                    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedRobot.valor_venda)
-                                                                    : 'R$ 0,00'}
-                                                            </p>
-                                                        </div>
-                                                        <div className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded border">
-                                                            <p className="text-xs text-gray-500 uppercase font-semibold">Preço Aluguel/Mês</p>
-                                                            <p className="text-lg font-bold text-blue-700 dark:text-blue-400">
-                                                                {selectedRobot.valor_aluguel ?
-                                                                    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedRobot.valor_aluguel)
-                                                                    : 'R$ 0,00'}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                                                        <div className="flex justify-between border-b border-gray-100 dark:border-gray-700 pb-1">
-                                                            <span>Clínica Vinculada:</span>
-                                                            <span className="font-medium text-gray-900 dark:text-gray-100">
-                                                                {clinics.find(c => c.id.toString() == selectedRobot.id_clinica?.toString())?.nome_fantasia || 'Nenhuma (Estoque Global)'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex justify-between border-b border-gray-100 dark:border-gray-700 pb-1">
-                                                            <span>Modelo Hardware:</span>
-                                                            <span className="font-medium text-gray-900 dark:text-gray-100">{selectedRobot.modelo_hardware || '-'}</span>
-                                                        </div>
-                                                        <div className="flex justify-between border-b border-gray-100 dark:border-gray-700 pb-1">
-                                                            <span>Versão Hardware:</span>
-                                                            <span className="font-medium text-gray-900 dark:text-gray-100">{selectedRobot.versao_hardware || '-'}</span>
-                                                        </div>
-                                                        <div className="flex justify-between border-b border-gray-100 dark:border-gray-700 pb-1">
-                                                            <span>Número de Série:</span>
-                                                            <span className="font-medium text-gray-900 dark:text-gray-100">{selectedRobot.numero_serie || '-'}</span>
-                                                        </div>
-                                                        <div className="flex justify-between pb-1">
-                                                            <span>Versão Firmware:</span>
-                                                            <span className="font-semibold font-mono text-indigo-700 dark:text-indigo-400">
-                                                                {selectedRobot.versao_firmware ? `v${selectedRobot.versao_firmware}` : <span className="text-gray-400 font-normal font-sans">N/A</span>}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                        </div>
-
-                        {/* CARDS DE AÇÃO */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                            {/* Comandos Rapidos */}
-                            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                                <h3 className="font-semibold mb-3 text-gray-700 dark:text-gray-200">Comandos Rápidos</h3>
-
-                                {/* Personalidade */}
-                                <div className="mb-3">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium uppercase tracking-wide">Personalidade</p>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button onClick={() => handleCommand('MODO_CRIANCA')} className="p-2 bg-green-50 border border-green-200 text-green-800 text-sm rounded shadow-sm hover:bg-green-100 font-medium">🧒 Modo Criança</button>
-                                        <button onClick={() => handleCommand('MODO_TERAPEUTA')} className="p-2 bg-indigo-50 border border-indigo-200 text-indigo-800 text-sm rounded shadow-sm hover:bg-indigo-100 font-medium">🩺 Modo Terapeuta</button>
-                                    </div>
-                                </div>
-
-                                {/* Jogos e interações */}
-                                <div className="mb-3">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium uppercase tracking-wide">Jogos e Interações</p>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button onClick={() => handleCommand('FALAR', { texto: 'Olá, amigo!' })} className="p-2 bg-white border text-sm rounded shadow-sm hover:bg-gray-50">🗣️ Dizer Olá</button>
-                                        <button onClick={() => handleCommand('JOGAR_CORES')} className="p-2 bg-white border text-sm rounded shadow-sm hover:bg-gray-50">🎨 Jogo Cores</button>
-                                        <button onClick={() => handleCommand('JOGAR_EMOCOES')} className="p-2 bg-white border text-sm rounded shadow-sm hover:bg-gray-50">😊 Jogo Emoções</button>
-                                        <button onClick={() => handleCommand('JOGO_PAREAR')} className="p-2 bg-white border text-sm rounded shadow-sm hover:bg-gray-50">🖐️ Jogo Parear</button>
-                                        <button onClick={() => handleCommand('MODO_PAPAGAIO')} className="p-2 bg-purple-50 border border-purple-100 text-purple-700 text-sm rounded shadow-sm hover:bg-purple-100 font-medium">🦜 Modo Papagaio</button>
-                                        <button onClick={() => handleCommand('MODO_CONVERSA')} className="p-2 bg-blue-50 border border-blue-100 text-blue-700 text-sm rounded shadow-sm hover:bg-blue-100 font-medium">🤖 Conversar (IA)</button>
-                                    </div>
-                                </div>
-
-                                {/* Parar */}
-                                <button onClick={() => handleCommand('PARAR')} className="w-full p-2 bg-red-50 border border-red-100 text-red-600 text-sm rounded shadow-sm hover:bg-red-100 font-medium">🛑 Parar Tudo</button>
-                            </div>
-
-                            {/* Enviar Fala */}
-                            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                                <h3 className="font-semibold mb-3 text-gray-700 dark:text-gray-200">Enviar Fala</h3>
-                                <div className="flex gap-2">
-                                    <input id="speakIdx" className="flex-1 p-2 rounded border text-sm" placeholder="Digite o que robô deve falar..." />
-                                    <button
-                                        onClick={() => {
-                                            const el = document.getElementById('speakIdx') as HTMLInputElement
-                                            if (el.value) { handleCommand('FALAR', { texto: el.value }); el.value = ''; }
-                                        }}
-                                        className="bg-blue-600 text-white px-3 rounded text-sm"
-                                    >Enviar</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* PROGRAMAS ESPECIAIS */}
-                        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl mb-4">
-                            <h3 className="font-semibold mb-3 text-gray-700 dark:text-gray-200">🔬 Programas Especiais</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                <button
-                                    onClick={() => handleCommand('CALIBRAR_OLHOS')}
-                                    className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded shadow-sm hover:bg-yellow-100 font-medium"
-                                >
-                                    👁️ Calibrar Olhos
-                                </button>
-                                <button
-                                    onClick={() => handleCommand('RASTREADOR_TELA')}
-                                    className="p-2 bg-cyan-50 border border-cyan-200 text-cyan-800 text-sm rounded shadow-sm hover:bg-cyan-100 font-medium"
-                                >
-                                    📷 Rastreador Tela
-                                </button>
-                                <button
-                                    onClick={() => handleCommand('COREOGRAFIA_MACDONALD')}
-                                    className="p-2 bg-orange-50 border border-orange-200 text-orange-800 text-sm rounded shadow-sm hover:bg-orange-100 font-medium"
-                                >
-                                    🎵 Old MacDonald
-                                </button>
-                                <button
-                                    onClick={() => handleCommand('COREOGRAFIA_SEULOBATO')}
-                                    className="p-2 bg-green-50 border border-green-200 text-green-800 text-sm rounded shadow-sm hover:bg-green-100 font-medium"
-                                >
-                                    🎶 Seu Lobato
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* DIRETRIZES IA */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-bold text-lg flex items-center gap-2">
-                                    <span className="bg-purple-100 text-purple-700 p-1.5 rounded-lg">🧠</span>
-                                    Diretrizes de IA
-                                </h3>
-                                {dirSaveMsg && (
-                                    <span className={`text-sm font-medium px-3 py-1 rounded-full ${dirSaveMsg.startsWith('Erro') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                                        {dirSaveMsg}
+                                <div className="flex justify-between items-center">
+                                    <span className="font-bold text-gray-700 dark:text-gray-200 group-hover:text-primary transition-colors">
+                                        {r.nome_identificacao}
                                     </span>
-                                )}
-                            </div>
-                            <p className="text-xs text-gray-500 mb-4">
-                                Define o comportamento e personalidade do robô em cada modo.
-                                As alterações são carregadas pelo robô em até 5 minutos ou imediatamente ao salvar (se online).
-                            </p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Modo Criança */}
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-sm font-semibold text-green-700 dark:text-green-400 flex items-center gap-1">
-                                        🧒 Modo Criança
-                                    </label>
-                                    <textarea
-                                        value={dirCrianca}
-                                        onChange={e => setDirCrianca(e.target.value)}
-                                        rows={8}
-                                        className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-600 text-sm font-mono bg-gray-50 dark:bg-gray-700 resize-y focus:outline-none focus:ring-2 focus:ring-green-400"
-                                        placeholder="Ex: Você é o Robô Tirilo. Fale com crianças de forma lúdica e encorajadora..."
-                                    />
-                                    <button
-                                        onClick={() => handleSaveDirective('CRIANCA', dirCrianca)}
-                                        disabled={isSavingDir || !dirCrianca.trim()}
-                                        className="self-end px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
-                                    >
-                                        {isSavingDir ? 'Salvando...' : 'Salvar Criança'}
-                                    </button>
+                                    <div className="flex items-center gap-1.5">
+                                        {(new Date().getTime() - new Date(telemetry.find(t => t.mac_address === r.mac_address)?.timestamp || 0).getTime()) < 120000 ? (
+                                            <span className="flex h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                                        ) : (
+                                            <span className="h-2 w-2 rounded-full bg-gray-300" />
+                                        )}
+                                        <span className={`w-2 h-2 rounded-full ${r.status_bloqueio ? 'bg-red-500' : 'bg-green-500'}`} title={r.status_bloqueio ? 'Bloqueado' : 'Desbloqueado'} />
+                                    </div>
                                 </div>
-                                {/* Modo Terapeuta */}
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
-                                        🩺 Modo Terapeuta
-                                    </label>
-                                    <textarea
-                                        value={dirTerapeuta}
-                                        onChange={e => setDirTerapeuta(e.target.value)}
-                                        rows={8}
-                                        className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-600 text-sm font-mono bg-gray-50 dark:bg-gray-700 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                                        placeholder="Ex: Você é o Doutor Tirilo. Auxilie o terapeuta com análise comportamental de forma profissional..."
-                                    />
-                                    <button
-                                        onClick={() => handleSaveDirective('TERAPEUTA', dirTerapeuta)}
-                                        disabled={isSavingDir || !dirTerapeuta.trim()}
-                                        className="self-end px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium"
-                                    >
-                                        {isSavingDir ? 'Salvando...' : 'Salvar Terapeuta'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* PERFIS DE PERSONALIDADE */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-bold text-lg flex items-center gap-2">
-                                    <span className="bg-blue-100 text-blue-700 p-1.5 rounded-lg">🎭</span>
-                                    Perfis de Personalidade
-                                </h3>
-                                <div className="flex items-center gap-2">
-                                    {perfilMsg && (
-                                        <span className={`text-sm font-medium px-3 py-1 rounded-full ${perfilMsg.startsWith('Erro') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                                            {perfilMsg}
+                                <div className="flex justify-between items-center mt-1">
+                                    <div className="text-[10px] font-mono text-gray-500 truncate">{r.mac_address}</div>
+                                    {r.id_clinica && (
+                                        <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded uppercase font-bold tracking-tight">
+                                            {clinics.find(c => c.id.toString() == r.id_clinica?.toString())?.nome_fantasia?.split(' ')[0] || 'CLÍNICA'}
                                         </span>
                                     )}
-                                    <button
-                                        onClick={() => setPerfilEdit({ nome: '', descricao: '', prompt_instrucao: '', modo_base: 'CRIANCA', ativo: true })}
-                                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 font-medium"
-                                    >
-                                        + Novo Perfil
-                                    </button>
                                 </div>
                             </div>
-                            <p className="text-xs text-gray-500 mb-4">
-                                Crie quantos perfis quiser com nomes e prompts personalizados. Ative um perfil no robô com um clique.
-                            </p>
+                        ))}
+                        {filteredRobots.length === 0 && (
+                            <div className="text-center py-8 text-gray-400">
+                                <Search className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                                <p className="text-sm">Nenhum robô encontrado.</p>
+                            </div>
+                        )}
+                    </div>
+                </ScrollArea>
+                
+                <Button 
+                    variant="outline" 
+                    className="mt-4 w-full justify-start gap-2 border-dashed"
+                    onClick={() => setActiveTab('novo')}
+                >
+                    <Plus className="w-4 h-4" />
+                    Novo Registro
+                </Button>
+            </div>
+        )
+    }
 
-                            {/* Aviso para superadmin sem robô selecionado */}
-                            {!clinicaId && !selectedRobot && (
-                                <p className="text-sm text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg px-3 py-2 mb-4">
-                                    Selecione um robô na lista acima para gerenciar os perfis da clínica vinculada.
-                                </p>
-                            )}
+    function RenderDashboardTab() {
+        if (!selectedRobot) return (
+            <div className="flex flex-col items-center justify-center h-[500px] text-gray-400 bg-white dark:bg-gray-800 rounded-xl border border-dashed">
+                <LayoutDashboard className="w-16 h-16 mb-4 opacity-10" />
+                <p className="text-lg font-medium">Selecione um robô na lista lateral</p>
+                <p className="text-sm">Para visualizar status e comandos rápidos</p>
+            </div>
+        )
 
-                            {/* Lista de Perfis */}
-                            <div className="space-y-2 mb-4">
-                                {perfis.length === 0 && (
-                                    <p className="text-sm text-gray-400 italic">Nenhum perfil criado ainda.</p>
+        return (
+            <div className="space-y-6">
+                {/* Header do Robô Selecionado */}
+                <Card className="overflow-hidden border-none shadow-md bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
+                    <CardContent className="p-6">
+                        <div className="flex flex-col md:flex-row gap-6 items-start">
+                            <div className="w-full md:w-48 aspect-square bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden shadow-inner border-4 border-white dark:border-gray-800">
+                                {selectedRobot.foto_url ? (
+                                    <img src={selectedRobot.foto_url} alt="Robô" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                        <Cpu className="w-16 h-16 opacity-20" />
+                                    </div>
                                 )}
-                                {perfis.map(p => (
-                                    <div key={p.id} className={`flex items-center justify-between p-3 rounded-lg border ${perfilAtivoId === p.id ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700'}`}>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-semibold text-sm">{p.nome}</span>
-                                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.modo_base === 'TERAPEUTA' ? 'bg-indigo-100 text-indigo-700' : 'bg-green-100 text-green-700'}`}>
-                                                    {p.modo_base === 'TERAPEUTA' ? '🩺 Terapeuta' : '🧒 Criança'}
-                                                </span>
-                                                {perfilAtivoId === p.id && <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">● Ativo</span>}
-                                            </div>
-                                            {p.descricao && <p className="text-xs text-gray-500 mt-0.5 truncate">{p.descricao}</p>}
-                                        </div>
-                                        <div className="flex items-center gap-1 ml-2 shrink-0">
-                                            <button
-                                                onClick={() => handleAtivarPerfil(p)}
-                                                disabled={!selectedRobot}
-                                                className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40 font-medium"
-                                            >
-                                                Ativar
-                                            </button>
-                                            <button
-                                                onClick={() => setPerfilEdit({ ...p })}
-                                                className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300"
-                                            >
-                                                Editar
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeletePerfil(p.id!)}
-                                                className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
                             </div>
+                            
+                            <div className="flex-1 space-y-4">
+                                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                                    <div>
+                                        <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                                            {selectedRobot.nome_identificacao}
+                                        </h2>
+                                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                                            <Badge variant="secondary" className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5">
+                                                MAC: {selectedRobot.mac_address}
+                                            </Badge>
+                                            <Badge className={
+                                                selectedRobot.status_operacional === 'disponivel' ? 'bg-green-500' :
+                                                selectedRobot.status_operacional === 'em_uso' ? 'bg-blue-500' :
+                                                'bg-orange-500'
+                                            }>
+                                                {selectedRobot.status_operacional?.toUpperCase() || 'DISPONÍVEL'}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex gap-2 w-full sm:w-auto">
+                                        <Button size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={() => setIsEditing(true)}>
+                                            <Settings className="w-4 h-4 mr-2" />
+                                            Editar
+                                        </Button>
+                                        <Button size="sm" variant={selectedRobot.status_bloqueio ? "destructive" : "outline"} className="flex-1 sm:flex-none" onClick={() => handleToggleBlock(selectedRobot)}>
+                                            <Shield className="w-4 h-4 mr-2" />
+                                            {selectedRobot.status_bloqueio ? "Desbloquear" : "Bloquear"}
+                                        </Button>
+                                    </div>
+                                </div>
 
-                            {/* Formulário de Edição/Criação */}
-                            {perfilEdit !== null && (
-                                <div className="border border-blue-200 rounded-xl p-4 bg-blue-50 dark:bg-blue-900/20">
-                                    <h4 className="font-semibold text-sm mb-3">{perfilEdit.id ? 'Editar Perfil' : 'Novo Perfil'}</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-600 mb-1">Nome do Perfil *</label>
-                                            <input
-                                                value={perfilEdit.nome || ''}
-                                                onChange={e => setPerfilEdit(prev => ({ ...prev!, nome: e.target.value }))}
-                                                className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm bg-white dark:bg-gray-700"
-                                                placeholder="Ex: Autismo Leve, Fonoaudiologia..."
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-600 mb-1">Modo Base</label>
-                                            <select
-                                                value={perfilEdit.modo_base || 'CRIANCA'}
-                                                onChange={e => setPerfilEdit(prev => ({ ...prev!, modo_base: e.target.value as 'CRIANCA' | 'TERAPEUTA' }))}
-                                                className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm bg-white dark:bg-gray-700"
-                                            >
-                                                <option value="CRIANCA">🧒 Criança (voz robótica, jogos)</option>
-                                                <option value="TERAPEUTA">🩺 Terapeuta (voz neural, log clínico)</option>
-                                            </select>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                                    <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border shadow-sm">
+                                        <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Status Rede</p>
+                                        <div className="flex items-center gap-2">
+                                            {(new Date().getTime() - new Date(telemetry[0]?.timestamp || 0).getTime()) < 120000 ? (
+                                                <Badge className="bg-green-500/10 text-green-600 border-green-200">Online</Badge>
+                                            ) : (
+                                                <Badge variant="outline" className="text-gray-400">Offline</Badge>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="mb-3">
-                                        <label className="block text-xs font-medium text-gray-600 mb-1">Descrição (opcional)</label>
-                                        <input
-                                            value={perfilEdit.descricao || ''}
-                                            onChange={e => setPerfilEdit(prev => ({ ...prev!, descricao: e.target.value }))}
-                                            className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm bg-white dark:bg-gray-700"
-                                            placeholder="Ex: Perfil para crianças com TEA nível 1"
-                                        />
+                                    <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border shadow-sm">
+                                        <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Firmware</p>
+                                        <p className="font-mono font-bold text-indigo-600">v{selectedRobot.versao_firmware || '1.0'}</p>
                                     </div>
-                                    <div className="mb-3">
-                                        <label className="block text-xs font-medium text-gray-600 mb-1">Prompt de Instrução (System Prompt) *</label>
-                                        <textarea
-                                            value={perfilEdit.prompt_instrucao || ''}
-                                            onChange={e => setPerfilEdit(prev => ({ ...prev!, prompt_instrucao: e.target.value }))}
-                                            rows={8}
-                                            className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-600 text-sm font-mono bg-white dark:bg-gray-700 resize-y"
-                                            placeholder="Você é o Robô Tirilo. Fale de forma clara e pausada para crianças com dificuldades de comunicação..."
-                                        />
+                                    <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border shadow-sm">
+                                        <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Bateria</p>
+                                        <div className="flex items-center gap-1">
+                                            <Activity className="w-3 h-3 text-green-500" />
+                                            <p className="font-bold">100%</p>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-end gap-2">
-                                        <button
-                                            onClick={() => setPerfilEdit(null)}
-                                            className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300"
+                                    <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border shadow-sm">
+                                        <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Sessão</p>
+                                        <p className="font-bold text-blue-600">Ativa</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Comandos Rápidos */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Terminal className="w-5 h-5 text-primary" />
+                                Comandos Rápidos
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                             <div className="grid grid-cols-2 gap-2">
+                                <Button onClick={() => handleCommand('MODO_CRIANCA')} className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 hover:bg-green-100">🧒 Modo Criança</Button>
+                                <Button onClick={() => handleCommand('MODO_TERAPEUTA')} className="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border-indigo-200 hover:bg-indigo-100">🩺 Modo Terapeuta</Button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button variant="outline" size="sm" onClick={() => handleCommand('MODO_PAPAGAIO')}>🦜 Papagaio</Button>
+                                <Button variant="outline" size="sm" onClick={() => handleCommand('MODO_CONVERSA')}>🤖 Conversar</Button>
+                            </div>
+                            <Button variant="destructive" className="w-full shadow-lg shadow-red-500/10" onClick={() => handleCommand('PARAR')}>
+                                <Power className="w-4 h-4 mr-2" />
+                                Parar Todas as Atividades
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* Enviar Fala */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Radio className="w-5 h-5 text-primary" />
+                                Voz do Robô
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex gap-2">
+                                <Input id="speakIdx" placeholder="Digite o que o Tirilo deve falar..." />
+                                <Button onClick={() => {
+                                    const el = document.getElementById('speakIdx') as HTMLInputElement
+                                    if (el.value) { handleCommand('FALAR', { texto: el.value }); el.value = ''; }
+                                }}>Enviar</Button>
+                            </div>
+                            <div className="flex gap-2 mt-4">
+                                <Button variant="ghost" size="sm" className="text-xs" onClick={() => handleCommand('FALAR', { texto: 'Olá, como você está hoje?' })}>Dizer Olá</Button>
+                                <Button variant="ghost" size="sm" className="text-xs" onClick={() => handleCommand('FALAR', { texto: 'Parabéns, você conseguiu!' })}>Parabenizar</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Telemetria Simplificada */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <Signal className="w-5 h-5 text-primary" />
+                            Atividade Recente
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {telemetry.slice(0, 5).map(t => (
+                                <div key={t.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-transparent hover:border-gray-200 transition-all">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                                            <Play className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold">{t.jogo || 'Ação do Sistema'}</p>
+                                            <p className="text-[10px] text-gray-500">{new Date(t.timestamp).toLocaleTimeString()}</p>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline">{t.resultado}</Badge>
+                                </div>
+                            ))}
+                            {telemetry.length === 0 && <p className="text-center py-4 text-gray-400 text-sm">Sem atividades registradas.</p>}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
+    function RenderNewRobotTab() {
+        return (
+            <Card className="max-w-2xl mx-auto">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Plus className="w-6 h-6 text-primary" />
+                        Registrar Novo Robô Tirilo
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <p className="text-sm text-gray-500 mb-4">
+                        Preencha as informações técnicas fornecidas na etiqueta do dispositivo para vinculá-lo à frota.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">Endereço MAC</label>
+                            <Input
+                                placeholder="00:00:00:00:00:00"
+                                value={newMac}
+                                onChange={e => setNewMac(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">Nome de Identificação</label>
+                            <Input
+                                placeholder="Ex: Tirilo - Sala 01"
+                                value={newName}
+                                onChange={e => setNewName(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">Clínica de Destino</label>
+                        <select
+                            className="w-full p-2 rounded-lg border bg-white dark:bg-gray-800"
+                            value={newClinicId}
+                            onChange={e => setNewClinicId(e.target.value)}
+                            disabled={!!clinicaId}
+                        >
+                            <option value="">Nenhuma (Estoque / Global)</option>
+                            {clinics.map(c => (
+                                <option key={c.id} value={c.id}>{c.nome_fantasia}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="pt-4">
+                        <Button className="w-full h-12 text-lg shadow-lg shadow-primary/20" onClick={handleRegister}>
+                            Finalizar Registro
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        )
+    }
+
+    function RenderConfigTab() {
+        return (
+            <div className="space-y-6">
+                 {/* GLOBAL CONFIG */}
+                 <Card className="border-none shadow-sm overflow-hidden">
+                    <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4 border-b dark:border-gray-800">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <h2 className="text-base sm:text-xl font-black flex items-center gap-2">
+                                <Cpu className="w-5 h-5 text-indigo-500" />
+                                Personalidade Global da IA
+                            </h2>
+                            <Button onClick={handleSaveConfig} className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto h-9 sm:h-10 font-bold">
+                                <Check className="w-4 h-4 mr-2" />
+                                Salvar
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6 space-y-4">
+                        <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-100 flex items-start gap-3">
+                            <Info className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mt-0.5 shrink-0" />
+                            <p className="text-[10px] sm:text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+                                Este prompt define o comportamento base do robô para toda a clínica.
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300">Prompt do Sistema (Persona)</label>
+                            <textarea
+                                className="w-full p-3 sm:p-4 rounded-xl border dark:bg-gray-900 min-h-[100px] sm:min-h-[150px] shadow-inner focus:ring-2 focus:ring-primary/20 transition-all outline-none text-xs sm:text-sm font-medium leading-relaxed"
+                                value={prompt}
+                                onChange={e => setPrompt(e.target.value)}
+                                placeholder="Você é o Robô Tirilo, um assistente lúdico para crianças..."
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* DIRETRIZES IA */}
+                <Card className="border-none shadow-sm overflow-hidden">
+                    <CardHeader className="p-4 sm:p-6 border-b dark:border-gray-800">
+                        <CardTitle className="text-base sm:text-xl font-black flex items-center gap-2">
+                            <Bug className="w-5 h-5 text-primary" />
+                            Diretrizes de Atuação
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Modo Criança */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs sm:text-sm font-black text-green-600 flex items-center gap-2 uppercase tracking-wider">
+                                        🧒 Modo Criança
+                                    </label>
+                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold" onClick={() => handleSaveDirective('CRIANCA', dirCrianca)}>Salvar</Button>
+                                </div>
+                                <textarea
+                                    value={dirCrianca}
+                                    onChange={e => setDirCrianca(e.target.value)}
+                                    rows={4}
+                                    className="w-full p-3 rounded-xl border dark:bg-gray-900 text-[11px] sm:text-xs font-mono shadow-inner outline-none focus:ring-2 focus:ring-green-400/20 leading-relaxed"
+                                    placeholder="Instruções para interação infantil..."
+                                />
+                            </div>
+                            {/* Modo Terapeuta */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs sm:text-sm font-black text-indigo-600 flex items-center gap-2 uppercase tracking-wider">
+                                        🩺 Modo Terapeuta
+                                    </label>
+                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold" onClick={() => handleSaveDirective('TERAPEUTA', dirTerapeuta)}>Salvar</Button>
+                                </div>
+                                <textarea
+                                    value={dirTerapeuta}
+                                    onChange={e => setDirTerapeuta(e.target.value)}
+                                    rows={4}
+                                    className="w-full p-3 rounded-xl border dark:bg-gray-900 text-[11px] sm:text-xs font-mono shadow-inner outline-none focus:ring-2 focus:ring-indigo-400/20 leading-relaxed"
+                                    placeholder="Instruções para auxílio profissional..."
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* PERFIS DE PERSONALIDADE */}
+                <Card>
+                    <CardHeader className="p-4 sm:p-6">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                                <Gamepad2 className="w-5 h-5 text-primary" />
+                                Perfis de Personalidade
+                            </CardTitle>
+                            <Button size="sm" onClick={() => setPerfilEdit({ nome: '', descricao: '', prompt_instrucao: '', modo_base: 'CRIANCA', ativo: true })}>
+                                <Plus className="w-4 h-4 mr-2" />
+                                <span className="hidden sm:inline">Novo Perfil</span>
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-3 sm:p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {perfis.map(p => (
+                                <Card key={p.id} className={`group hover:border-primary/50 transition-all ${perfilAtivoId === p.id ? 'border-primary bg-primary/5' : ''}`}>
+                                    <CardContent className="p-4">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <Badge variant={p.modo_base === 'TERAPEUTA' ? "secondary" : "outline"} className="text-[9px]">
+                                                {p.modo_base}
+                                            </Badge>
+                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setPerfilEdit({ ...p })}><Settings className="w-3 h-3" /></Button>
+                                                <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={() => handleDeletePerfil(p.id!)}>✕</Button>
+                                            </div>
+                                        </div>
+                                        <h4 className="font-bold text-sm truncate">{p.nome}</h4>
+                                        <p className="text-xs text-gray-500 line-clamp-2 mt-1 min-h-[2.5rem]">{p.descricao || 'Sem descrição.'}</p>
+                                        <Button 
+                                            size="sm" 
+                                            className="w-full mt-4 h-8" 
+                                            variant={perfilAtivoId === p.id ? "default" : "outline"}
+                                            onClick={() => handleAtivarPerfil(p)}
+                                            disabled={!selectedRobot}
                                         >
-                                            Cancelar
-                                        </button>
-                                        <button
-                                            onClick={handleSavePerfil}
-                                            disabled={isSavingPerfil || !perfilEdit.nome?.trim() || !perfilEdit.prompt_instrucao?.trim() || !(clinicaId || selectedRobot?.id_clinica)}
-                                            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
-                                        >
-                                            {isSavingPerfil ? 'Salvando...' : 'Salvar Perfil'}
-                                        </button>
-                                    </div>
+                                            {perfilAtivoId === p.id ? "Perfil Ativo" : "Ativar no Robô"}
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                            {perfis.length === 0 && (
+                                <div className="col-span-full py-8 text-center text-gray-400">
+                                    <p className="text-sm">Nenhum perfil personalizado cadastrado.</p>
                                 </div>
                             )}
                         </div>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
 
-                        {/* CONECTIVIDADE & SUPORTE (NOVO) */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
-                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                                <span className="bg-indigo-100 text-indigo-700 p-1.5 rounded-lg">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z" /></svg>
-                                </span>
-                                Conectividade e Acesso Remoto
-                            </h3>
+    function RenderAppsTab() {
+        const games = filteredApps.filter(a => a.categoria === 'JOGO')
+        const tools = filteredApps.filter(a => a.categoria !== 'JOGO')
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Status Card */}
-                                <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-600">
-                                    <p className="text-xs text-gray-500 uppercase font-semibold mb-2">Status da Rede</p>
-                                    <div className="flex items-center gap-3">
-                                        {telemetry.length > 0 && (new Date().getTime() - new Date(telemetry[0].timestamp).getTime()) < 120000 ? (
-                                            <>
-                                                <span className="relative flex h-3 w-3">
-                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                                                </span>
-                                                <span className="font-bold text-green-700 dark:text-green-400">ONLINE (Ativo agora)</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span className="h-3 w-3 rounded-full bg-gray-400"></span>
-                                                <span className="font-bold text-gray-500">OFFLINE (Visto há {telemetry.length > 0 ? Math.floor((new Date().getTime() - new Date(telemetry[0].timestamp).getTime()) / 60000) + ' min' : 'nunca'})</span>
-                                            </>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-gray-400 mt-2">Baseado na telemetria via Supabase</p>
-                                </div>
-
-                                {/* SSH Access */}
-                                <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-600">
-                                    <p className="text-xs text-gray-500 uppercase font-semibold mb-2">Acesso Seguro (Tailscale)</p>
-                                    {selectedRobot.endereco_tailscale ? (
-                                        <div>
-                                            <code className="block bg-black text-green-400 p-2 rounded text-xs font-mono mb-2 overflow-x-auto">
-                                                ssh {selectedRobot.usuario_ssh || 'pi'}@{selectedRobot.endereco_tailscale}
-                                            </code>
-                                            <button
-                                                onClick={() => navigator.clipboard.writeText(`ssh ${selectedRobot.usuario_ssh || 'pi'}@${selectedRobot.endereco_tailscale}`)}
-                                                className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5" /></svg>
-                                                Copiar Comando SSH
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-gray-400 italic">Endereço IP não cadastrado.</p>
-                                    )}
-                                </div>
+        return (
+            <div className="space-y-8">
+                <Card className="bg-primary/5 border-primary/20">
+                    <CardContent className="p-4 sm:p-6">
+                        <div className="flex flex-col md:flex-row gap-4 items-center">
+                            <div className="relative flex-1 w-full">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <Input 
+                                    className="pl-10 h-10 sm:h-12 text-sm sm:text-lg bg-white dark:bg-gray-900 border-none shadow-sm" 
+                                    placeholder="Busca rápida..."
+                                    value={appSearch}
+                                    onChange={e => setAppSearch(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+                                <Badge variant="secondary" className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full cursor-pointer hover:bg-primary hover:text-white transition-colors shrink-0 text-[10px] sm:text-xs" onClick={() => setAppSearch('')}>Todos</Badge>
+                                <Badge variant="secondary" className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full cursor-pointer hover:bg-primary hover:text-white transition-colors shrink-0 text-[10px] sm:text-xs" onClick={() => setAppSearch('jogo')}>Jogos</Badge>
+                                <Badge variant="secondary" className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full cursor-pointer hover:bg-primary hover:text-white transition-colors shrink-0 text-[10px] sm:text-xs" onClick={() => setAppSearch('ferramenta')}>Ferramentas</Badge>
                             </div>
                         </div>
+                    </CardContent>
+                </Card>
 
-                        <h3 className="font-bold text-lg mb-3">Telemetria (Ao Vivo)</h3>
-                        <div className="border rounded-lg overflow-hidden">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50 dark:bg-gray-700 text-gray-500 font-medium">
-                                    <tr>
-                                        <th className="p-3">Horário</th>
-                                        <th className="p-3">Atividade</th>
-                                        <th className="p-3">Resultado</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {telemetry.map(t => (
-                                        <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                                            <td className="p-3">{new Date(t.timestamp).toLocaleTimeString()}</td>
-                                            <td className="p-3 font-medium">{t.jogo || 'Log'}</td>
-                                            <td className="p-3">{t.resultado}</td>
-                                        </tr>
-                                    ))}
-                                    {telemetry.length === 0 && (
-                                        <tr><td colSpan={3} className="p-4 text-center text-gray-400">Sem dados recentes.</td></tr>
+                {/* Seção de Jogos */}
+                <div className="space-y-4">
+                    <h3 className="text-lg sm:text-2xl font-black flex items-center gap-3 text-gray-800 dark:text-white px-1">
+                        <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg sm:rounded-xl">
+                            <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                        </div>
+                        LudoTirilo: Jogos e Interações
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                        {games.map(game => (
+                            <Card key={game.id} className="group overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-none bg-white dark:bg-gray-800 shadow-sm">
+                                <div className="aspect-[4/3] relative overflow-hidden bg-gray-100 dark:bg-gray-700">
+                                    {game.thumbnail_url ? (
+                                        <img src={game.thumbnail_url} alt={game.nome} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                            <Gamepad2 className="w-10 h-10 sm:w-12 sm:h-12 opacity-10" />
+                                        </div>
                                     )}
-                                </tbody>
-                            </table>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                                        <Badge className="bg-white/20 backdrop-blur-md border-none text-white text-[9px] sm:text-[10px] uppercase font-bold tracking-widest">
+                                            v{game.versao_atual || '1.0'}
+                                        </Badge>
+                                    </div>
+                                </div>
+                                <CardContent className="p-3 sm:p-4 space-y-3">
+                                    <h4 className="font-bold text-base sm:text-lg leading-tight group-hover:text-primary transition-colors truncate">{game.nome}</h4>
+                                    <p className="text-[11px] sm:text-xs text-gray-500 line-clamp-2 h-8 leading-relaxed">{game.descricao_regras || 'Interação lúdica com o Robô Tirilo.'}</p>
+                                    <Button 
+                                        className="w-full h-9 sm:h-10 font-bold tracking-wide text-xs sm:text-sm" 
+                                        onClick={() => handleCommand(game.comando_entrada || 'START_GAME', { game_id: game.id })}
+                                        disabled={!selectedRobot}
+                                    >
+                                        <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-2 fill-current" />
+                                        INICIAR AGORA
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Seção de Ferramentas */}
+                <div className="space-y-4">
+                    <h3 className="text-lg sm:text-2xl font-black flex items-center gap-3 text-gray-800 dark:text-white px-1">
+                        <div className="p-1.5 sm:p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg sm:rounded-xl">
+                            <Wrench className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
+                        </div>
+                        Configurações e Diagnóstico
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        {tools.map(tool => (
+                            <Card key={tool.id} className="bg-gray-50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 transition-colors border-dashed hover:border-solid hover:border-orange-200">
+                                <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 shrink-0">
+                                        <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-bold text-xs sm:text-sm truncate">{tool.nome}</h4>
+                                        <p className="text-[9px] sm:text-[10px] text-gray-500 truncate">{tool.comando_entrada}</p>
+                                    </div>
+                                    <Button 
+                                        size="sm" 
+                                        variant="secondary" 
+                                        className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs" 
+                                        onClick={() => handleCommand(tool.comando_entrada || 'SYSTEM_TOOL')}
+                                        disabled={!selectedRobot}
+                                    >
+                                        Executar
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ))}
+                        {/* Ferramentas Hardcoded se necessário (fallback ou legado) */}
+                        {!tools.some(t => t.comando_entrada === 'CALIBRAR_OLHOS') && (
+                            <Card className="bg-gray-50 dark:bg-gray-800/50 border-dashed border-gray-300">
+                                <CardContent className="p-4 flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-600">
+                                        <Bug className="w-6 h-6" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-sm">Calibração de Atuadores</h4>
+                                        <p className="text-[10px] text-gray-500">Ajuste fino de servos e LEDs</p>
+                                    </div>
+                                    <Button size="sm" variant="secondary" onClick={() => handleCommand('CALIBRAR_OLHOS')} disabled={!selectedRobot}>Abrir</Button>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    function RenderEditForm() {
+        if (!selectedRobot) return null;
+
+        return (
+            <div className="space-y-4 mb-2 p-4 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg border border-yellow-200">
+                <h3 className="font-bold text-yellow-800 dark:text-yellow-200 border-b border-yellow-200 pb-2 mb-2">Editando Robô</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Basic Info */}
+                    <div>
+                        <label className="text-xs font-semibold block mb-1 text-gray-700 dark:text-gray-300">Nome</label>
+                        <Input
+                            className="bg-white dark:bg-gray-800"
+                            value={editForm.nome}
+                            onChange={e => setEditForm({ ...editForm, nome: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold block mb-1 text-gray-700 dark:text-gray-300">MAC Address</label>
+                        <Input
+                            className="bg-gray-100 dark:bg-gray-900"
+                            value={editForm.mac}
+                            onChange={e => setEditForm({ ...editForm, mac: e.target.value })}
+                            readOnly
+                        />
+                    </div>
+
+                    {/* Clinic selection */}
+                    <div className="md:col-span-2">
+                        <label className="text-xs font-semibold block mb-1 text-gray-700 dark:text-gray-300">Clínica Vinculada</label>
+                        <select
+                            className="w-full p-2 border rounded text-sm bg-white dark:bg-gray-800"
+                            value={editForm.clinicaId}
+                            onChange={e => setEditForm({ ...editForm, clinicaId: e.target.value })}
+                            disabled={!!clinicaId}
+                        >
+                            <option value="">Nenhuma (Estoque / Global)</option>
+                            {clinics.map(c => (
+                                <option key={c.id} value={c.id}>{c.nome_fantasia}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Specs */}
+                    <div>
+                        <label className="text-xs font-semibold block mb-1 text-gray-700 dark:text-gray-300">Modelo Hardware</label>
+                        <Input
+                            className="bg-white dark:bg-gray-800"
+                            placeholder="Ex: Raspberry Pi 4"
+                            value={editForm.modelo}
+                            onChange={e => setEditForm({ ...editForm, modelo: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold block mb-1 text-gray-700 dark:text-gray-300">Versão Hardware</label>
+                        <Input
+                            className="bg-white dark:bg-gray-800"
+                            placeholder="Ex: v2.0"
+                            value={editForm.versao}
+                            onChange={e => setEditForm({ ...editForm, versao: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold block mb-1 text-gray-700 dark:text-gray-300">Número de Série</label>
+                        <Input
+                            className="bg-white dark:bg-gray-800"
+                            placeholder="Ex: SN-123456"
+                            value={editForm.serial}
+                            onChange={e => setEditForm({ ...editForm, serial: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold block mb-1 text-gray-700 dark:text-gray-300">Status Operacional</label>
+                        <select
+                            className="w-full p-2 border rounded text-sm bg-white dark:bg-gray-800"
+                            value={editForm.statusOp}
+                            onChange={e => setEditForm({ ...editForm, statusOp: e.target.value })}
+                        >
+                            <option value="disponivel">Disponível</option>
+                            <option value="em_uso">Em Uso</option>
+                            <option value="manutencao">Em Manutenção</option>
+                            <option value="indisponivel">Indisponível</option>
+                        </select>
+                    </div>
+
+                    <div className="md:col-span-2 pt-2 border-t border-yellow-200 mt-2">
+                        <h4 className="text-xs font-bold text-yellow-800 uppercase mb-2">Conectividade (Admin)</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs font-semibold block mb-1">Tailscale IP</label>
+                                <Input
+                                    className="font-mono text-xs bg-white dark:bg-gray-800"
+                                    value={editForm.tailscaleIp}
+                                    onChange={e => setEditForm({ ...editForm, tailscaleIp: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold block mb-1 text-gray-700 dark:text-gray-300">Usuário SSH</label>
+                                <Input
+                                    className="font-mono text-xs bg-white dark:bg-gray-800"
+                                    value={editForm.sshUser}
+                                    onChange={e => setEditForm({ ...editForm, sshUser: e.target.value })}
+                                />
+                            </div>
                         </div>
                     </div>
-                ) : (
-                    <div className="bg-white dark:bg-gray-800 rounded-xl p-12 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-gray-400 h-full">
-                        <p className="text-xl font-medium">Selecione um robô para gerenciar</p>
-                        <p className="text-sm mt-2">Ou registre um novo dispositivo na lateral.</p>
-                    </div>
-                )}
+                </div>
+
+                <div className="flex gap-2 mt-4 pt-2 border-t border-yellow-200 justify-end">
+                    <Button variant="outline" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                    <Button onClick={handleUpdateRobot} className="bg-green-600 hover:bg-green-700 text-white">Salvar Alterações</Button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-140px)] overflow-y-auto lg:overflow-hidden p-2 lg:p-0 pb-24 lg:pb-0">
+            {/* Sidebar Desktop (Contexto do Robô) */}
+            <div className="hidden lg:block w-80 shrink-0">
+                {RenderRobotSidebar()}
             </div>
 
+            {/* Mobile Header with Drawer Trigger */}
+            <div className="lg:hidden flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border shadow-sm mb-2">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                        <Cpu className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                        <h2 className="font-bold text-sm leading-tight">Gestão de Robôs</h2>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">{selectedRobot?.nome_identificacao || 'Nenhum Selecionado'}</p>
+                    </div>
+                </div>
+
+                <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+                    <SheetTrigger asChild>
+                        <Button variant="outline" size="icon" className="relative">
+                            <Menu className="w-5 h-5" />
+                            {!selectedRobot && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />}
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="p-0 w-80">
+                        <SheetHeader className="p-4 border-b">
+                            <SheetTitle className="flex items-center gap-2">
+                                <Cpu className="w-5 h-5 text-primary" />
+                                Lista de Robôs
+                            </SheetTitle>
+                        </SheetHeader>
+                        <div className="h-[calc(100vh-80px)]">
+                            {RenderRobotSidebar()}
+                        </div>
+                    </SheetContent>
+                </Sheet>
+            </div>
+
+            {/* Main Content Area (Abas) */}
+            <div className="flex-1 min-w-0">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+                    {/* Header de Abas Desktop */}
+                    <div className="hidden lg:flex items-center justify-between mb-4 bg-white dark:bg-gray-800 p-2 rounded-xl border shadow-sm">
+                        <TabsList className="bg-transparent border-none">
+                            <TabsTrigger value="dashboard" className="gap-2">
+                                <LayoutDashboard className="w-4 h-4" />
+                                <span>Painel</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="novo" className="gap-2">
+                                <Plus className="w-4 h-4" />
+                                <span>Novo Robô</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="config" className="gap-2">
+                                <Settings className="w-4 h-4" />
+                                <span>IA & Perfil</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="apps" className="gap-2">
+                                <Gamepad2 className="w-4 h-4" />
+                                <span>Aplicativos</span>
+                            </TabsTrigger>
+                        </TabsList>
+                        
+                        {selectedRobot && (
+                            <div className="flex items-center gap-3 pr-4">
+                                <div className="text-right">
+                                    <p className="text-xs font-bold leading-tight">{selectedRobot.nome_identificacao}</p>
+                                    <p className="text-[10px] text-gray-500 font-mono">{selectedRobot.mac_address}</p>
+                                </div>
+                                <div className={`w-2.5 h-2.5 rounded-full ${selectedRobot.status_bloqueio ? 'bg-red-500' : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]'}`} />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Navbar Mobile (Fixa no Rodapé) */}
+                    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 px-1 pb-safe pt-1 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+                        <TabsList className="grid grid-cols-4 w-full bg-transparent gap-0 h-16">
+                            <TabsTrigger value="dashboard" className="flex flex-col items-center justify-center gap-0.5 h-full w-full data-[state=active]:bg-primary/5 data-[state=active]:text-primary border-none bg-transparent transition-all p-0">
+                                <LayoutDashboard className="w-5 h-5" />
+                                <span className="text-[10px] font-bold leading-none">Painel</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="novo" className="flex flex-col items-center justify-center gap-0.5 h-full w-full data-[state=active]:bg-primary/5 data-[state=active]:text-primary border-none bg-transparent transition-all p-0">
+                                <Plus className="w-5 h-5" />
+                                <span className="text-[10px] font-bold leading-none">Novo</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="config" className="flex flex-col items-center justify-center gap-0.5 h-full w-full data-[state=active]:bg-primary/5 data-[state=active]:text-primary border-none bg-transparent transition-all p-0">
+                                <Settings className="w-5 h-5" />
+                                <span className="text-[10px] font-bold leading-none">IA</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="apps" className="flex flex-col items-center justify-center gap-0.5 h-full w-full data-[state=active]:bg-primary/5 data-[state=active]:text-primary border-none bg-transparent transition-all p-0">
+                                <Gamepad2 className="w-5 h-5" />
+                                <span className="text-[10px] font-bold leading-none">Apps</span>
+                            </TabsTrigger>
+                        </TabsList>
+                    </div>
+
+                    <ScrollArea className="flex-1 lg:pr-4 lg:-mr-4">
+                        <div className="pb-10 lg:pb-0">
+                            <TabsContent value="dashboard" className="m-0 focus-visible:outline-none">
+                                {RenderDashboardTab()}
+                            </TabsContent>
+                            <TabsContent value="novo" className="m-0 focus-visible:outline-none">
+                                {RenderNewRobotTab()}
+                            </TabsContent>
+                            <TabsContent value="config" className="m-0 focus-visible:outline-none">
+                                {RenderConfigTab()}
+                            </TabsContent>
+                            <TabsContent value="apps" className="m-0 focus-visible:outline-none">
+                                {RenderAppsTab()}
+                            </TabsContent>
+                        </div>
+                    </ScrollArea>
+                </Tabs>
+            </div>
+
+            {/* Dialogs */}
             <Dialog open={isMaintenanceOpen} onOpenChange={setIsMaintenanceOpen}>
                 <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 overflow-hidden">
                     <MaintenancePanel robot={selectedRobot || undefined} onClose={() => setIsMaintenanceOpen(false)} />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isEditing} onOpenChange={setIsEditing}>
+                <DialogContent className="max-w-2xl">
+                    {RenderEditForm()}
                 </DialogContent>
             </Dialog>
         </div>
