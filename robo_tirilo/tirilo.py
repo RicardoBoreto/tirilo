@@ -3,7 +3,7 @@
 =============================================================================
 PROJETO: ROBÔ TIRILO
 ARQUIVO: tirilo.py
-VERSÃO:  4.6 (Voz Neural Terapeuta + Barge-In + Editor de Diretrizes)
+VERSÃO:  4.8 (Estabilidade: Barge-In + Captura de Voz + Ping/Online)
 DATA:    15/03/2026
 AUTOR:   Ricardo Alonso Boreto
 
@@ -68,7 +68,7 @@ from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "4.7"
+VERSAO_ATUAL = "4.8"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -263,6 +263,7 @@ MODO_VISAO_ATIVO = True # Controla se o robô segue rostos
 _ev_camera_livre = threading.Event() # Sinaliza que a câmera foi liberada
 _pausar_piscar = False  # Pausa piscada espontânea durante animações complexas/programas externos
 _parar_fala = threading.Event()  # Barge-in: interrompe fala ao detectar voz (modo Terapeuta)
+_barge_in_ativo = False          # Garante que só um thread de barge-in roda por vez
 _processo_externo = None  # Processo filho atual (jogo/programa externo) para poder encerrar via PARAR
 HAAR_PATH = os.path.join(DIR_BASE, "robo_tirilo", "haarcascades", "haarcascade_frontalface_default.xml")
 
@@ -967,8 +968,16 @@ def capturar_voz():
         texto = r.recognize_google(audio, language="pt-BR").lower()
         return texto
 
+    except sr.UnknownValueError:
+        # Google não entendeu o áudio (silêncio ou ruído) — comportamento normal
+        if gui: gui.set_status("Pronto!", CINZA)
+        return None
+    except sr.RequestError as e:
+        print(f"Erro de rede no reconhecimento de voz: {e}")
+        if gui: gui.set_status("Sem internet", VERMELHO)
+        return None
     except Exception as e:
-        print(f"Erro na captura de voz (pode ser internet): {e}")
+        print(f"Erro na captura de voz: {e}")
         if gui: gui.set_status("Erro Voz", VERMELHO)
         return None
 
@@ -988,9 +997,12 @@ def _monitorar_barge_in(processo_audio):
     import math
 
     CHUNK_BYTES = 1024   # 512 amostras S16_LE
-    THRESH      = 600    # RMS mínimo para voz (ajuste se falso-positivo)
+    THRESH      = 4500   # RMS mínimo para voz — elevado para ignorar feedback do EMEET M1A
     CONFIRMA    = 3      # chunks consecutivos ~= 100ms de voz para confirmar
+    DELAY_INICIO = 0.5   # segundos antes de começar a monitorar (mpg123 estabilizar)
 
+    global _barge_in_ativo
+    _barge_in_ativo = True
     proc_rec = None
     try:
         proc_rec = subprocess.Popen(
@@ -1000,6 +1012,11 @@ def _monitorar_barge_in(processo_audio):
         )
         count = 0
         print("Barge-in: monitorando mic...")
+        # Descarta os primeiros chunks para o mpg123 estabilizar o volume
+        chunks_descartar = int(DELAY_INICIO * 16000 * 2 / CHUNK_BYTES)
+        for _ in range(chunks_descartar):
+            if proc_rec.stdout.read(CHUNK_BYTES) == b'':
+                break
         while processo_audio.poll() is None and not _parar_fala.is_set():
             data = proc_rec.stdout.read(CHUNK_BYTES)
             if len(data) < CHUNK_BYTES:
@@ -1019,6 +1036,7 @@ def _monitorar_barge_in(processo_audio):
     except Exception as e:
         print(f"Barge-in monitor erro: {e}")
     finally:
+        _barge_in_ativo = False
         if proc_rec and proc_rec.poll() is None:
             try: proc_rec.terminate()
             except: pass
@@ -1052,7 +1070,8 @@ def falar(texto, local_fast=False):
                     ["mpg123", "-o", "alsa", "-a", "default", "-q", arq_mp3],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                 )
-                threading.Thread(target=_monitorar_barge_in, args=(proc_audio,), daemon=True).start()
+                if not _barge_in_ativo:
+                    threading.Thread(target=_monitorar_barge_in, args=(proc_audio,), daemon=True).start()
                 proc_audio.wait()
             except Exception as e:
                 print(f"IA: Falha Edge-TTS ({e}), usando espeak...")
@@ -1697,6 +1716,7 @@ def loop_logica():
             comando_fila.put(cmd)
         cloud_mgr.register_callback(on_nuvem_comando)
         cloud_mgr.start_listener()
+        cloud_mgr.notify_online()
         print(f"Listener de comandos ativado. Firmware: {VERSAO_ATUAL}")
         # Carrega configurações globais (Modelo IA)
         global MODELO_IA
@@ -1734,7 +1754,10 @@ def loop_logica():
                         payload = cmd.get('comando', '')
                         print(f"Comando recebido: {payload}")
                         
-                        if payload == "PARAR":
+                        if payload == "PING":
+                            from datetime import datetime, timezone
+                            cloud_mgr.send_telemetry('SYSTEM', 'PONG', datetime.now(timezone.utc).isoformat())
+                        elif payload == "PARAR":
                             finalizar_modo_geral()
                         elif payload == "MODO_TERAPEUTA":
                             threading.Thread(target=iniciar_modo_terapeuta).start()

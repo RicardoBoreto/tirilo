@@ -317,8 +317,7 @@ class CloudManager:
         
         print(f"Starting command listener for MAC: {self.mac_address}...")
         last_id = 0
-        loop_count = 0
-                
+
         # Get last command ID to avoid re-processing
         try:
             res = self.client.table('comandos_robo').select('id').order('id', desc=True).limit(1).execute()
@@ -334,7 +333,7 @@ class CloudManager:
                     .eq('mac_address', self.mac_address) \
                     .gt('id', last_id) \
                     .execute()
-                
+
                 if response.data:
                     for cmd in response.data:
                         print(f"New command received: {cmd}")
@@ -343,26 +342,24 @@ class CloudManager:
                             cb(cmd)
             except Exception as e:
                 print(f"Listener error: {e}")
-            
+
             import time
             time.sleep(2) # Poll every 2 seconds
-            
-            # Heartbeat logic (every ~60s)
-            if loop_count >= 30:
-                try:
-                    from datetime import datetime, timezone
-                    now = datetime.now(timezone.utc).isoformat()
-                    self.send_telemetry('SYSTEM', 'HEARTBEAT', now)
-                    # Atualiza versão do firmware no registro do robô
-                    if self.versao_firmware:
-                        self.client.table('saas_frota_robos') \
-                            .update({'versao_firmware': self.versao_firmware}) \
-                            .eq('mac_address', self.mac_address) \
-                            .execute()
-                except Exception:
-                    pass
-                loop_count = 0
-            loop_count += 1
+
+    def notify_online(self):
+        """Envia notificação de ativação uma única vez ao iniciar. Atualiza versão do firmware."""
+        try:
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc).isoformat()
+            self.send_telemetry('SYSTEM', 'ONLINE', now)
+            if self.versao_firmware:
+                self.client.table('saas_frota_robos') \
+                    .update({'versao_firmware': self.versao_firmware}) \
+                    .eq('mac_address', self.mac_address) \
+                    .execute()
+            print("CloudManager: notificação ONLINE enviada.")
+        except Exception as e:
+            print(f"CloudManager: erro ao notificar ONLINE: {e}")
 
     def start_listener(self):
         self.running = True

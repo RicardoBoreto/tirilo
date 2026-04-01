@@ -130,25 +130,15 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
 
     useEffect(() => {
         let interval: NodeJS.Timeout
-        let pingInterval: NodeJS.Timeout
 
         if (selectedRobot) {
-            // Send immediate PING to check status
-            sendCommand(selectedRobot.mac_address, 'PING').catch(e => console.error("Ping error:", e))
-
             loadTelemetry(selectedRobot.mac_address)
             interval = setInterval(() => {
                 loadTelemetry(selectedRobot.mac_address, true)
             }, 3000)
-
-            // Optional: Keep pinging every 60s
-            pingInterval = setInterval(() => {
-                sendCommand(selectedRobot.mac_address, 'PING').catch(() => { })
-            }, 60000)
         }
         return () => {
             clearInterval(interval)
-            clearInterval(pingInterval)
         }
     }, [selectedRobot])
 
@@ -509,6 +499,15 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                             ) : (
                                                 <Badge variant="outline" className="text-gray-400">Offline</Badge>
                                             )}
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-5 w-5 p-0 text-gray-400 hover:text-indigo-600"
+                                                title="Verificar se o robô está ativo"
+                                                onClick={() => handleCommand('PING')}
+                                            >
+                                                <Signal className="w-3 h-3" />
+                                            </Button>
                                         </div>
                                     </div>
                                     <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border shadow-sm">

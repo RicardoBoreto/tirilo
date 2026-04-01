@@ -10,6 +10,16 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.16.0] - 01/04/2026
+
+### 🤖 Dashboard do Robô — Ping sob Demanda
+
+#### Sistema de Status Online
+- **Removido**: PING automático ao selecionar o robô e reenvio a cada 60s — eliminava comandos desnecessários acumulando na fila.
+- **Adicionado**: botão `Signal` ao lado do badge "Status Rede" — permite verificar manualmente se o robô está ativo. O badge fica verde se o robô respondeu com `PONG` nos últimos 2 minutos.
+
+---
+
 ## [1.15.0] - 01/04/2026
 
 ### 📱 Modernização UI/UX & Responsividade Mobile

@@ -1,5 +1,21 @@
 # Histórico de Versões - Robô Tirilo
 
+## [4.8] - 2026-04-01
+### 🔧 Estabilidade: Barge-In, Captura de Voz e Sistema de Ping
+
+#### Barge-In (Modo Terapeuta)
+- **THRESH elevado** 600 → 4500: elimina falsos positivos causados pelo feedback acústico do EMEET M1A (speakerphone capturava a própria saída de áudio e interrompia a fala).
+- **Delay inicial de 0.5s**: descarta chunks iniciais do buffer `arecord` enquanto o `mpg123` estabiliza o volume — sem impacto perceptível na latência.
+- **Flag `_barge_in_ativo`**: garante que apenas um thread de barge-in rode por vez. Antes, cada frase do streaming iniciava um `arecord` separado, causando conflito no ALSA (só um processo pode capturar de cada vez).
+
+#### Captura de Voz
+- **Tratamento de exceções separado**: `sr.UnknownValueError` (silêncio/ruído — comportamento normal) retorna `None` silenciosamente, sem poluir o log. Apenas `sr.RequestError` (falha de rede real) é logado como erro.
+
+#### Sistema de Ping / Notificação Online
+- **Removido**: heartbeat periódico a cada 60s (HEARTBEAT na telemetria + atualização de `versao_firmware`).
+- **Adicionado**: `cloud_mgr.notify_online()` — envia `ONLINE` na telemetria e atualiza `versao_firmware` **uma única vez** ao iniciar.
+- **Adicionado**: handler do comando `PING` — responde com telemetria `PONG` (timestamp UTC) quando solicitado pelo SaaS.
+
 ## [4.7] - 2026-03-15
 ### 🎮 Seleção de Jogos por IA (Modo Livre)
 
