@@ -227,22 +227,23 @@ class CloudManager:
         except Exception as e:
             print(f"Cloud: erro ao buscar jogos da clínica: {e}")
 
-        # 2. Fallback: todos os jogos ativos no catálogo
-        if not jogos:
-            try:
-                res = self.client.table('saas_jogos') \
-                    .select('nome, comando_entrada, descricao_regras') \
-                    .eq('ativo', True) \
-                    .execute()
-                for j in (res.data or []):
-                    if j.get('comando_entrada'):
-                        jogos.append({
-                            'nome': j.get('nome', ''),
-                            'codigo': j['comando_entrada'].strip().lower(),
-                            'descricao': j.get('descricao_regras') or ''
-                        })
-            except Exception as e:
-                print(f"Cloud: erro ao buscar catálogo de jogos: {e}")
+        # 2. Jogos gratuitos (preco = 0) disponíveis para todas as clínicas automaticamente
+        try:
+            res = self.client.table('saas_jogos') \
+                .select('nome, comando_entrada, descricao_regras, preco') \
+                .eq('ativo', True) \
+                .eq('preco', 0) \
+                .execute()
+            codigos_ja_incluidos = {j['codigo'] for j in jogos}
+            for j in (res.data or []):
+                if j.get('comando_entrada') and j['comando_entrada'].strip().lower() not in codigos_ja_incluidos:
+                    jogos.append({
+                        'nome': j.get('nome', ''),
+                        'codigo': j['comando_entrada'].strip().lower(),
+                        'descricao': j.get('descricao_regras') or ''
+                    })
+        except Exception as e:
+            print(f"Cloud: erro ao buscar jogos gratuitos: {e}")
 
         print(f"Cloud: {len(jogos)} jogo(s) carregado(s): {[j['codigo'] for j in jogos]}")
         return jogos

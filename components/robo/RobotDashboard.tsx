@@ -125,7 +125,12 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
     }, [clinicaId])
 
     useEffect(() => {
-        if (!clinicaId && selectedRobot) loadPerfis()
+        if (!clinicaId && selectedRobot) {
+            loadPerfis()
+            if (selectedRobot.id_clinica) {
+                getLojaJogos(parseInt(selectedRobot.id_clinica)).then(data => setAllGames(data || []))
+            }
+        }
     }, [selectedRobot])
 
     useEffect(() => {

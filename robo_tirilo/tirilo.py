@@ -3,7 +3,7 @@
 =============================================================================
 PROJETO: ROBÔ TIRILO
 ARQUIVO: tirilo.py
-VERSÃO:  4.8 (Estabilidade: Barge-In + Captura de Voz + Ping/Online)
+VERSÃO:  4.10 (Detecção de jogos por voz + jogos gratuitos automáticos)
 DATA:    15/03/2026
 AUTOR:   Ricardo Alonso Boreto
 
@@ -68,7 +68,7 @@ from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "4.8"
+VERSAO_ATUAL = "4.10"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -1070,7 +1070,9 @@ def falar(texto, local_fast=False):
                     ["mpg123", "-o", "alsa", "-a", "default", "-q", arq_mp3],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                 )
+                global _barge_in_ativo
                 if not _barge_in_ativo:
+                    _barge_in_ativo = True
                     threading.Thread(target=_monitorar_barge_in, args=(proc_audio,), daemon=True).start()
                 proc_audio.wait()
             except Exception as e:
@@ -1640,6 +1642,61 @@ def lancar_parear():
         gui._ev_retomar.set()
 
 
+def _detectar_jogo_por_voz(texto_l):
+    """Verifica se o texto contém o nome de algum jogo disponível.
+    Retorna o código do jogo encontrado ou None."""
+    if not _jogos_disponiveis:
+        return None
+    for jogo in _jogos_disponiveis:
+        # Divide o nome em palavras significativas (>= 3 letras) e verifica se estão no texto
+        palavras = [p.lower() for p in jogo['nome'].split() if len(p) >= 3]
+        if palavras and all(p in texto_l for p in palavras):
+            return jogo['codigo']
+    return None
+
+def _executar_jogo_por_codigo(codigo):
+    """Executa um jogo pelo código — suporta funções internas e scripts .py externos."""
+    mapa_interno = {
+        "cores":       jogar_cores,
+        "emocoes":     jogar_emocoes,
+        "adivinhacao": jogar_adivinhacao,
+        "musica":      tocar_musica,
+        "parear":      lancar_parear,
+    }
+    if codigo in mapa_interno:
+        threading.Thread(target=mapa_interno[codigo], daemon=True).start()
+    elif codigo.endswith('.py'):
+        # Script externo cadastrado pelo path
+        def _run():
+            global gui, MODO_VISAO_ATIVO, _ev_camera_livre, _pausar_piscar, _processo_externo
+            script = os.path.join(os.path.dirname(__file__), codigo)
+            uid = os.getuid()
+            env = os.environ.copy()
+            env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
+            env.pop('SDL_AUDIODRIVER', None)
+            subprocess.run(["pkill", "-9", "aplay"],  stderr=subprocess.DEVNULL)
+            subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
+            _pausar_piscar = True
+            visao_estava_ativa = MODO_VISAO_ATIVO
+            if visao_estava_ativa:
+                _ev_camera_livre.clear()
+                MODO_VISAO_ATIVO = False
+                _ev_camera_livre.wait(timeout=3)
+            if gui:
+                gui.suspenso = True
+                gui._ev_display_livre.wait(timeout=3)
+                gui._ev_display_livre.clear()
+            _processo_externo = subprocess.Popen(["python3", script], env=env)
+            _processo_externo.wait()
+            _processo_externo = None
+            _pausar_piscar = False
+            MODO_VISAO_ATIVO = visao_estava_ativa
+            if gui:
+                gui._ev_retomar.set()
+        threading.Thread(target=_run, daemon=True).start()
+    else:
+        print(f"Jogo '{codigo}' sem implementação local.")
+
 def _lancar_jogo(codigo):
     """Lança um jogo pelo código (comando_entrada) retornado pela IA via tag [JOGO:codigo]."""
     codigo = codigo.strip().lower()
@@ -1834,14 +1891,14 @@ def loop_logica():
                                 if MODO_VISAO_TELA: gui.iniciar_jogo("visao")
                                 else: gui.parar_jogo()
                             falar("Modo visão " + ("ativado" if MODO_VISAO_TELA else "desativado"))
-                        elif payload in ("CALIBRAR_OLHOS", "RASTREADOR_TELA", "COREOGRAFIA_MACDONALD", "COREOGRAFIA_SEULOBATO"):
+                        elif payload.endswith('.py') or payload in ("CALIBRAR_OLHOS", "RASTREADOR_TELA", "COREOGRAFIA_MACDONALD", "COREOGRAFIA_SEULOBATO"):
                             scripts_map = {
                                 "CALIBRAR_OLHOS":       "ferramentas/calibrador_olhos.py",
                                 "RASTREADOR_TELA":      "ferramentas/rastreador_tela.py",
                                 "COREOGRAFIA_MACDONALD":"jogos/coreografia_macdonald/coreografia_macdonald.py",
                                 "COREOGRAFIA_SEULOBATO":"jogos/coreografia_seulobato/coreografia_seulobato.py",
                             }
-                            nome_script = scripts_map[payload]
+                            nome_script = payload if payload.endswith('.py') else scripts_map[payload]
 
                             def _executar_programa(nome=nome_script, cmd=payload):
                                 global gui
@@ -1937,6 +1994,12 @@ def loop_logica():
                 # Comandos de movimento corporal por voz
                 if executar_movimento_voz(texto_l):
                     continue
+                # Detecção de jogo por voz antes de ir para IA
+                jogo_voz = _detectar_jogo_por_voz(texto_l)
+                if jogo_voz:
+                    print(f"Jogo detectado por voz: {jogo_voz}")
+                    _executar_jogo_por_codigo(jogo_voz)
+                    continue
                 # Conversa normal de IA no modo terapeuta
                 if modo_ia_ativo:
                     perguntar_gemini(texto)  # já fala internamente via streaming
@@ -1954,6 +2017,13 @@ def loop_logica():
 
             # Comandos de movimento corporal por voz
             if executar_movimento_voz(texto_l):
+                continue
+
+            # Detecção de jogo por voz antes de ir para IA
+            jogo_voz = _detectar_jogo_por_voz(texto_l)
+            if jogo_voz:
+                print(f"Jogo detectado por voz: {jogo_voz}")
+                _executar_jogo_por_codigo(jogo_voz)
                 continue
 
             if modo_ia_ativo:

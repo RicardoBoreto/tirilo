@@ -10,6 +10,28 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.18.0] - 02/04/2026
+
+### 🎮 Robô — Detecção de Jogos por Voz (Firmware v4.10)
+
+- Robô detecta jogos por voz antes de consultar a IA: falar o nome do jogo dispara diretamente.
+- Jogos com `preco = 0` carregados automaticamente para todas as clínicas, sem necessidade de licença manual.
+- RLS: políticas de leitura para `anon` adicionadas em `saas_jogos` e `saas_clinicas_jogos`.
+
+---
+
+## [1.17.0] - 02/04/2026
+
+### 🤖 Dashboard do Robô — Aplicativos e Scripts Dinâmicos
+
+#### Aba Aplicativos (Super Admin)
+- Super Admin sem `clinicaId`: ao selecionar um robô, a loja de jogos agora é carregada com o `id_clinica` do robô selecionado — jogos e ferramentas aparecem corretamente.
+
+#### Scripts por Path Dinâmico (Robô v4.9)
+- Jogos e ferramentas cadastrados no banco com o campo `comando_entrada` preenchido com o path `.py` (ex: `jogos/coreografia_seulobato/coreografia_seulobato.py`) são executados diretamente pelo robô sem necessidade de alterar o firmware.
+
+---
+
 ## [1.16.0] - 01/04/2026
 
 ### 🤖 Dashboard do Robô — Ping sob Demanda

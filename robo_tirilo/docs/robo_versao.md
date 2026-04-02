@@ -1,5 +1,35 @@
 # Histórico de Versões - Robô Tirilo
 
+## [4.10] - 2026-04-02
+### 🎮 Detecção de Jogos por Voz + Jogos Gratuitos Automáticos
+
+#### Detecção de Jogos por Voz
+- **`_detectar_jogo_por_voz(texto_l)`**: antes de enviar para o Gemini, verifica se as palavras do nome do jogo estão no texto falado. Ex: falar "seu lobato" dispara a coreografia diretamente.
+- **`_executar_jogo_por_codigo(codigo)`**: executa o jogo — função interna (cores, parear...) ou script `.py` externo com o fluxo completo (libera display, câmera, áudio).
+- Funciona nos dois modos: Criança e Terapeuta.
+
+#### Jogos Gratuitos Carregados Automaticamente
+- `get_jogos_clinica()` agora inclui todos os jogos com `preco = 0` automaticamente, sem precisar de licença em `saas_clinicas_jogos`.
+- Jogos pagos continuam exigindo distribuição explícita via aba "Distribuição" no SaaS.
+
+#### Scripts por Path Dinâmico (complemento v4.9)
+- Políticas RLS adicionadas no Supabase: `anon` pode ler `saas_jogos` e `saas_clinicas_jogos` (apenas registros ativos).
+
+## [4.9] - 2026-04-02
+### 🔧 Scripts Externos por Path Dinâmico + Fix Barge-In
+
+#### Execução de Scripts por Path Dinâmico
+- **Novo**: qualquer comando recebido terminando em `.py` é tratado diretamente como caminho relativo ao `tirilo.py`, sem precisar estar no `scripts_map`.
+- Permite cadastrar novos jogos/ferramentas no SaaS com o campo `comando_entrada` preenchido com o path (ex: `jogos/coreografia_seulobato/coreografia_seulobato.py`) e o robô os executa automaticamente — sem alterar o código.
+- `scripts_map` permanece como fallback para comandos legados por nome (`CALIBRAR_OLHOS`, `RASTREADOR_TELA`, `COREOGRAFIA_MACDONALD`, `COREOGRAFIA_SEULOBATO`).
+
+#### Fix Barge-In (Race Condition)
+- `_barge_in_ativo = True` movido para `falar()` **antes** de iniciar o thread — eliminava race condition onde múltiplos threads eram criados antes do primeiro setar a flag.
+- Adicionado `global _barge_in_ativo` em `falar()` para evitar `UnboundLocalError`.
+
+#### Fix Aba Aplicativos (Super Admin)
+- Super Admin sem `clinicaId`: ao selecionar um robô, a loja agora é carregada usando o `id_clinica` do robô — mesmo padrão já usado para perfis de personalidade.
+
 ## [4.8] - 2026-04-01
 ### 🔧 Estabilidade: Barge-In, Captura de Voz e Sistema de Ping
 
