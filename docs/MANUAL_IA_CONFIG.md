@@ -50,3 +50,28 @@ Além do modelo global, você pode definir modelos específicos para cada prompt
 
 ### Robô não muda de modelo
 - Reinicie o script do robô: `sudo systemctl restart tirilo` (ou comando equivalente).
+
+---
+
+## 6. Ajuste Fino de Voz (Motor Piper - v4.11+)
+
+Com o motor **Piper TTS**, você tem controle dinâmico sobre a personalidade sonora do Tirilo diretamente no **Robot Dashboard (Aba IA)**.
+
+### Parâmetros Configuráveis:
+1.  **Pitch (Tom)**:
+    -   **Faixa**: -200 a 400.
+    -   **Uso**: Valores positivos tornam a voz mais aguda/infantil (recomendado: **150 a 200**). Valores negativos tornam a voz mais grave/adulta.
+2.  **Speed (Velocidade)**:
+    -   **Faixa**: 0.5x a 2.0x.
+    -   **Uso**: O padrão Piper é rápido. Valores entre **1.3 e 1.6** são ideais para garantir que a criança compreenda cada palavra com clareza.
+
+### Como Aplicar Mudanças:
+1.  **Selecione o Robô**: Diferente das diretrizes globais, os ajustes de voz são vinculados ao contexto da clínica do robô selecionado.
+2.  **Ajuste os Sliders**: Mova os controles de Pitch e Speed.
+3.  **Salvar Configurações**: Clique em "Salvar".
+4.  **Sincronização**: O sistema enviará automaticamente um comando `RELOAD_CONFIG` para o robô. O Tirilo dirá "Configurações atualizadas" já com o novo tom de voz!
+
+> [!TIP]
+> Use o botão **"Ouvir Prévia"** no Dashboard (se disponível) ou peça para o robô falar algo para testar se o tom ficou amigável antes de iniciar a sessão clínica.
+
+---

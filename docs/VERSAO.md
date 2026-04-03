@@ -10,6 +10,25 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.36.0] - 03/04/2026
+## [4.11] - Robô Tirilo (Voz Neural Dinâmica)
+
+### ✨ Novos Recursos (Voz e Personalidade)
+- **Controle Dinâmico de Piper TTS**: Implementação de sliders de **Pitch** (-200 a 400) e **Velocidade** (0.5 a 2.0) no Dashboard de IA.
+- **Processamento via SoX**: Integração do utilitário SoX no firmware do robô para modulação de tonalidade em tempo real.
+- **Obrigatoriedade de Selecionar Robô**: Trava de segurança no Dashboard que impede a alteração de configurações de IA sem um robô (clínica) selecionado, garantindo persistência e sincronização de comandos.
+
+### 🔧 Melhorias e Engenharia
+- **Sincronização Cloud-Bot**: Atualização do `src/cloud.py` para buscar colunas de voz no Supabase e `tirilo.py` para aplicar mudanças via `RELOAD_CONFIG` sem reiniciar o processo.
+- **Setup Automatizado**: Inclusão do pacote `sox` no script de instalação de áudio (`02_setup_audio.sh`).
+- **Logs de Debug**: Adicionado monitoramento visual no terminal do robô para validar parâmetros de voz recebidos (`VOZ: PIPER | PITCH: X | SPEED: Y`).
+
+### 🐛 Correções de Bugs
+- **Corrigido: SyntaxError global**: Resolvida falha de declaração de variáveis globais no `loop_logica` do firmware.
+- **Corrigido: Sincronia de Colunas**: Resolvido problema onde colunas de voz não eram lidas da nuvem devido a filtro no `select()`.
+
+---
+
 ## [1.35.0] - 03/04/2026
 
 ### 🤖 Expressividade Facial: Sobrancelhas Sincronizadas

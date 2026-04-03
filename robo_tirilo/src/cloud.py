@@ -107,7 +107,7 @@ class CloudManager:
 
         try:
             response = self.client.table('clinica_config_ia') \
-                .select('prompt_personalidade_robo, motor_voz_preferencial') \
+                .select('prompt_personalidade_robo, motor_voz_preferencial, piper_pitch, piper_speed') \
                 .eq('id_clinica', self.clinica_id) \
                 .execute()
             

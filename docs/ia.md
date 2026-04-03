@@ -169,4 +169,12 @@ A IA também auxilia na gestão do inventário terapêutico da clínica:
   - **Nome:** Sugestão do nome do brinquedo/recurso.
   - **Descrição:** Breve explicação funcional (para que serve).
   - **Objetivos Terapêuticos:** Lista de habilidades (ABA/Denver) que podem ser trabalhadas com aquele item (ex: "Coordenação Motora Fina", "Pareamento").
-- **Integração com Planos:** Os materiais cadastrados enriquecem a geração de planos. A chave `{{RECURSOS_LISTA}}` agora fornece à IA não apenas nomes, mas descrições e objetivos de cada item disponível, permitindo sugestões de atividades muito mais assertivas e personalizadas.
+  - **Integração com Planos:** Os materiais cadastrados enriquecem a geração de planos. A chave `{{RECURSOS_LISTA}}` agora fornece à IA não apenas nomes, mas descrições e objetivos de cada item disponível, permitindo sugestões de atividades muito mais assertivas e personalizadas.
+
+### 🎤 Motor de Voz Neural Local (Piper) - v4.11+
+Para garantir alta performance e privacidade, o robô utiliza o **Piper TTS** para síntese de voz local.
+- **Pipeline de Áudio:** O texto é sintetizado pelo modelo ONNX (carregado na RAM) e, opcionalmente, processado pelo **SoX** para ajuste de tonalidade before playback.
+- **Controles Dinâmicos (SaaS):**
+  - **Pitch:** Ajuste de tom (-200 a 400). Valores positivos tornam a voz mais aguda e amigável para crianças.
+  - **Velocidade (length_scale):** Controla a cadência da fala. Valores > 1.0 tornam a fala mais lenta e clara.
+- **Sincronização:** O robô busca as configurações no boot e via comando `RELOAD_CONFIG` enviado pelo Dashboard.

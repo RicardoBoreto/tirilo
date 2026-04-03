@@ -4,14 +4,12 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 // --- Types ---
-// --- Types ---
 export interface Robot {
     id: string;
     mac_address: string;
     nome_identificacao: string;
     id_clinica: string | null;
     status_bloqueio: boolean;
-    // New fields
     modelo_hardware?: string;
     versao_hardware?: string;
     numero_serie?: string;
@@ -19,12 +17,11 @@ export interface Robot {
     valor_venda?: number;
     valor_aluguel?: number;
     status_operacional?: string;
-
-    online?: boolean; // Derivado da telemetria recente
+    online?: boolean; 
     ultimo_visto?: string;
     endereco_tailscale?: string;
     usuario_ssh?: string;
-    versao_firmware?: string | null; // Versão do firmware em execução
+    versao_firmware?: string | null;
 }
 
 export interface RobotConfig {
@@ -32,6 +29,8 @@ export interface RobotConfig {
     id_clinica: string;
     prompt_personalidade_robo: string;
     motor_voz_preferencial: string;
+    piper_pitch?: number;
+    piper_speed?: number;
 }
 
 export interface Telemetry {
@@ -92,17 +91,16 @@ export async function getRobotConfig(clinicaId?: string) {
         .eq('id_clinica', clinicaId)
         .single();
 
-    if (error && error.code !== 'PGRST116') { // Ignora 'not found'
+    if (error && error.code !== 'PGRST116') {
         console.error("Error fetching config:", error);
     }
     return data as RobotConfig | null;
 }
 
-export async function updateRobotConfig(clinicaId: string, config: { prompt_personalidade_robo: string, motor_voz_preferencial: string }) {
+export async function updateRobotConfig(clinicaId: string, config: { prompt_personalidade_robo: string, motor_voz_preferencial: string, piper_pitch?: number, piper_speed?: number }) {
     if (!clinicaId) throw new Error("ID da clínica obrigatório.");
     const supabase = await createAdminClient();
 
-    // Upsert
     const { error } = await supabase
         .from('clinica_config_ia')
         .upsert({
@@ -173,8 +171,8 @@ export async function registerRobot(macAddress: string, name: string, clinicaId?
             mac_address: normalizeMac(macAddress),
             nome_identificacao: name,
             id_clinica: clinicaId || null,
-            status_bloqueio: false, // Auto-activate if created by admin
-            ...extraData // Spread new fields
+            status_bloqueio: false,
+            ...extraData
         });
 
     if (error) throw new Error(error.message);
@@ -205,7 +203,6 @@ export async function getDirectives(clinicaId?: string) {
 export async function saveDirective(clinicaId: string | null, modo: 'CRIANCA' | 'TERAPEUTA', diretriz: string) {
     const supabase = await createAdminClient();
 
-    // Verifica se já existe registro para este modo/clínica
     let existQuery = supabase
         .from('saas_diretrizes_ai')
         .select('id')
@@ -238,9 +235,7 @@ export async function saveDirective(clinicaId: string | null, modo: 'CRIANCA' | 
 export async function updateRobot(id: string, data: Partial<Robot>) {
     const supabase = await createAdminClient();
 
-    // Filter out undefined
     const updateData = Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== undefined));
-    // Also remove fields that shouldn't be updated directly if any (e.g. id)
 
     const { error } = await supabase
         .from('saas_frota_robos')
@@ -254,9 +249,6 @@ export async function updateRobot(id: string, data: Partial<Robot>) {
     if (error) throw new Error(error.message);
     revalidatePath('/admin/robo');
 }
-
-
-// --- Perfis de Personalidade ---
 
 export async function getPerfis(clinicaId: string) {
     const supabase = await createAdminClient();

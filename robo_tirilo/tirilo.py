@@ -97,6 +97,8 @@ TAXA_CAPTURA      = 48000   # EMEET M1A opera nativamente em 48 kHz
 # --- Configuração Piper (Voz Neural Local) ---
 _PIPER_INSTANCIA = None
 PASTA_VOZES_PIPER = os.path.expanduser("~/projeto_robo/robo_tirilo/vozes_piper")
+PIPER_VELOCIDADE = 1.4 # > 1.0 é mais devagar (ideal para crianças)
+PIPER_PITCH = 150      # 0 = normal, > 0 mais agudo (amigável), < 0 mais grave
 
 def _buscar_modelo_piper():
     """Busca o primeiro arquivo .onnx na pasta de vozes."""
@@ -145,7 +147,9 @@ def _inicializar_piper():
                 config_path=CAMINHO_MODELO_PIPER + ".json", 
                 use_cuda=False
             )
-            print(f"Piper: Modelo carregado com sucesso em {time.time() - start:.2f}s")
+            # Aplica a velocidade globalmente na instância
+            _PIPER_INSTANCIA.config.length_scale = PIPER_VELOCIDADE
+            print(f"Piper: Modelo carregado e velocidade ajustada para {PIPER_VELOCIDADE}")
         except Exception as e:
             print(f"Piper: Erro ao carregar modelo: {e}")
     else:
@@ -1109,6 +1113,9 @@ def falar(texto, local_fast=False):
         cor_fala = gui.cor_status if gui and gui.cor_status != CINZA else AZUL
 
     if gui: gui.set_status("Falando...", cor_fala)
+    
+    # DEBUG DE VOZ (Ajuda a validar se o Dash enviou os dados certos)
+    print(f"🎤 VOZ: {_MOTOR_VOZ_GLOBAL} | PITCH: {PIPER_PITCH} | SPEED: {PIPER_VELOCIDADE}")
 
     evt = threading.Event()
     t_anim = threading.Thread(target=animar_fala, args=(evt,))
@@ -1150,13 +1157,27 @@ def falar(texto, local_fast=False):
                         wav_file.setnchannels(1)
                         wav_file.setsampwidth(2)
                         wav_file.setframerate(_PIPER_INSTANCIA.config.sample_rate)
+                        # A velocidade já está configurada globalmente na instância
                         for chunk in _PIPER_INSTANCIA.synthesize(txt):
                             wav_file.writeframes(chunk.audio_int16_bytes)
                     
-                    subprocess.run(
-                        ["aplay", "-q", "-D", DISPOSITIVO_AUDIO, arq_wav],
-                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                    )
+                    if PIPER_PITCH != 0:
+                        # Usa SoX para ajustar a tonalidade (Pitch) em tempo real
+                        # Se falhar, tenta tocar o original (fallback silencioso no shell)
+                        comando = f"sox {arq_wav} -t wav - pitch {PIPER_PITCH} | aplay -q -D {DISPOSITIVO_AUDIO}"
+                        try:
+                            res = subprocess.run(comando, shell=True, capture_output=True, text=True)
+                            if res.returncode != 0:
+                                print(f"Audio: Erro no SoX ({res.stderr.strip()}). Tentando aplay direto...")
+                                subprocess.run(["aplay", "-q", "-D", DISPOSITIVO_AUDIO, arq_wav])
+                        except Exception as e:
+                            print(f"Audio: Erro subprocess ({e}). Tentando aplay direto...")
+                            subprocess.run(["aplay", "-q", "-D", DISPOSITIVO_AUDIO, arq_wav])
+                    else:
+                        subprocess.run(
+                            ["aplay", "-q", "-D", DISPOSITIVO_AUDIO, arq_wav],
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                        )
                 except Exception as e:
                     print(f"Piper: Erro na síntese ({e}), usando espeak...")
                     _falar_espeak(txt, t_anim)
@@ -1809,6 +1830,7 @@ def _lancar_jogo(codigo):
 def loop_logica():
     global modo_ia_ativo, MODO_ROBO_ATUAL, TEXTO_RESPOSTA_IA, cloud_mgr 
     global MODELO_IA, _jogos_disponiveis, _perfil_ativo, _MOTOR_VOZ_GLOBAL, _cache_diretriz
+    global _PIPER_INSTANCIA, PIPER_VELOCIDADE, PIPER_PITCH
     
     # 1. Prepara arquivos e conexão Cloud (ESSENCIAL para carregar .env.local)
     configurar_arquivos_terapeuta()
@@ -1873,6 +1895,14 @@ def loop_logica():
             if motor:
                 _MOTOR_VOZ_GLOBAL = motor.upper()
                 print(f"Cloud: Motor de voz configurado: {_MOTOR_VOZ_GLOBAL}")
+            
+            # Carrega ajustes Piper
+            global PIPER_VELOCIDADE, PIPER_PITCH
+            if 'piper_speed' in config_db:
+                PIPER_VELOCIDADE = float(config_db['piper_speed'])
+            if 'piper_pitch' in config_db:
+                PIPER_PITCH = int(config_db['piper_pitch'])
+            print(f"Cloud: Piper Config - Speed: {PIPER_VELOCIDADE}, Pitch: {PIPER_PITCH}")
 
         _jogos_disponiveis = cloud_mgr.get_jogos_clinica()
         _perfil_ativo = cloud_mgr.get_perfil_ativo() or {}
@@ -1921,9 +1951,14 @@ def loop_logica():
                                 cfg = cloud_mgr.get_config()
                                 print(f"DEBUG: RELOAD_CONFIG - Config recebida: {cfg}")
                                 if cfg and cfg.get('motor_voz_preferencial'):
-                                    motor_novo = cfg['motor_voz_preferencial'].upper()
-                                    print(f"DEBUG: RELOAD_CONFIG - Mudando de {_MOTOR_VOZ_GLOBAL} para {motor_novo}")
-                                    _MOTOR_VOZ_GLOBAL = motor_novo
+                                    _MOTOR_VOZ_GLOBAL = cfg['motor_voz_preferencial'].upper()
+                                    
+                                    # Atualiza parâmetros Piper se presentes
+                                    if 'piper_speed' in cfg:
+                                        PIPER_VELOCIDADE = float(cfg['piper_speed'])
+                                        if _PIPER_INSTANCIA: _PIPER_INSTANCIA.config.length_scale = PIPER_VELOCIDADE
+                                    if 'piper_pitch' in cfg:
+                                        PIPER_PITCH = int(cfg['piper_pitch'])
                                     
                                     # Se selecionou Piper e ainda não carregou, carrega agora!
                                     if _MOTOR_VOZ_GLOBAL == "PIPER" and _PIPER_INSTANCIA is None:

@@ -357,6 +357,20 @@ CREATE TABLE public.saas_clinicas_jogos (
     UNIQUE(clinica_id, jogo_id)
 );
 
+-- Perfis de Personalidade do Robô (V1.14)
+CREATE TABLE public.saas_perfis_robo (
+    id               SERIAL PRIMARY KEY,
+    clinica_id       INTEGER REFERENCES public.saas_clinicas(id),
+    nome             TEXT NOT NULL,
+    descricao        TEXT,
+    prompt_instrucao TEXT NOT NULL,
+    modo_base        TEXT NOT NULL DEFAULT 'CRIANCA'
+                         CHECK (modo_base IN ('CRIANCA', 'TERAPEUTA')),
+    ativo            BOOLEAN DEFAULT TRUE,
+    created_at       TIMESTAMPTZ DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Frota de Robôs
 CREATE TABLE public.saas_frota_robos (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -378,25 +392,12 @@ CREATE TABLE public.saas_frota_robos (
     modelo_contrato TEXT DEFAULT 'VENDA',
     status_financeiro TEXT DEFAULT 'ADIMPLENTE',
     versao_firmware TEXT DEFAULT NULL, -- Versão do firmware tirilo.py (atualizada via heartbeat)
-    perfil_ativo_id INTEGER -- FK para saas_perfis_robo (definida após criação da tabela)
+    perfil_ativo_id INTEGER REFERENCES public.saas_perfis_robo(id)
 );
 
 COMMENT ON COLUMN public.saas_frota_robos.versao_firmware
 IS 'Versão do firmware tirilo.py em execução. Atualizada automaticamente via heartbeat a cada 60s.';
 
--- Perfis de Personalidade do Robô (V1.14)
-CREATE TABLE public.saas_perfis_robo (
-    id               SERIAL PRIMARY KEY,
-    clinica_id       INTEGER REFERENCES public.saas_clinicas(id),
-    nome             TEXT NOT NULL,
-    descricao        TEXT,
-    prompt_instrucao TEXT NOT NULL,
-    modo_base        TEXT NOT NULL DEFAULT 'CRIANCA'
-                         CHECK (modo_base IN ('CRIANCA', 'TERAPEUTA')),
-    ativo            BOOLEAN DEFAULT TRUE,
-    created_at       TIMESTAMPTZ DEFAULT NOW(),
-    updated_at       TIMESTAMPTZ DEFAULT NOW()
-);
 
 -- Configuração de IA da Clínica (Personalidade)
 CREATE TABLE public.clinica_config_ia (
@@ -404,6 +405,8 @@ CREATE TABLE public.clinica_config_ia (
     id_clinica BIGINT REFERENCES public.saas_clinicas(id) ON DELETE CASCADE,
     prompt_personalidade_robo TEXT DEFAULT 'Você é o Tirilo, um robô amigo e terapêutico.',
     motor_voz_preferencial TEXT DEFAULT 'pt-br',
+    piper_pitch INTEGER DEFAULT 150,
+    piper_speed NUMERIC(3,2) DEFAULT 1.4,
     criado_em TIMESTAMPTZ DEFAULT NOW(),
     atualizado_em TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT unique_config_clinica UNIQUE (id_clinica)
@@ -679,9 +682,6 @@ ALTER TABLE public.saas_integracoes_google ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saas_frota_robos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saas_perfis_robo ENABLE ROW LEVEL SECURITY;
 
--- FK de perfil_ativo_id (definida após criação de saas_perfis_robo)
-ALTER TABLE public.saas_frota_robos
-    ADD CONSTRAINT fk_perfil_ativo FOREIGN KEY (perfil_ativo_id) REFERENCES public.saas_perfis_robo(id);
 
 -- Políticas de Segurança
 CREATE POLICY "Apenas autenticados" ON public.saas_operadoras FOR ALL TO authenticated USING (true);

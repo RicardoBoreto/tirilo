@@ -64,6 +64,10 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
     const [isSavingDir, setIsSavingDir] = useState(false)
     const [dirSaveMsg, setDirSaveMsg] = useState('')
 
+    // Piper TTS Config
+    const [piperPitch, setPiperPitch] = useState(150)
+    const [piperSpeed, setPiperSpeed] = useState(1.4)
+
     // Perfis de Personalidade
     const [perfis, setPerfis] = useState<PerfilRobo[]>([])
     const [perfilEdit, setPerfilEdit] = useState<Partial<PerfilRobo> | null>(null)
@@ -173,6 +177,8 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
             setConfig(data)
             setPrompt(data.prompt_personalidade_robo)
             setVoice(data.motor_voz_preferencial)
+            if (data.piper_pitch !== undefined) setPiperPitch(data.piper_pitch)
+            if (data.piper_speed !== undefined) setPiperSpeed(data.piper_speed)
         }
     }
 
@@ -190,7 +196,9 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         try {
             await updateRobotConfig(cid, {
                 prompt_personalidade_robo: prompt,
-                motor_voz_preferencial: voice
+                motor_voz_preferencial: voice,
+                piper_pitch: piperPitch,
+                piper_speed: piperSpeed
             })
             // Notifica o robô para recarregar as configurações (Voz e Prompt)
             if (selectedRobot) {
@@ -689,6 +697,16 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
     }
 
     function RenderConfigTab() {
+        if (!clinicaId && !selectedRobot) {
+            return (
+                <div className="flex flex-col items-center justify-center h-[500px] text-gray-400 bg-white dark:bg-gray-800 rounded-xl border border-dashed">
+                    <Cpu className="w-16 h-16 mb-4 opacity-10" />
+                    <p className="text-lg font-medium">Selecione um robô na lista lateral</p>
+                    <p className="text-sm">Para carregar as configurações de IA da clínica correspondente.</p>
+                </div>
+            )
+        }
+
         return (
             <div className="space-y-6">
                  {/* GLOBAL CONFIG */}
@@ -750,6 +768,44 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
+
+                            {/* PIPER TWEAKS */}
+                            {voice === 'PIPER' && (
+                                <div className="mt-6 space-y-4 p-4 rounded-xl bg-primary/5 border border-primary/10 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-primary">Tonalidade (Pitch)</label>
+                                        <Badge variant="outline" className="font-mono text-[10px]">{piperPitch}</Badge>
+                                    </div>
+                                    <input 
+                                        type="range" min="-200" max="400" step="10"
+                                        value={piperPitch}
+                                        onChange={e => setPiperPitch(parseInt(e.target.value))}
+                                        className="w-full h-1.5 bg-gray-200 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer accent-primary"
+                                    />
+                                    <div className="flex justify-between text-[8px] text-gray-400 font-bold uppercase">
+                                        <span>Grave</span>
+                                        <span>Normal</span>
+                                        <span>Agudo</span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between mb-1 mt-4">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-primary">Velocidade (Speed)</label>
+                                        <Badge variant="outline" className="font-mono text-[10px]">{piperSpeed}x</Badge>
+                                    </div>
+                                    <input 
+                                        type="range" min="0.5" max="2.0" step="0.1"
+                                        value={piperSpeed}
+                                        onChange={e => setPiperSpeed(parseFloat(e.target.value))}
+                                        className="w-full h-1.5 bg-gray-200 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer accent-primary"
+                                    />
+                                    <div className="flex justify-between text-[8px] text-gray-400 font-bold uppercase">
+                                        <span>Lento</span>
+                                        <span>Normal</span>
+                                        <span>Rápido</span>
+                                    </div>
+                                </div>
+                            )}
+
                             <p className="mt-2 text-[10px] text-gray-500 italic">
                                 * Esta escolha afeta toda a interação, ignorando o modo (Criança/Terapeuta).
                             </p>
