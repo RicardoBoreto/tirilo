@@ -10,6 +10,18 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.19.0] - 02/04/2026
+
+### 🔧 Renomeação: Jogos → Aplicativos
+
+- Sidebar: "Gerenciar Jogos" renomeado para "Gerenciar Aplicativos".
+- Página Gerenciar Aplicativos: título, subtítulo, cabeçalho de tabela, modais de criar/editar/visualizar, labels e mensagens de feedback atualizados.
+- Aba Aplicativos no Dashboard do Robô: filtro de categoria substituído de badges fixos por campo `Select` dinâmico, gerado a partir das categorias reais cadastradas no banco — suporta qualquer número de categorias sem quebrar o layout.
+- Filtro de texto e filtro de categoria operam de forma independente (estado `appCategoriaFilter` separado de `appSearch`).
+- Seções da aba Aplicativos agrupadas dinamicamente por categoria (uma seção por categoria), com ícone e estilo diferenciado para `JOGO`, `FERRAMENTA` e categorias desconhecidas.
+
+---
+
 ## [1.18.0] - 02/04/2026
 
 ### 🎮 Robô — Detecção de Jogos por Voz (Firmware v4.10)

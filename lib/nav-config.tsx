@@ -39,7 +39,7 @@ export function getSidebarLinks(
         },
         {
             href: '/admin/jogos',
-            label: 'Gerenciar Jogos',
+            label: 'Gerenciar Aplicativos',
             icon: <Gamepad2 className="w-6 h-6" color="#4F46E5" />,
         },
         {

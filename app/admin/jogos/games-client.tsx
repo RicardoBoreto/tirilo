@@ -225,18 +225,18 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
             if (editingGame) {
                 const result = await updateGame(editingGame.id, formData)
                 if (result.error) throw new Error(result.error)
-                toast({ title: 'Sucesso', description: 'Jogo atualizado com sucesso.' })
+                toast({ title: 'Sucesso', description: 'Aplicativo atualizado com sucesso.' })
             } else {
                 const result = await createGame(formData)
                 if (result.error) throw new Error(result.error)
-                toast({ title: 'Sucesso', description: 'Jogo criado com sucesso.' })
+                toast({ title: 'Sucesso', description: 'Aplicativo criado com sucesso.' })
             }
 
             setIsOpen(false)
             setEditingGame(null)
             router.refresh()
         } catch (error: any) {
-            console.error('Erro ao salvar jogo:', error)
+            console.error('Erro ao salvar aplicativo:', error)
 
             toast({
                 title: 'Erro ao executar operação',
@@ -264,7 +264,7 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
             // Optimistic update
             setGames(games.map(g => g.id === game.id ? { ...g, ativo: !g.ativo } : g))
 
-            toast({ title: 'Status atualizado', description: `Jogo ${!game.ativo ? 'ativado' : 'desativado'}.` })
+            toast({ title: 'Status atualizado', description: `Aplicativo ${!game.ativo ? 'ativado' : 'desativado'}.` })
             router.refresh()
         } catch (error: any) {
             toast({
@@ -279,11 +279,11 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Gerenciar Jogos</h2>
-                    <p className="text-sm sm:text-base text-muted-foreground">Administre os jogos e suas versões na frota de robôs.</p>
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Gerenciar Aplicativos</h2>
+                    <p className="text-sm sm:text-base text-muted-foreground">Administre os aplicativos e suas versões na frota de robôs.</p>
                 </div>
                 <Button onClick={() => { setEditingGame(null); setIsReadOnly(false); setIsOpen(true); }} className="w-full sm:w-auto shadow-lg shadow-primary/20">
-                    <Plus className="mr-2 h-4 w-4" /> Novo Jogo
+                    <Plus className="mr-2 h-4 w-4" /> Novo Aplicativo
                 </Button>
             </div>
 
@@ -303,7 +303,7 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
             <div className="grid grid-cols-1 gap-4 md:hidden">
                 {filteredGames.length === 0 ? (
                     <div className="p-12 text-center text-muted-foreground bg-gray-50/50 rounded-2xl border-2 border-dashed">
-                        Nenhum jogo encontrado.
+                        Nenhum aplicativo encontrado.
                     </div>
                 ) : (
                     filteredGames.map((game) => (
@@ -371,7 +371,7 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                 <table className="w-full text-sm text-left">
                     <thead className="bg-gray-50/50 dark:bg-gray-800 border-b">
                         <tr>
-                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Jogo</th>
+                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Aplicativo</th>
                             <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Versão</th>
                             <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Preço</th>
                             <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Categoria</th>
@@ -384,7 +384,7 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                         {filteredGames.length === 0 ? (
                             <tr>
                                 <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                                    Nenhum jogo encontrado.
+                                    Nenhum aplicativo encontrado.
                                 </td>
                             </tr>
                         ) : (
@@ -477,9 +477,9 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>{isReadOnly ? 'Visualizar Jogo' : (editingGame ? 'Editar Jogo' : 'Novo Jogo')}</DialogTitle>
+                        <DialogTitle>{isReadOnly ? 'Visualizar Aplicativo' : (editingGame ? 'Editar Aplicativo' : 'Novo Aplicativo')}</DialogTitle>
                         <DialogDescription>
-                            {isReadOnly ? 'Detalhes do jogo.' : (editingGame ? 'Gerencie os detalhes do jogo ou lance uma nova versão.' : 'Adicione um novo jogo para a frota.')}
+                            {isReadOnly ? 'Detalhes do aplicativo.' : (editingGame ? 'Gerencie os detalhes do aplicativo ou lance uma nova versão.' : 'Adicione um novo aplicativo para a frota.')}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -495,7 +495,7 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                             <TabsContent value="details" forceMount={true} className="space-y-4 data-[state=inactive]:hidden outline-none">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="nome" className="font-bold">Nome do Jogo</Label>
+                                        <Label htmlFor="nome" className="font-bold">Nome do Aplicativo</Label>
                                         <Input id="nome" name="nome" required defaultValue={editingGame?.nome} placeholder="Ex: Parear Cores" disabled={isReadOnly} className="h-11 sm:h-10" />
                                     </div>
                                     <div className="space-y-2">
@@ -511,13 +511,13 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="descricao_regras">Regras do Jogo</Label>
+                                    <Label htmlFor="descricao_regras">Regras do Aplicativo</Label>
                                     <Textarea id="descricao_regras" name="descricao_regras" className="h-24" defaultValue={editingGame?.descricao_regras || ''} placeholder="Descreva como jogar..." disabled={isReadOnly} />
                                 </div>
 
                                 <div className="space-y-2">
                                     <Label htmlFor="indicacao">Indicação (Público Alvo)</Label>
-                                    <Textarea id="indicacao" name="indicacao" className="h-20" defaultValue={editingGame?.indicacao || ''} placeholder="Para quem é indicado este jogo?" disabled={isReadOnly} />
+                                    <Textarea id="indicacao" name="indicacao" className="h-20" defaultValue={editingGame?.indicacao || ''} placeholder="Para quem é indicado este aplicativo?" disabled={isReadOnly} />
                                 </div>
 
                                 <div className="space-y-2">
@@ -545,12 +545,12 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                                         disabled={isReadOnly}
                                         className="font-mono bg-green-50 text-green-700 dark:bg-green-900/10 dark:text-green-400 font-bold"
                                     />
-                                    <p className="text-xs text-muted-foreground">Valor da licença do jogo. Digite 0 para tornar gratuito.</p>
+                                    <p className="text-xs text-muted-foreground">Valor da licença do aplicativo. Digite 0 para tornar gratuito.</p>
                                 </div>
 
                                 <div className="flex items-center space-x-2 pt-2">
                                     <Switch id="ativo" name="ativo" defaultChecked={editingGame ? editingGame.ativo : true} value="true" disabled={isReadOnly} />
-                                    <Label htmlFor="ativo">Jogo Ativo (Visível na lista de seleção)</Label>
+                                    <Label htmlFor="ativo">Aplicativo Ativo (Visível na lista de seleção)</Label>
                                 </div>
                             </TabsContent>
 
@@ -561,7 +561,7 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                                         Habilidades Trabalhadas
                                     </div>
                                     <p className="text-sm text-muted-foreground">
-                                        Defina quais competências este jogo estimula. Isso será usado pela IA para sugerir atividades.
+                                        Defina quais competências este aplicativo estimula. Isso será usado pela IA para sugerir atividades.
                                     </p>
 
                                     {!isReadOnly && (
@@ -648,7 +648,7 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                                         Distribuição e Licenças
                                     </div>
                                     <p className="text-sm text-muted-foreground">
-                                        Gerencie quais clínicas possuem acesso a este jogo.
+                                        Gerencie quais clínicas possuem acesso a este aplicativo.
                                     </p>
 
                                     <div className="relative">
@@ -729,7 +729,7 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                                 </Button>
                                 {!isReadOnly && (
                                     <Button type="submit" disabled={isLoading} className="w-full sm:w-auto h-11 sm:h-10 order-1 sm:order-2 shadow-lg shadow-primary/20 font-bold">
-                                        {isLoading ? 'Salvando...' : (editingGame ? 'Salvar Alterações' : 'Criar Jogo')}
+                                        {isLoading ? 'Salvando...' : (editingGame ? 'Salvar Alterações' : 'Criar Aplicativo')}
                                     </Button>
                                 )}
                             </DialogFooter>

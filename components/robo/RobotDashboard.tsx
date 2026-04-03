@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, ReactNode } from 'react'
 import {
     getRobots,
     getRobotConfig,
@@ -40,6 +40,7 @@ import {
     SheetTrigger,
 } from "@/components/ui/sheet"
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
@@ -99,6 +100,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
     const [allGames, setAllGames] = useState<any[]>([])
     const [robotSearch, setRobotSearch] = useState('')
     const [appSearch, setAppSearch] = useState('')
+    const [appCategoriaFilter, setAppCategoriaFilter] = useState('')
     const [activeTab, setActiveTab] = useState('dashboard')
 
     useEffect(() => {
@@ -354,10 +356,13 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         r.mac_address.toLowerCase().includes(robotSearch.toLowerCase())
     )
 
-    const filteredApps = allGames.filter(g => 
-        g.nome.toLowerCase().includes(appSearch.toLowerCase()) ||
-        g.categoria?.toLowerCase().includes(appSearch.toLowerCase())
-    )
+    const filteredApps = allGames.filter(g => {
+        const matchesSearch = !appSearch ||
+            g.nome.toLowerCase().includes(appSearch.toLowerCase()) ||
+            g.categoria?.toLowerCase().includes(appSearch.toLowerCase())
+        const matchesCategoria = !appCategoriaFilter || g.categoria === appCategoriaFilter
+        return matchesSearch && matchesCategoria
+    })
 
     function RenderRobotSidebar() {
         return (
@@ -804,13 +809,106 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* MODAL DE EDIÇÃO DE PERFIL */}
+                <Dialog open={!!perfilEdit} onOpenChange={(open) => { if (!open) setPerfilEdit(null) }}>
+                    <DialogContent className="max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle>{perfilEdit?.id ? 'Editar Perfil' : 'Novo Perfil'}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 pt-2">
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium">Nome do Perfil</label>
+                                <Input
+                                    placeholder="Ex: Animado, Calmo, Formal..."
+                                    value={perfilEdit?.nome || ''}
+                                    onChange={e => setPerfilEdit(p => ({ ...p!, nome: e.target.value }))}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium">Descrição</label>
+                                <Input
+                                    placeholder="Breve descrição do perfil..."
+                                    value={perfilEdit?.descricao || ''}
+                                    onChange={e => setPerfilEdit(p => ({ ...p!, descricao: e.target.value }))}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium">Modo Base</label>
+                                <div className="flex gap-2">
+                                    <Button
+                                        type="button"
+                                        variant={perfilEdit?.modo_base === 'CRIANCA' ? 'default' : 'outline'}
+                                        className="flex-1"
+                                        onClick={() => setPerfilEdit(p => ({ ...p!, modo_base: 'CRIANCA' }))}
+                                    >
+                                        🧒 Criança
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant={perfilEdit?.modo_base === 'TERAPEUTA' ? 'default' : 'outline'}
+                                        className="flex-1"
+                                        onClick={() => setPerfilEdit(p => ({ ...p!, modo_base: 'TERAPEUTA' }))}
+                                    >
+                                        🩺 Terapeuta
+                                    </Button>
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium">Prompt de Personalidade</label>
+                                <textarea
+                                    className="w-full p-3 rounded-xl border dark:bg-gray-900 min-h-[140px] text-sm font-mono shadow-inner outline-none focus:ring-2 focus:ring-primary/20 leading-relaxed resize-none"
+                                    placeholder="Descreva a personalidade e comportamento do robô neste perfil..."
+                                    value={perfilEdit?.prompt_instrucao || ''}
+                                    onChange={e => setPerfilEdit(p => ({ ...p!, prompt_instrucao: e.target.value }))}
+                                />
+                            </div>
+                            {perfilMsg && (
+                                <p className={`text-sm font-medium ${perfilMsg.startsWith('Erro') ? 'text-red-500' : 'text-green-600'}`}>
+                                    {perfilMsg}
+                                </p>
+                            )}
+                            <div className="flex gap-2 pt-1">
+                                <Button variant="outline" className="flex-1" onClick={() => setPerfilEdit(null)}>
+                                    Cancelar
+                                </Button>
+                                <Button className="flex-1" onClick={handleSavePerfil} disabled={isSavingPerfil || !perfilEdit?.nome}>
+                                    {isSavingPerfil ? 'Salvando...' : 'Salvar Perfil'}
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         )
     }
 
     function RenderAppsTab() {
-        const games = filteredApps.filter(a => a.categoria === 'JOGO')
-        const tools = filteredApps.filter(a => a.categoria !== 'JOGO')
+        const categorias = [...new Set(allGames.map(g => g.categoria).filter(Boolean))] as string[]
+
+        const categoryStyle: Record<string, { icon: ReactNode, bg: string, text: string, border: string, label: string }> = {
+            'JOGO': {
+                icon: <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />,
+                bg: 'bg-blue-100 dark:bg-blue-900/30',
+                text: 'text-blue-600',
+                border: 'hover:border-blue-200',
+                label: 'LudoTirilo: Jogos e Interações',
+            },
+            'FERRAMENTA': {
+                icon: <Wrench className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />,
+                bg: 'bg-orange-100 dark:bg-orange-900/30',
+                text: 'text-orange-600',
+                border: 'hover:border-orange-200',
+                label: 'Configurações e Diagnóstico',
+            },
+        }
+        const defaultStyle = {
+            icon: <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />,
+            bg: 'bg-purple-100 dark:bg-purple-900/30',
+            text: 'text-purple-600',
+            border: 'hover:border-purple-200',
+            label: '',
+        }
 
         return (
             <div className="space-y-8">
@@ -819,98 +917,121 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                         <div className="flex flex-col md:flex-row gap-4 items-center">
                             <div className="relative flex-1 w-full">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <Input 
-                                    className="pl-10 h-10 sm:h-12 text-sm sm:text-lg bg-white dark:bg-gray-900 border-none shadow-sm" 
+                                <Input
+                                    className="pl-10 h-10 sm:h-12 text-sm sm:text-lg bg-white dark:bg-gray-900 border-none shadow-sm"
                                     placeholder="Busca rápida..."
                                     value={appSearch}
                                     onChange={e => setAppSearch(e.target.value)}
                                 />
                             </div>
-                            <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
-                                <Badge variant="secondary" className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full cursor-pointer hover:bg-primary hover:text-white transition-colors shrink-0 text-[10px] sm:text-xs" onClick={() => setAppSearch('')}>Todos</Badge>
-                                <Badge variant="secondary" className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full cursor-pointer hover:bg-primary hover:text-white transition-colors shrink-0 text-[10px] sm:text-xs" onClick={() => setAppSearch('jogo')}>Jogos</Badge>
-                                <Badge variant="secondary" className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full cursor-pointer hover:bg-primary hover:text-white transition-colors shrink-0 text-[10px] sm:text-xs" onClick={() => setAppSearch('ferramenta')}>Ferramentas</Badge>
-                            </div>
+                            <Select
+                                value={appCategoriaFilter || '__all__'}
+                                onValueChange={v => setAppCategoriaFilter(v === '__all__' ? '' : v)}
+                            >
+                                <SelectTrigger className="w-full sm:w-48 h-10 sm:h-12 bg-white dark:bg-gray-900 border-none shadow-sm text-sm sm:text-base">
+                                    <SelectValue placeholder="Todas as categorias" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__all__">Todas as categorias</SelectItem>
+                                    {categorias.map(cat => (
+                                        <SelectItem key={cat} value={cat}>
+                                            {cat.charAt(0) + cat.slice(1).toLowerCase()}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Seção de Jogos */}
-                <div className="space-y-4">
-                    <h3 className="text-lg sm:text-2xl font-black flex items-center gap-3 text-gray-800 dark:text-white px-1">
-                        <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg sm:rounded-xl">
-                            <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-                        </div>
-                        LudoTirilo: Jogos e Interações
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                        {games.map(game => (
-                            <Card key={game.id} className="group overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-none bg-white dark:bg-gray-800 shadow-sm">
-                                <div className="aspect-[4/3] relative overflow-hidden bg-gray-100 dark:bg-gray-700">
-                                    {game.thumbnail_url ? (
-                                        <img src={game.thumbnail_url} alt={game.nome} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                            <Gamepad2 className="w-10 h-10 sm:w-12 sm:h-12 opacity-10" />
-                                        </div>
-                                    )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
-                                        <Badge className="bg-white/20 backdrop-blur-md border-none text-white text-[9px] sm:text-[10px] uppercase font-bold tracking-widest">
-                                            v{game.versao_atual || '1.0'}
-                                        </Badge>
-                                    </div>
-                                </div>
-                                <CardContent className="p-3 sm:p-4 space-y-3">
-                                    <h4 className="font-bold text-base sm:text-lg leading-tight group-hover:text-primary transition-colors truncate">{game.nome}</h4>
-                                    <p className="text-[11px] sm:text-xs text-gray-500 line-clamp-2 h-8 leading-relaxed">{game.descricao_regras || 'Interação lúdica com o Robô Tirilo.'}</p>
-                                    <Button 
-                                        className="w-full h-9 sm:h-10 font-bold tracking-wide text-xs sm:text-sm" 
-                                        onClick={() => handleCommand(game.comando_entrada || 'START_GAME', { game_id: game.id })}
-                                        disabled={!selectedRobot}
-                                    >
-                                        <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-2 fill-current" />
-                                        INICIAR AGORA
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </div>
+                {categorias.map(cat => {
+                    const items = filteredApps.filter(a => a.categoria === cat)
+                    if (items.length === 0) return null
+                    const style = categoryStyle[cat] || defaultStyle
+                    const isJogo = cat === 'JOGO'
 
-                {/* Seção de Ferramentas */}
-                <div className="space-y-4">
-                    <h3 className="text-lg sm:text-2xl font-black flex items-center gap-3 text-gray-800 dark:text-white px-1">
-                        <div className="p-1.5 sm:p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg sm:rounded-xl">
-                            <Wrench className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
+                    return (
+                        <div key={cat} className="space-y-4">
+                            <h3 className="text-lg sm:text-2xl font-black flex items-center gap-3 text-gray-800 dark:text-white px-1">
+                                <div className={`p-1.5 sm:p-2 ${style.bg} rounded-lg sm:rounded-xl`}>
+                                    {style.icon}
+                                </div>
+                                {style.label || cat.charAt(0) + cat.slice(1).toLowerCase()}
+                            </h3>
+
+                            {isJogo ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                                    {items.map(game => (
+                                        <Card key={game.id} className="group overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-none bg-white dark:bg-gray-800 shadow-sm">
+                                            <div className="aspect-[4/3] relative overflow-hidden bg-gray-100 dark:bg-gray-700">
+                                                {game.thumbnail_url ? (
+                                                    <img src={game.thumbnail_url} alt={game.nome} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                        <Gamepad2 className="w-10 h-10 sm:w-12 sm:h-12 opacity-10" />
+                                                    </div>
+                                                )}
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                                                    <Badge className="bg-white/20 backdrop-blur-md border-none text-white text-[9px] sm:text-[10px] uppercase font-bold tracking-widest">
+                                                        v{game.versao_atual || '1.0'}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                            <CardContent className="p-3 sm:p-4 space-y-3">
+                                                <h4 className="font-bold text-base sm:text-lg leading-tight group-hover:text-primary transition-colors truncate">{game.nome}</h4>
+                                                <p className="text-[11px] sm:text-xs text-gray-500 line-clamp-2 h-8 leading-relaxed">{game.descricao_regras || 'Interação lúdica com o Robô Tirilo.'}</p>
+                                                <Button
+                                                    className="w-full h-9 sm:h-10 font-bold tracking-wide text-xs sm:text-sm"
+                                                    onClick={() => handleCommand(game.comando_entrada || 'START_GAME', { game_id: game.id })}
+                                                    disabled={!selectedRobot}
+                                                >
+                                                    <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-2 fill-current" />
+                                                    INICIAR AGORA
+                                                </Button>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                    {items.map(item => (
+                                        <Card key={item.id} className={`bg-gray-50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 transition-colors border-dashed hover:border-solid ${style.border}`}>
+                                            <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+                                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl ${style.bg} flex items-center justify-center ${style.text} shrink-0`}>
+                                                    <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-bold text-xs sm:text-sm truncate">{item.nome}</h4>
+                                                    <p className="text-[9px] sm:text-[10px] text-gray-500 truncate">{item.comando_entrada}</p>
+                                                </div>
+                                                <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs"
+                                                    onClick={() => handleCommand(item.comando_entrada || 'SYSTEM_TOOL')}
+                                                    disabled={!selectedRobot}
+                                                >
+                                                    Executar
+                                                </Button>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                        Configurações e Diagnóstico
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                        {tools.map(tool => (
-                            <Card key={tool.id} className="bg-gray-50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 transition-colors border-dashed hover:border-solid hover:border-orange-200">
-                                <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 shrink-0">
-                                        <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="font-bold text-xs sm:text-sm truncate">{tool.nome}</h4>
-                                        <p className="text-[9px] sm:text-[10px] text-gray-500 truncate">{tool.comando_entrada}</p>
-                                    </div>
-                                    <Button 
-                                        size="sm" 
-                                        variant="secondary" 
-                                        className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs" 
-                                        onClick={() => handleCommand(tool.comando_entrada || 'SYSTEM_TOOL')}
-                                        disabled={!selectedRobot}
-                                    >
-                                        Executar
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        ))}
-                        {/* Ferramentas Hardcoded se necessário (fallback ou legado) */}
-                        {!tools.some(t => t.comando_entrada === 'CALIBRAR_OLHOS') && (
+                    )
+                })}
+
+                {/* Fallback: CALIBRAR_OLHOS se não cadastrado no banco */}
+                {!allGames.some(g => g.comando_entrada === 'CALIBRAR_OLHOS') && (!appCategoriaFilter || appCategoriaFilter === 'FERRAMENTA') && (
+                    <div className="space-y-4">
+                        <h3 className="text-lg sm:text-2xl font-black flex items-center gap-3 text-gray-800 dark:text-white px-1">
+                            <div className="p-1.5 sm:p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg sm:rounded-xl">
+                                <Bug className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" />
+                            </div>
+                            Diagnóstico
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                             <Card className="bg-gray-50 dark:bg-gray-800/50 border-dashed border-gray-300">
                                 <CardContent className="p-4 flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-600">
@@ -923,9 +1044,9 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                     <Button size="sm" variant="secondary" onClick={() => handleCommand('CALIBRAR_OLHOS')} disabled={!selectedRobot}>Abrir</Button>
                                 </CardContent>
                             </Card>
-                        )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         )
     }
