@@ -10,6 +10,16 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.19.1] - 03/04/2026
+
+### 🐛 Correção: Sincronia Coreografia "Seu Lobato"
+- **Ajuste de Tempo:** Estendida a duração total da coreografia para coincidir com os **2:16 minutos** (52 compassos) do áudio oficial.
+- **Ciclos de Movimento:** Os ciclos foram expandidos de 9 para **11 compassos**, garantindo que o 5º ciclo execute o "Gran Finale" precisamente no fim da música.
+- **Sincronia da Boca:** Modulo de animação da boca atualizado para 11 compassos, mantendo os silêncios sincronizados com a estrutura rítmica da canção.
+- **Fluidez:** Adicionadas variações de movimento ("Varrida Final") para preencher o tempo extra sem repetições monótonas.
+
+---
+
 ## [1.19.0] - 02/04/2026
 
 ### 🔧 Renomeação: Jogos → Aplicativos

@@ -59,12 +59,12 @@ def rotina_coreografia_background():
             # Descobre em qual compasso global estamos (tempo total dividido pelo tempo de 1 compasso)
             compasso_atual_global = int(decorrido / compasso) + 1 # +1 pois começa do Compasso 1
             
-            # Lógica dos silêncios: 1,2, 11,12, 21,22, 31,32, 41,42...
-            # Note que: compasso 1%10 = 1, compasso 2%10 = 2, compasso 11%10 = 1...
-            resto_dez = compasso_atual_global % 10
+            # Lógica dos silêncios: 1,2, 12,13, 23,24, 34,35...
+            # Note que: compasso 1%11 = 1, compasso 2%11 = 2, compasso 12%11 = 1...
+            resto_onze = compasso_atual_global % 11
 
             abertura = 0
-            if compasso_atual_global < 53 and resto_dez not in (1, 2):
+            if compasso_atual_global < 53 and resto_onze not in (1, 2):
                 abertura = random.uniform(40, 90)
 
             olhos.mover_suave_boca(alvo=abertura, duracao=beat/2.0)
@@ -85,7 +85,7 @@ def rotina_coreografia_background():
                 pygame.event.post(pygame.event.Event(pygame.QUIT))
                 break
                 
-            print(f"\n[ CICLO {ciclo} INICIADO ] - Loop de 9 compassos (~23.5s)")
+            print(f"\n[ CICLO {ciclo} INICIADO ] - Loop de 11 compassos (~28.7s)")
             
             # [Compasso 1] (1 compasso): Preparação
             if ciclo == 1:
@@ -94,7 +94,7 @@ def rotina_coreografia_background():
             
             # [Compasso 2] (1 compasso): Galope Unico
             print(f"Compasso 2 (~2.6s) -> Galope!")
-            olhos.alternar_piscar(batidas=4, vel=beat/2.0)
+            olhos.alternar_piscar(batidas=8, vel=beat/2.0)
             
             # [Compassos 3 a 6] (4 compassos): Varrida
             print(f"Compassos 3-6 -> Varrida Direita/Esquerda")
@@ -122,11 +122,12 @@ def rotina_coreografia_background():
                 olhos.olhar_neutro(suave=True)
                 time.sleep((beat * 2) - 0.4)
 
-            # [Compassos 9 a 9.5] (1.5 compassos): Varrida final
-            print(f"Compassos 9-9.5 -> Varrida final.")
-            olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
-            olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
-            olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
+            # [Compassos 9 a 11] (3 compassos): Varrida final extendida
+            print(f"Compassos 9-11 -> Varrida final.")
+            for _ in range(2):
+                olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
+                olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
+                olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
             
             ciclo += 1
             
