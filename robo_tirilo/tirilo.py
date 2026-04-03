@@ -1152,7 +1152,6 @@ def falar(texto, local_fast=False):
                 import tempfile
                 arq_wav = tempfile.mktemp(suffix=".wav")
                 try:
-                    t_anim.start()
                     with wave.open(arq_wav, "wb") as wav_file:
                         wav_file.setnchannels(1)
                         wav_file.setsampwidth(2)
@@ -1166,14 +1165,19 @@ def falar(texto, local_fast=False):
                         # Se falhar, tenta tocar o original (fallback silencioso no shell)
                         comando = f"sox {arq_wav} -t wav - pitch {PIPER_PITCH} | aplay -q -D {DISPOSITIVO_AUDIO}"
                         try:
+                            # Inicia animação agora que o áudio está pronto e sintetizado
+                            if not t_anim.is_alive(): t_anim.start()
                             res = subprocess.run(comando, shell=True, capture_output=True, text=True)
                             if res.returncode != 0:
                                 print(f"Audio: Erro no SoX ({res.stderr.strip()}). Tentando aplay direto...")
                                 subprocess.run(["aplay", "-q", "-D", DISPOSITIVO_AUDIO, arq_wav])
                         except Exception as e:
                             print(f"Audio: Erro subprocess ({e}). Tentando aplay direto...")
+                            if not t_anim.is_alive(): t_anim.start()
                             subprocess.run(["aplay", "-q", "-D", DISPOSITIVO_AUDIO, arq_wav])
                     else:
+                        # Inicia animação para o áudio direto
+                        if not t_anim.is_alive(): t_anim.start()
                         subprocess.run(
                             ["aplay", "-q", "-D", DISPOSITIVO_AUDIO, arq_wav],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
