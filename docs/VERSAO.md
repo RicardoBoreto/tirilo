@@ -21,11 +21,13 @@ Cada versão segue o formato:
 ### 🔧 Melhorias e Engenharia
 - **Sincronização Cloud-Bot**: Atualização do `src/cloud.py` para buscar colunas de voz no Supabase e `tirilo.py` para aplicar mudanças via `RELOAD_CONFIG` sem reiniciar o processo.
 - **Setup Automatizado**: Inclusão do pacote `sox` no script de instalação de áudio (`02_setup_audio.sh`).
+- **Respostas Neurais Diretas**: Desativação das frases de preenchimento ("deixa eu pensar") para uma conversação mais fluida e instantânea com o Gemini 3.1.
 - **Logs de Debug**: Adicionado monitoramento visual no terminal do robô para validar parâmetros de voz recebidos (`VOZ: PIPER | PITCH: X | SPEED: Y`).
 
 ### 🐛 Correções de Bugs
 - **Corrigido: SyntaxError global**: Resolvida falha de declaração de variáveis globais no `loop_logica` do firmware.
 - **Corrigido: Sincronia de Colunas**: Resolvido problema onde colunas de voz não eram lidas da nuvem devido a filtro no `select()`.
+- **Corrigido: Sincronia Boca/Voz**: Otimizado o atraso entre o movimento dos servos e a saída do áudio no motor Piper TTS.
 
 ---
 
