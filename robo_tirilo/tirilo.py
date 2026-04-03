@@ -1340,6 +1340,7 @@ Criança: "brincar" → "Que divertido! Vamos jogar! [JOGO:{exemplo_codigo}]"
         MODO_VISAO_ATIVO = antigo_modo_visao
         if olhos:
             threading.Thread(target=olhos.olhar_frente, daemon=True).start()
+            time.sleep(0.1)  # Respiro para o I2C estabilizar os olhos antes de abrir a boca
 
         # --- 4. FALA CADA FRASE ASSIM QUE CHEGA NO STREAM ---
         buffer = ""

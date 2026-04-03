@@ -53,10 +53,11 @@ class ControladorOlhos:
     def mover_servo_bruto(self, porta, angulo):
         if angulo < 0: angulo = 0
         if angulo > 180: angulo = 180
-        if self.kit:
-            try:
-                self.kit.servo[porta].angle = angulo
-            except: pass
+        with self.lock:
+            if self.kit:
+                try:
+                    self.kit.servo[porta].angle = angulo
+                except: pass
 
     def _calcular_angulo(self, valor_min, valor_max, percentual, invertido=False):
         pct = max(0.0, min(100.0, float(percentual))) / 100.0
