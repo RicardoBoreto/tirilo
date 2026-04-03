@@ -305,7 +305,7 @@ No Raspberry Pi OS, instale as dependências:
 
 ```bash
 sudo apt update && sudo apt install -y espeak-ng python3-pygame python3-opencv
-pip3 install supabase edge-tts google-genai adafruit-circuitpython-servokit dotenv
+pip3 install supabase edge-tts google-genai adafruit-circuitpython-servokit dotenv piper-tts
 ```
 
 ### 2. Copiar os arquivos
@@ -357,6 +357,7 @@ ROBO_MAC_ADDRESS=XX:XX:XX:XX:XX:XX
 | `tirilo.py` | Script principal (versão de produção) |
 | `tirilo.service` | Configuração do serviço systemd |
 | `setup_autostart_tirilo.sh` | Instalador do auto-start |
+| `vozes_piper/` | Diretório para modelos neurais (.onnx) |
 | `calibrador_olhos.py` | Ferramenta de calibragem de servos |
 | `olhos_tirilo.py` | Driver do hardware PCA9685 |
 | `.env` | Credenciais (não commitar) |
@@ -448,7 +449,7 @@ Se encontrar problemas:
 
 ---
 
-**Última atualização:** 04/12/2024  
-**Versão do sistema:** 1.2.0  
+**Última atualização:** 03/04/2026  
+**Versão do sistema:** 1.16.0  
 **Node.js requerido:** 18.x ou superior  
 **Next.js:** 15.5.6

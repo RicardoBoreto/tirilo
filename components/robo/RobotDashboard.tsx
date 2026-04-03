@@ -140,6 +140,10 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
 
         if (selectedRobot) {
             loadTelemetry(selectedRobot.mac_address)
+            // Se formos Super Admin (sem clinicaId), carregamos a config da clínica do robô selecionado
+            if (!clinicaId && selectedRobot.id_clinica) {
+                loadConfig(String(selectedRobot.id_clinica))
+            }
             interval = setInterval(() => {
                 loadTelemetry(selectedRobot.mac_address, true)
             }, 3000)
@@ -161,9 +165,10 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         setClinics(data || [])
     }
 
-    async function loadConfig() {
-        if (!clinicaId) return
-        const data = await getRobotConfig(clinicaId)
+    async function loadConfig(targetId?: string) {
+        const cid = targetId || clinicaId
+        if (!cid) return
+        const data = await getRobotConfig(cid)
         if (data) {
             setConfig(data)
             setPrompt(data.prompt_personalidade_robo)
@@ -179,14 +184,20 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
     }
 
     async function handleSaveConfig() {
-        if (!clinicaId) return alert('Configuração global não disponível para Super Admin (Selecione uma clínica primeiro - Feature Futura)')
+        const cid = clinicaId || (selectedRobot?.id_clinica ? String(selectedRobot.id_clinica) : null)
+        if (!cid) return alert('Configuração global não disponível sem clínica definida. Selecione um robô ou uma clínica.')
+        
         try {
-            await updateRobotConfig(clinicaId, {
+            await updateRobotConfig(cid, {
                 prompt_personalidade_robo: prompt,
                 motor_voz_preferencial: voice
             })
+            // Notifica o robô para recarregar as configurações (Voz e Prompt)
+            if (selectedRobot) {
+                await sendCommand(selectedRobot.mac_address, 'RELOAD_CONFIG')
+            }
             alert('Configuração salva com sucesso!')
-            loadConfig()
+            loadConfig(cid)
         } catch (e) {
             alert('Erro ao salvar config: ' + e)
         }
@@ -256,9 +267,9 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         setDirSaveMsg('')
         try {
             await saveDirective(clinicaId ?? null, modo, texto)
-            // Envia comando para o robô recarregar as diretrizes imediatamente
+            // Envia comando para o robô recarregar as diretrizes e motor de voz imediatamente
             if (selectedRobot) {
-                await sendCommand(selectedRobot.mac_address, 'RELOAD_DIRETRIZES')
+                await sendCommand(selectedRobot.mac_address, 'RELOAD_CONFIG')
             }
             setDirSaveMsg(`Diretriz ${modo === 'CRIANCA' ? 'Criança' : 'Terapeuta'} salva!`)
             setTimeout(() => setDirSaveMsg(''), 3000)
@@ -710,6 +721,40 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                 placeholder="Você é o Robô Tirilo, um assistente lúdico para crianças..."
                             />
                         </div>
+
+                        <div className="pt-4 border-t dark:border-gray-800">
+                            <label className="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Motor de Voz Preferencial</label>
+                            <Select value={voice} onValueChange={setVoice}>
+                                <SelectTrigger className="w-full sm:w-64 h-11 bg-white dark:bg-gray-900 border-gray-200">
+                                    <Radio className="w-4 h-4 mr-2 text-indigo-500" />
+                                    <SelectValue placeholder="Escolha o estilo de voz" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ROBOTICO">
+                                        <div className="flex flex-col text-left">
+                                            <span className="font-bold text-sm">Voz Robótica v.4.10</span>
+                                            <span className="text-[10px] text-gray-500">Espeak-ng (Clássico, latência zero)</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="NATURAL">
+                                        <div className="flex flex-col text-left">
+                                            <span className="font-bold text-sm">Voz Natural (Neural)</span>
+                                            <span className="text-[10px] text-gray-500">Edge-TTS (Humana, requer internet)</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="PIPER">
+                                        <div className="flex flex-col text-left">
+                                            <span className="font-bold text-sm">Voz Neural Local (Premium)</span>
+                                            <span className="text-[10px] text-gray-500">Piper-TTS (Neural, offline, latência ~0.5s)</span>
+                                        </div>
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className="mt-2 text-[10px] text-gray-500 italic">
+                                * Esta escolha afeta toda a interação, ignorando o modo (Criança/Terapeuta).
+                            </p>
+                        </div>
+
                     </CardContent>
                 </Card>
 

@@ -23,6 +23,17 @@ fi
 echo "-> Instalando Adafruit ServoKit e Blinka..."
 sudo python3 -m pip install adafruit-circuitpython-servokit adafruit-blinka --break-system-packages
 
+# 4. Preparar diretório de vozes Piper e baixar modelo padrão
+echo "-> Preparando diretório de vozes Piper e modelo padrão..."
+PIPER_DIR="$HOME/projeto_robo/robo_tirilo/vozes_piper"
+mkdir -p "$PIPER_DIR"
+
+if [ ! -f "$PIPER_DIR/pt_BR-faber-medium.onnx" ]; then
+    echo "-> Baixando modelo de voz Piper (Faber Medium)..."
+    wget -q --show-progress -O "$PIPER_DIR/pt_BR-faber-medium.onnx" "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx"
+    wget -q --show-progress -O "$PIPER_DIR/pt_BR-faber-medium.onnx.json" "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json"
+fi
+
 echo "=== BIBLIOTECAS PYTHON INSTALADAS ==="
 echo "Dica: Agora você pode rodar o programa diretamente com 'python3 tiriloV324.py'"
 echo "Próximo passo: ./05_setup_camera.sh"

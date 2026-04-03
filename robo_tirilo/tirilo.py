@@ -3,11 +3,18 @@
 =============================================================================
 PROJETO: ROBÔ TIRILO
 ARQUIVO: tirilo.py
-VERSÃO:  4.10 (Detecção de jogos por voz + jogos gratuitos automáticos)
-DATA:    15/03/2026
+VERSÃO:  4.11 (Integração tripla de TTS: Espeak, Edge, Piper)
+DATA:    03/04/2026
 AUTOR:   Ricardo Alonso Boreto
 
-MUDANÇAS v4.5:
+MUDANÇAS v4.11:
+- Integração Tripla de TTS: Adicionada opção de Voz Neural Local (Piper), 
+  mantendo Voz Robótica (Espeak) e Voz Natural em Nuvem (Edge).
+- Carga na RAM: Motor Piper carregado no boot para latência de ~0.5s.
+- Auto-Setup: Scripts de instalação agora criam pastas e baixam vozes automaticamente.
+- Redundância: Fallback automático entre os motores para garantir fala persistente.
+
+MUDANÇAS v4.10: (histórico)
 - VAD (Voice Activity Detection): gravação para automaticamente ao detectar silêncio
   (~1.3s após o usuário parar de falar) usando pyaudio + audioop, eliminando espera
   fixa de 4s. Fallback automático para arecord 4s se pyaudio não disponível.
@@ -63,12 +70,17 @@ import edge_tts
 from google import genai
 from google.genai import types
 import cv2
+import wave
+try:
+    from piper.voice import PiperVoice
+except ImportError:
+    PiperVoice = None
 from olhos_tirilo import ControladorOlhos
 from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "4.10"
+VERSAO_ATUAL = "4.11"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -81,6 +93,23 @@ QTD_CHARADAS = 5
 # Se o nome não funcionar, substitua por "plughw:1,0" com o card correto.
 DISPOSITIVO_AUDIO = "plughw:CARD=M1A,DEV=0"
 TAXA_CAPTURA      = 48000   # EMEET M1A opera nativamente em 48 kHz
+
+# --- Configuração Piper (Voz Neural Local) ---
+_PIPER_INSTANCIA = None
+PASTA_VOZES_PIPER = os.path.expanduser("~/projeto_robo/robo_tirilo/vozes_piper")
+
+def _buscar_modelo_piper():
+    """Busca o primeiro arquivo .onnx na pasta de vozes."""
+    if not os.path.exists(PASTA_VOZES_PIPER):
+        os.makedirs(PASTA_VOZES_PIPER, exist_ok=True)
+        return None
+    
+    modelos = [f for f in os.listdir(PASTA_VOZES_PIPER) if f.endswith(".onnx")]
+    if modelos:
+        return os.path.join(PASTA_VOZES_PIPER, modelos[0])
+    return None
+
+CAMINHO_MODELO_PIPER = _buscar_modelo_piper()
 
 # Testa suporte a PyAudio/VAD uma única vez no startup
 def _testar_vad():
@@ -95,6 +124,32 @@ def _testar_vad():
         return True
     except Exception:
         return False
+
+def _inicializar_piper():
+    """Carrega o modelo do Piper na RAM se os arquivos existirem."""
+    global _PIPER_INSTANCIA, CAMINHO_MODELO_PIPER
+    if not PiperVoice:
+        print("Piper: Biblioteca piper-tts não instalada.")
+        return
+    
+    # Tenta descobrir o modelo dinamicamente se ainda não tiver um caminho fixo
+    if not CAMINHO_MODELO_PIPER:
+        CAMINHO_MODELO_PIPER = _buscar_modelo_piper()
+    
+    if CAMINHO_MODELO_PIPER and os.path.exists(CAMINHO_MODELO_PIPER):
+        try:
+            print(f"Piper: Carregando modelo {CAMINHO_MODELO_PIPER} na RAM...")
+            start = time.time()
+            _PIPER_INSTANCIA = PiperVoice.load(
+                CAMINHO_MODELO_PIPER, 
+                config_path=CAMINHO_MODELO_PIPER + ".json", 
+                use_cuda=False
+            )
+            print(f"Piper: Modelo carregado com sucesso em {time.time() - start:.2f}s")
+        except Exception as e:
+            print(f"Piper: Erro ao carregar modelo: {e}")
+    else:
+        print(f"Piper: Nenhum modelo encontrado em {PASTA_VOZES_PIPER}")
 
 _VAD_DISPONIVEL = _testar_vad()
 if not _VAD_DISPONIVEL:
@@ -144,6 +199,7 @@ _cache_diretriz: dict = {}   # {modo: (texto, timestamp)}
 _CACHE_DIRETRIZ_TTL = 300    # 5 minutos
 _jogos_disponiveis: list = []  # Carregado do Supabase: [{nome, codigo, descricao}]
 _perfil_ativo: dict = {}       # Perfil ativo: {id, nome, prompt_instrucao, modo_base}
+_MOTOR_VOZ_GLOBAL = "ROBOTICO" # Pode ser "ROBOTICO" ou "NATURAL"
 
 
 # --- INICIALIZAÇÃO DE ARQUIVOS ---
@@ -1044,6 +1100,7 @@ def _monitorar_barge_in(processo_audio):
 
 def falar(texto, local_fast=False):
     if not texto: return
+    print(f"DEBUG: falar() - Texto: '{texto[:30]}...' | Motor: {_MOTOR_VOZ_GLOBAL}")
 
     # Define cor do status com base no modo
     if MODO_ROBO_ATUAL == "TERAPEUTA":
@@ -1059,8 +1116,8 @@ def falar(texto, local_fast=False):
     try:
         txt = str(texto).replace('*', '').replace('#', '')
 
-        if MODO_ROBO_ATUAL == "TERAPEUTA":
-            # --- Edge-TTS (voz neural Antonio) + barge-in — Modo Terapeuta ---
+        if _MOTOR_VOZ_GLOBAL == "NATURAL":
+            # --- Edge-TTS (voz neural Antonio) + barge-in ---
             import tempfile
             arq_mp3 = tempfile.mktemp(suffix=".mp3")
             try:
@@ -1082,8 +1139,36 @@ def falar(texto, local_fast=False):
                 if os.path.exists(arq_mp3):
                     try: os.remove(arq_mp3)
                     except: pass
+        elif _MOTOR_VOZ_GLOBAL == "PIPER":
+            # --- Piper-TTS (Voz Neural Local) ---
+            if _PIPER_INSTANCIA:
+                import tempfile
+                arq_wav = tempfile.mktemp(suffix=".wav")
+                try:
+                    t_anim.start()
+                    with wave.open(arq_wav, "wb") as wav_file:
+                        wav_file.setnchannels(1)
+                        wav_file.setsampwidth(2)
+                        wav_file.setframerate(_PIPER_INSTANCIA.config.sample_rate)
+                        for chunk in _PIPER_INSTANCIA.synthesize(txt):
+                            wav_file.writeframes(chunk.audio_int16_bytes)
+                    
+                    subprocess.run(
+                        ["aplay", "-q", "-D", DISPOSITIVO_AUDIO, arq_wav],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                    )
+                except Exception as e:
+                    print(f"Piper: Erro na síntese ({e}), usando espeak...")
+                    _falar_espeak(txt, t_anim)
+                finally:
+                    if os.path.exists(arq_wav):
+                        try: os.remove(arq_wav)
+                        except: pass
+            else:
+                print(f"DEBUG: Piper selecionado mas _PIPER_INSTANCIA é None em {CAMINHO_MODELO_PIPER}")
+                _falar_espeak(txt, t_anim)
         else:
-            # --- espeak-ng pipeline (voz robótica) — Modo Criança ---
+            # --- espeak-ng pipeline (voz robótica) ---
             _falar_espeak(txt, t_anim)
 
     except Exception as e:
@@ -1722,10 +1807,10 @@ def _lancar_jogo(codigo):
 
 # --- LOOP PRINCIPAL ---
 def loop_logica():
-    global modo_ia_ativo, MODO_ROBO_ATUAL, TEXTO_RESPOSTA_IA 
+    global modo_ia_ativo, MODO_ROBO_ATUAL, TEXTO_RESPOSTA_IA, cloud_mgr 
+    global MODELO_IA, _jogos_disponiveis, _perfil_ativo, _MOTOR_VOZ_GLOBAL, _cache_diretriz
     
     # 1. Prepara arquivos e conexão Cloud (ESSENCIAL para carregar .env.local)
-    global cloud_mgr
     configurar_arquivos_terapeuta()
     configurar_arquivos_diretriz()
     
@@ -1776,15 +1861,20 @@ def loop_logica():
         cloud_mgr.notify_online()
         print(f"Listener de comandos ativado. Firmware: {VERSAO_ATUAL}")
         # Carrega configurações globais (Modelo IA)
-        global MODELO_IA
-        global _jogos_disponiveis
         model_db = cloud_mgr.get_global_config_value('gemini_model_default')
         if model_db:
             MODELO_IA = model_db
             print(f"Cloud: Modelo IA configurado: {MODELO_IA}")
             
+        # Carrega configuração de voz da clínica
+        config_db = cloud_mgr.get_config()
+        if config_db:
+            motor = config_db.get('motor_voz_preferencial')
+            if motor:
+                _MOTOR_VOZ_GLOBAL = motor.upper()
+                print(f"Cloud: Motor de voz configurado: {_MOTOR_VOZ_GLOBAL}")
+
         _jogos_disponiveis = cloud_mgr.get_jogos_clinica()
-        global _perfil_ativo
         _perfil_ativo = cloud_mgr.get_perfil_ativo() or {}
         if _perfil_ativo:
             modo_base = _perfil_ativo.get('modo_base', 'CRIANCA').upper()
@@ -1792,6 +1882,9 @@ def loop_logica():
             print(f"Cloud: Perfil ativo: {_perfil_ativo.get('nome')} (modo {modo_base})")
         else:
             print("Cloud: Nenhum perfil ativo configurado, usando diretriz padrão.")
+
+        # Inicializa o Piper TTS (se necessário)
+        _inicializar_piper()
 
     falar(f"Olá! Eu sou o {NOME_ROBO}. Minha inteligência artificial está ligada. Como posso ajudar você hoje?")
     
@@ -1820,11 +1913,24 @@ def loop_logica():
                             threading.Thread(target=iniciar_modo_terapeuta).start()
                         elif payload == "MODO_CRIANCA":
                             threading.Thread(target=finalizar_modo_terapeuta).start()
-                        elif payload == "RELOAD_DIRETRIZES":
-                            global _cache_diretriz
+                        elif payload == "RELOAD_CONFIG":
                             _cache_diretriz.clear()
-                            print("Diretrizes: cache limpo, próxima interação recarrega do Supabase.")
-                            falar("Diretrizes atualizadas.")
+                            
+                            # Recarrega configurações da clínica (Voz)
+                            if cloud_mgr:
+                                cfg = cloud_mgr.get_config()
+                                print(f"DEBUG: RELOAD_CONFIG - Config recebida: {cfg}")
+                                if cfg and cfg.get('motor_voz_preferencial'):
+                                    motor_novo = cfg['motor_voz_preferencial'].upper()
+                                    print(f"DEBUG: RELOAD_CONFIG - Mudando de {_MOTOR_VOZ_GLOBAL} para {motor_novo}")
+                                    _MOTOR_VOZ_GLOBAL = motor_novo
+                                    
+                                    # Se selecionou Piper e ainda não carregou, carrega agora!
+                                    if _MOTOR_VOZ_GLOBAL == "PIPER" and _PIPER_INSTANCIA is None:
+                                        _inicializar_piper()
+                            
+                            print(f"Config: Recarregado do Supabase (Voz: {_MOTOR_VOZ_GLOBAL} e Diretrizes).")
+                            falar("Configurações atualizadas.")
                         elif payload == "MUDAR_PERFIL":
                             perfil_id = cmd.get('parametros', {}).get('perfil_id')
                             if perfil_id and cloud_mgr:

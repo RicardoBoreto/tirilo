@@ -106,6 +106,10 @@ Gestão de materiais de apoio e tecnologia assistiva.
 *   **Frota de Robôs (Tirilo):**
     *   Cadastro e vínculo de robôs com clínicas.
     *   **Telemetria:** Monitoramento em tempo real (Online/Offline, Bateria).
+    *   **Motores de Voz (TTS) Triplo:**
+        *   **Robótico (Espeak-ng):** Latência zero, 100% offline, tom clássico.
+        *   **Natural (Edge-TTS):** Voz humana premium, requer conexão com internet.
+        *   **Neural Local (Piper):** Voz neural de alta qualidade, 100% offline, latência ~0.5s.
     *   **Manutenção:** Gestão de Ordens de Serviço (Preventiva/Corretiva) para a frota.
 
 ---
