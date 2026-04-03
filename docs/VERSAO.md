@@ -10,19 +10,23 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
-## [1.20.0] - 03/04/2026
+## [1.21.0] - 03/04/2026
 
-### ✨ Novo Recurso: Coreografia Visual Sincronizada "Seu Lobato"
-- **Sincronia de Imagens:** Implementada troca automática de ilustrações baseada no ciclo da música:
-    - **Ciclo 1:** Galinha
-    - **Ciclo 2:** Vaca
-    - **Ciclo 3:** Porco
-    - **Ciclo 4:** Pintinho
-    - **Ciclo 5 e 6:** Fazenda completa
-- **Assets Exclusivos:** Geradas 5 novas ilustrações temáticas (Galinha, Vaca, Porco, Pintinho e Fazenda) em estilo vetor 2D otimizadas para a tela do Tirilo.
-- **Player Visual:** Refatorada a thread de interface para suportar estados globais de sincronia entre a movimentação física (servos) e o conteúdo digital.
+### 🎭 Grande Final: "O Show do Seu Lobato" (Versão Animada)
+- **Onomatopeias Visuais**: Inclusão de 5 novas ilustrações de "Som" (com balões de fala) para Galinha, Vaca, Porco, Pato e Pintinho.
+- **Narrativa Multicamadas**: Sincronia de 6 estágios por ciclo:
+    1. Fazenda (Início)
+    2. Cavalo (Galope)
+    3. Fazenda (Transição)
+    4. Animal (Revelação)
+    5. **Animal + Balão** (Som/Canto)
+    6. Fazenda (Fechamento)
+- **Sincronia Rítmica**: O balão de fala aparece nos compassos 7-8, coincidindo com o momento de maior ênfase sonora da música.
+- **Correção de Estabilidade**: Corrigido `NameError` e erros de atributo no controlador de servos.
 
 ---
+
+## [1.20.0] - 03/04/2026
 
 ## [1.19.2] - 03/04/2026
 
