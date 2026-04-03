@@ -10,6 +10,29 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.35.0] - 03/04/2026
+
+### 🤖 Expressividade Facial: Sobrancelhas Sincronizadas
+- **Integração de Hardware**: Ativação das portas 9 e 10 do PCA9685 para controle das sobrancelhas.
+- **Correção de Inversão**: Implementada lógica no driver `olhos_tirilo.py` para compensar a inversão física do motor esquerdo, garantindo simetria perfeita.
+- **Coreografia Viva**: 
+    - **Galope**: Sobrancelhas em 100% (Surpresa/Alerta).
+    - **Revelação**: Movimento de curiosidade (70-80%).
+    - **Som/Canto**: Empolgação máxima (100%).
+    - **Gran Finale**: Abaixamento suave (0%) sincronizado com o sono.
+
+---
+
+## [1.30.0] - 03/04/2026
+
+### 🇺🇸 Internacionalização: "Old MacDonald Had a Farm"
+- **Versão Global**: Nova coreografia baseada no clássico em inglês, com áudio `macdonald.mp3`.
+- **Novos Personagens**: Inclusão de assets exclusivos: **Old MacDonald**, **Dog** e **Sheep**.
+- **Onomatopeias EN**: Primeira fase com balão de fala "Moo Moo" para a vaca.
+- **Paridade Técnica**: Replicada toda a inteligência rítmica e de compensação de latência da versão brasileira.
+
+---
+
 ## [1.21.0] - 03/04/2026
 
 ### 🎭 Grande Final: "O Show do Seu Lobato" (Versão Animada)

@@ -19,6 +19,11 @@ except ImportError:
     sys.exit(1)
 
 
+# Sincronia Global
+IMAGEM_ATUAL = "fazenda"
+CICLO_ATUAL = 1
+FADE_ALPHA = 0 # 0 (transparente) a 255 (todo preto)
+
 def tocar_musica(arquivo_mp3):
     print(f"[Audio] Procurando: {arquivo_mp3}")
     if not os.path.exists(arquivo_mp3):
@@ -40,13 +45,14 @@ def rotina_coreografia_background():
     print("\n--- INICIANDO COREOGRAFIA COMPACTA: OLD MACDONALD (92 BPM) ---\n")
     olhos = ControladorOlhos()
     
+    global IMAGEM_ATUAL, CICLO_ATUAL, FADE_ALPHA
     bpm = 92.0
     beat = 60.0 / bpm            
     compasso = beat * 4          
     
     caminho_audio = os.path.join(os.path.dirname(os.path.abspath(__file__)), "musica", "macdonald.mp3")
     tem_audio = tocar_musica(caminho_audio)
-    
+
     # Marcador do inicio real da musica
     tempo_inicio_musica = time.time()
 
@@ -54,7 +60,7 @@ def rotina_coreografia_background():
     def animar_boca_canto():
         """Move a boca suavemente enquanto a música toca, respeitando compassos mudos."""
         time.sleep(0.1)
-        while tem_audio and tem_audio.poll() is None:  # poll() is None = ainda tocando
+        while tem_audio and tem_audio.poll() is None:
             decorrido = time.time() - tempo_inicio_musica
             # Descobre em qual compasso global estamos (tempo total dividido pelo tempo de 1 compasso)
             compasso_atual_global = int(decorrido / compasso) + 1 # +1 pois começa do Compasso 1
@@ -75,45 +81,86 @@ def rotina_coreografia_background():
 
     if tem_audio:
         threading.Thread(target=animar_boca_canto, daemon=True).start()
+    # Mapeamento do bicho de cada ciclo
+    bichos_por_ciclo = {
+        1: "vaca",   # Cow
+        2: "porco",  # Pig
+        3: "dog",    # Dog (Novo!)
+        4: "pato",   # Duck
+        5: "sheep"   # Sheep (Novo!)
+    }
 
     try:
         ciclo = 1
         while True:
-            if tem_audio and tem_audio.poll() is not None:  # processo encerrou = música acabou
-                print("\n[Audio] Musica encerrada. Finalizando coreografia.")
-                # Envia um evento pro PyGame da tela principal fechar as imagens
+            # Check audio
+            if tem_audio and tem_audio.poll() is not None:
+                print("[Coreografia] Áudio terminou. Encerrando movimentos.")
                 pygame.event.post(pygame.event.Event(pygame.QUIT))
                 break
                 
-            print(f"\n[ CICLO {ciclo} INICIADO ] - Loop de 10 compassos (~26.1s)")
-
-            # [Compasso 1] (1 compasso): Preparação
+            print(f"\n[ CICLO {ciclo} INICIADO ] - Old MacDonald")
+            
+            # [Compasso 1] (1 compasso): Preparação - SEMPRE MOSTRA FAZENDA NO INÍCIO
+            IMAGEM_ATUAL = "fazenda"
+            # O olhar_neutro leva 0.4s, descontamos isso da espera para não atrasar o galope
+            olhos.olhar_neutro(suave=True) 
+            
             if ciclo == 1:
-                olhos.fechar_olhos(suave=False)
-            olhos.mover_suave_ambos(p_alvo=20, h_alvo=50, duracao=compasso)
-
-            # [Compasso 2] (1 compasso): Galope
-            print(f"Compasso 2 -> Galope!")
+                olhos.mover_suave_ambos(p_alvo=0, duracao=compasso - 0.4)
+            else:
+                time.sleep(max(0, compasso - 0.4))
+            
+            # [Compasso 2] (1 compasso): Galope Unico ("Toc Toc") - MOSTRA O CAVALO!
+            IMAGEM_ATUAL = "cavalo"
+            print(f"Compasso 2 -> Horse Gallop + Eyebrows Alert!")
+            olhos.mover_sobrancelhas(100)
             olhos.alternar_piscar(batidas=4, vel=beat/2.0)
+            
+            # [Compassos 3 a 6] (4 compassos): Varrida Alternada (Old MacDonald -> Revelação)
+            print(f"Compassos 3-6 -> Varrida...")
+            for v_idx in range(4):
+                if v_idx == 0:
+                    IMAGEM_ATUAL = "oldmacdonald"
+                    print("  Aguardando o bicho (Old MacDonald)...")
+                elif v_idx == 2:
+                    IMAGEM_ATUAL = bichos_por_ciclo.get(ciclo, "fazenda")
+                    print(f"  Revelando: {IMAGEM_ATUAL}!")
+                elif v_idx == 3:
+                    # ANTECIPADO: Onomatopeia aparece 1 compasso antes (no 6)
+                    IMAGEM_ATUAL = f"{bichos_por_ciclo.get(ciclo, 'fazenda')}_som"
+                    print(f"  Sound bubble: {IMAGEM_ATUAL}!")
+                
+                olhos.mover_suave_ambos(h_alvo=35, sb_alvo=80, duracao=beat*2)
+                olhos.mover_suave_ambos(h_alvo=65, sb_alvo=60, duracao=beat*2)
 
-            # [Compassos 3 a 6] (4 compassos): Varrida
-            print(f"Compassos 3-6 -> Varrida Direita/Esquerda")
-            for _ in range(4):
-                olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
-                olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
-
-            # [Compassos 7 a 8] (2 compassos): Vesgo
-            print(f"Compassos 7-8 -> Vesgo e Normal.")
-            for i in range(2):
-                # --- GRAN FINALE ---
-                if ciclo == 5 and i == 1:
-                    print(f"Gran Finale -> Piscar Sincronizado e Olhos Abertos!")
+            # [Compassos 7 a 8] (2 compassos): Vesgo e Normal - SOUND REVELATION
+            IMAGEM_ATUAL = f"{bichos_por_ciclo.get(ciclo, 'fazenda')}_som"
+            print(f"Compassos 7-8 -> Sound and Interaction.")
+            for v_idx in range(2):
+                # --- GRAN FINALE (COMPASSO 52 - END OF CYCLE 5) ---
+                if ciclo == 5 and v_idx == 1:
+                    print(f"Gran Finale -> Sync Blinking, Eyebrows and Farewell!")
                     for _ in range(4):
-                        olhos.mover_suave_ambos(p_alvo=100, duracao=beat/2.0)
-                        olhos.mover_suave_ambos(p_alvo=20, duracao=beat/2.0)
-                    olhos.abrir_olhos()
-                    if tem_audio and tem_audio.poll() is None:
-                        tem_audio.terminate()
+                        olhos.mover_suave_ambos(p_alvo=100, sb_alvo=100, duracao=beat/2.0)
+                        olhos.mover_suave_ambos(p_alvo=40, sb_alvo=80, duracao=beat/2.0)
+                    olhos.olhar_neutro(suave=True)
+                    IMAGEM_ATUAL = f"{bichos_por_ciclo.get(ciclo, 'fazenda')}_som"
+                    olhos.mover_suave_ambos(p_alvo=0, sb_alvo=100, duracao=beat*2)
+                    
+                    print("  Waiting for music end (Fade-out)...")
+                    time.sleep(compasso * 3) 
+                    
+                    print("  Starting visual Fade-out and closing eyes/eyebrows...")
+                    olhos.mover_suave_ambos(p_alvo=100, sb_alvo=0, duracao=1.5)
+                    
+                    passos_fade = 50
+                    for i in range(passos_fade):
+                        FADE_ALPHA = int((i / passos_fade) * 255)
+                        time.sleep(compasso / passos_fade)
+                    
+                    FADE_ALPHA = 255
+                    time.sleep(0.5)
                     pygame.event.post(pygame.event.Event(pygame.QUIT))
                     return
 
@@ -122,13 +169,19 @@ def rotina_coreografia_background():
                 olhos.olhar_neutro(suave=True)
                 time.sleep((beat * 2) - 0.4)
 
-            # [Compassos 9 a 9.5] (1.5 compassos): Varrida final
-            print(f"Compassos 9-9.5 -> Varrida final.")
+            # [Compassos 9 a 9.5] (1.5 compassos): Varrida final - VOLTA PARA A FAZENDA
+            IMAGEM_ATUAL = "fazenda"
+            print(f"Compassos 9-9.5 -> Varrida final (Voltando para Fazenda).")
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
             
+            if ciclo > 5:
+                # Segurança se o áudio não fechar o programa sozinho
+                break
+            
             ciclo += 1
+            CICLO_ATUAL = ciclo
             
     except Exception as e:
         print(f"Erro na Thread de Coreografia: {e}")
@@ -153,53 +206,68 @@ def iniciar_player_visual():
     pygame.display.set_caption("Tirilo Coreografia Player")
     PRETO = (0, 0, 0)
 
-    # Carrega as imagens caso elas existam na pasta (se não, fica tela preta)
-    arquivos_img = ["fazenda.png", "cavalo.png", "porco.png"] # Aceita os arquivos recém criados
-    imagens_carregadas = []
+    # Carrega as imagens temáticas
+    # Assets: Fazenda, Personagem, Cavalo, bichos e versões com som (balão)
+    arquivos_img = [
+        "fazenda.png", "oldmacdonald.png", "cavalo.png", 
+        "vaca.png", "porco.png", "dog.png", "pato.png", "sheep.png",
+        "vaca_som.png", "porco_som.png", "dog_som.png", "pato_som.png", "sheep_som.png"
+    ]
+    imagens_dict = {}
     dir_atual = os.path.join(os.path.dirname(os.path.abspath(__file__)), "imagens")
+    print(f"[UI] Carregando imagens de: {dir_atual}")
 
     for arq in arquivos_img:
         caminho = os.path.join(dir_atual, arq)
         if os.path.exists(caminho):
             try:
                 img = pygame.image.load(caminho).convert_alpha()
-                # Redimensiona para caber na tela mantendo proporção 
                 img = pygame.transform.smoothscale(img, (w, h))
-                imagens_carregadas.append(img)
-            except: pass
+                nome_sem_ext = arq.split('.')[0]
+                imagens_dict[nome_sem_ext] = img
+            except Exception as e:
+                print(f"Erro ao carregar {arq}: {e}")
+    
+    print(f"[UI] Imagens carregadas: {list(imagens_dict.keys())}")
+
+    # Mapeamento Ciclo/Bicho retirado daqui pois agora a thread controla direto pelo nome
 
     # Inicia a inteligência da coreografia em BACKGROUND sem travar a UI!
     thread_coreografia = threading.Thread(target=rotina_coreografia_background, daemon=True)
     thread_coreografia.start()
 
     clock = pygame.time.Clock()
-    running = True
-    img_idx = 0
-    ultimo_slide = pygame.time.get_ticks()
-
-    while running:
+    
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                pygame.quit()
+                sys.exit(0)
             # Foge clicando
             elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.FINGERDOWN:
-                running = False 
+                pygame.quit()
+                sys.exit(0)
 
-        # Lógica assíncrona do SlideShow (A cada 4 segundos, muda de imagem aleatoriamente)
-        agora = pygame.time.get_ticks()
-        if len(imagens_carregadas) > 0 and agora - ultimo_slide > 4000:
-            img_idx = (img_idx + 1) % len(imagens_carregadas)
-            ultimo_slide = agora
+        # Lógica sincronizada com o Compasso da Thread de Coreografia
+        img_key = IMAGEM_ATUAL
+        img_atual = imagens_dict.get(img_key)
 
         tela.fill(PRETO)
         
-        if len(imagens_carregadas) > 0:
-            tela.blit(imagens_carregadas[img_idx], (0, 0))
+        if img_atual:
+            tela.blit(img_atual, (0, 0))
         
-        # Pode desenhar texto de carregamento se imagens não existirem
+        # Aplica o Efeito de Fade-out se FADE_ALPHA > 0
+        if FADE_ALPHA > 0:
+            overlay = pygame.Surface((w, h))
+            overlay.fill((0, 0, 0))
+            overlay.set_alpha(FADE_ALPHA)
+            tela.blit(overlay, (0, 0))
+
+        # Feedback visual se imagens não existirem
         font = pygame.font.Font(None, 40)
-        if len(imagens_carregadas) == 0:
-             txt = font.render("Coreografia em Andamento... (Sem Imagens na pasta)", True, (100,100,100))
+        if not img_atual:
+             txt = font.render(f"Tocando {img_key} (Ciclo {CICLO_ATUAL})...", True, (100,100,100))
              tela.blit(txt, (w/2 - txt.get_width()//2, h/2))
 
         pygame.display.flip()

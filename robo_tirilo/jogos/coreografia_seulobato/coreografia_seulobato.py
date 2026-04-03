@@ -22,6 +22,7 @@ except ImportError:
 # Sincronia Global
 IMAGEM_ATUAL = "fazenda"
 CICLO_ATUAL = 1
+FADE_ALPHA = 0 # 0 (transparente) a 255 (todo preto)
 
 def tocar_musica(arquivo_mp3):
     print(f"[Audio] Procurando: {arquivo_mp3}")
@@ -44,7 +45,7 @@ def rotina_coreografia_background():
     print("\n--- INICIANDO COREOGRAFIA COMPACTA: SEU LOBATO (92 BPM) ---\n")
     olhos = ControladorOlhos()
     
-    global IMAGEM_ATUAL, CICLO_ATUAL
+    global IMAGEM_ATUAL, CICLO_ATUAL, FADE_ALPHA
     bpm = 92.0
     beat = 60.0 / bpm            
     compasso = beat * 4          
@@ -103,46 +104,67 @@ def rotina_coreografia_background():
             
             # [Compasso 1] (1 compasso): Preparação - SEMPRE MOSTRA FAZENDA NO INÍCIO
             IMAGEM_ATUAL = "fazenda"
+            # O olhar_neutro leva 0.4s, descontamos isso da espera para não atrasar o galope
+            olhos.olhar_neutro(suave=True) 
+            
             if ciclo == 1:
-                olhos.olhar_neutro(suave=True)
-                olhos.mover_suave_ambos(p_alvo=0, duracao=compasso)
+                olhos.mover_suave_ambos(p_alvo=0, duracao=compasso - 0.4)
             else:
-                olhos.olhar_neutro(suave=True)
-                time.sleep(compasso)
+                time.sleep(max(0, compasso - 0.4))
             
             # [Compasso 2] (1 compasso): Galope Unico ("Toc Toc") - MOSTRA O CAVALO!
             IMAGEM_ATUAL = "cavalo"
-            print(f"Compasso 2 (~2.6s) -> Galope! (Mostrando Cavalo)")
+            print(f"Compasso 2 (~2.6s) -> Galope! (Mostrando Cavalo + Sobrancelhas Alerta)")
+            olhos.mover_sobrancelhas(100)
             olhos.alternar_piscar(batidas=4, vel=beat/2.0)
             
-            # [Compassos 3 a 6] (4 compassos): Varrida Alternada (Fazenda -> Revelação)
+            # [Compassos 3 a 6] (4 compassos): Varrida Alternada (Seu Lobato -> Revelação)
             print(f"Compassos 3-6 -> Varrida...")
             for v_idx in range(4):
                 if v_idx == 0:
-                    IMAGEM_ATUAL = "fazenda"
-                    print("  Aguardando o bicho (Fazenda)...")
+                    IMAGEM_ATUAL = "seulobato"
+                    print("  Aguardando o bicho (Seu Lobato)...")
                 elif v_idx == 2:
                     IMAGEM_ATUAL = bichos_por_ciclo.get(ciclo, "fazenda")
                     print(f"  Revelando: {IMAGEM_ATUAL}!")
+                elif v_idx == 3:
+                    # ANTECIPADO: Onomatopeia aparece 1 compasso antes (no 6)
+                    IMAGEM_ATUAL = f"{bichos_por_ciclo.get(ciclo, 'fazenda')}_som"
+                    print(f"  Som antecipado: {IMAGEM_ATUAL}!")
                 
-                olhos.mover_suave_ambos(h_alvo=35, duracao=beat*2)
-                olhos.mover_suave_ambos(h_alvo=65, duracao=beat*2)
+                olhos.mover_suave_ambos(h_alvo=35, sb_alvo=80, duracao=beat*2)
+                olhos.mover_suave_ambos(h_alvo=65, sb_alvo=60, duracao=beat*2)
 
-            # [Compassos 7 a 8] (2 compassos): Vesgo e Normal - REVELAÇÃO SONORA (COM BALÃO)
+            # [Compassos 7 a 8] (2 compassos): Vesgo e Normal - REVELAÇÃO SONORA CONTINUA
             IMAGEM_ATUAL = f"{bichos_por_ciclo.get(ciclo, 'fazenda')}_som"
-            print(f"Compassos 7-8 -> Vesgo e Normal (Mostrando som: {IMAGEM_ATUAL}).")
+            print(f"Compassos 7-8 -> Som e Vesgo.")
             for v_idx in range(2):
-                # --- GRAN FINALE (COMPASSO 52) ---
-                if ciclo == 6 and v_idx == 1:
-                    print(f"Gran Finale -> Piscar Sincronizado e Olhos Abertos!")
+                # --- GRAN FINALE (COMPASSO 52 - FIM DO CICLO 5) ---
+                if ciclo == 5 and v_idx == 1:
+                    print(f"Gran Finale -> Piscar Sincronizado, Sobrancelhas e Olhos Abertos!")
                     for _ in range(4):
-                        olhos.mover_suave_ambos(p_alvo=100, duracao=beat/2.0)
-                        olhos.mover_suave_ambos(p_alvo=40, duracao=beat/2.0)
+                        olhos.mover_suave_ambos(p_alvo=100, sb_alvo=100, duracao=beat/2.0)
+                        olhos.mover_suave_ambos(p_alvo=40, sb_alvo=80, duracao=beat/2.0)
                     olhos.olhar_neutro(suave=True)
                     # No gran finale, mantemos a imagem do bicho com som até o fim
                     IMAGEM_ATUAL = f"{bichos_por_ciclo.get(ciclo, 'fazenda')}_som"
-                    olhos.mover_suave_ambos(p_alvo=0, duracao=beat*2)
-                    time.sleep(beat * 4) 
+                    olhos.mover_suave_ambos(p_alvo=0, sb_alvo=100, duracao=beat*2)
+                    
+                    # Espera o final da música (Ajustamos para +3 compassos de espera)
+                    print("  Aguardando final da música para Fade-out...")
+                    time.sleep(compasso * 3) 
+                    
+                    # Inicia o Fade-out suave (Duração de 1 compasso)
+                    print("  Iniciando Fade-out visual e fechando olhos/sobrancelhas...")
+                    olhos.mover_suave_ambos(p_alvo=100, sb_alvo=0, duracao=1.5)
+                    
+                    passos_fade = 50
+                    for i in range(passos_fade):
+                        FADE_ALPHA = int((i / passos_fade) * 255)
+                        time.sleep(compasso / passos_fade)
+                    
+                    FADE_ALPHA = 255
+                    time.sleep(0.5)
                     pygame.event.post(pygame.event.Event(pygame.QUIT))
                     return
 
@@ -157,6 +179,10 @@ def rotina_coreografia_background():
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
+            
+            if ciclo > 5:
+                # Segurança se o áudio não fechar o programa sozinho
+                break
             
             ciclo += 1
             CICLO_ATUAL = ciclo
@@ -185,9 +211,9 @@ def iniciar_player_visual():
     PRETO = (0, 0, 0)
 
     # Carrega as imagens temáticas
-    # Assets: Fazenda, Cavalo, bichos e versões com som (balão)
+    # Assets: Fazenda, Personagem, Cavalo, bichos e versões com som (balão)
     arquivos_img = [
-        "fazenda.png", "cavalo.png", 
+        "fazenda.png", "seulobato.png", "cavalo.png", 
         "galinha.png", "vaca.png", "porco.png", "pato.png", "pintinho.png",
         "galinha_som.png", "vaca_som.png", "porco_som.png", "pato_som.png", "pintinho_som.png"
     ]
@@ -235,6 +261,13 @@ def iniciar_player_visual():
         if img_atual:
             tela.blit(img_atual, (0, 0))
         
+        # Aplica o Efeito de Fade-out se FADE_ALPHA > 0
+        if FADE_ALPHA > 0:
+            overlay = pygame.Surface((w, h))
+            overlay.fill((0, 0, 0))
+            overlay.set_alpha(FADE_ALPHA)
+            tela.blit(overlay, (0, 0))
+
         # Feedback visual se imagens não existirem
         font = pygame.font.Font(None, 40)
         if not img_atual:

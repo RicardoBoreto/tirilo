@@ -123,7 +123,10 @@ class ControladorOlhos:
         cfg = self.config.get(olho, {})
         if "sobrancelha" in cfg:
             c = cfg["sobrancelha"]
-            ang = self._calcular_angulo(c["min"], c["max"], percentual, invertido=False)
+            # Ajuste de polaridade para que 100% = Levantada
+            # A sobrancelha esquerda é invertida fisicamente em relação à direita
+            inv = False if olho == "olho_esquerdo" else True
+            ang = self._calcular_angulo(c["min"], c["max"], percentual, invertido=inv)
             self.mover_servo_bruto(c["porta"], ang)
 
     def mover_sobrancelhas(self, percentual_dir, percentual_esq=None):
