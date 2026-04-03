@@ -920,7 +920,7 @@ def animar_fala(evento_parada):
                 elif abertura <= 50: gui.set_boca('media')
                 else: gui.set_boca('aberta')
         
-        time.sleep(random.uniform(0.1, 0.2))
+        time.sleep(random.uniform(0.15, 0.25))
     
     if olhos: 
         olhos.mover_boca(0)
