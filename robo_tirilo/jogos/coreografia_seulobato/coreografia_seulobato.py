@@ -19,6 +19,9 @@ except ImportError:
     sys.exit(1)
 
 
+# Controle de Ciclo Global para Sincronia de Imagem
+CICLO_ATUAL = 1
+
 def tocar_musica(arquivo_mp3):
     print(f"[Audio] Procurando: {arquivo_mp3}")
     if not os.path.exists(arquivo_mp3):
@@ -40,6 +43,7 @@ def rotina_coreografia_background():
     print("\n--- INICIANDO COREOGRAFIA COMPACTA: SEU LOBATO (92 BPM) ---\n")
     olhos = ControladorOlhos()
     
+    global CICLO_ATUAL
     bpm = 92.0
     beat = 60.0 / bpm            
     compasso = beat * 4          
@@ -129,6 +133,7 @@ def rotina_coreografia_background():
             olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
             
             ciclo += 1
+            CICLO_ATUAL = ciclo
             
     except Exception as e:
         print(f"Erro na Thread de Coreografia: {e}")
@@ -153,9 +158,10 @@ def iniciar_player_visual():
     pygame.display.set_caption("Tirilo Coreografia Player")
     PRETO = (0, 0, 0)
 
-    # Carrega as imagens caso elas existam na pasta (se não, fica tela preta)
-    arquivos_img = ["fazenda.png", "cavalo.png", "porco.png"] # Aceita os arquivos recém criados
-    imagens_carregadas = []
+    # Carrega as imagens temáticas
+    # Ciclo 1: Galinha, 2: Vaca, 3: Porco, 4: Pintinho
+    arquivos_img = ["galinha.png", "vaca.png", "porco.png", "pintinho.png", "fazenda.png"]
+    imagens_dict = {}
     dir_atual = os.path.join(os.path.dirname(os.path.abspath(__file__)), "imagens")
 
     for arq in arquivos_img:
@@ -163,43 +169,51 @@ def iniciar_player_visual():
         if os.path.exists(caminho):
             try:
                 img = pygame.image.load(caminho).convert_alpha()
-                # Redimensiona para caber na tela mantendo proporção 
                 img = pygame.transform.smoothscale(img, (w, h))
-                imagens_carregadas.append(img)
-            except: pass
+                nome_sem_ext = arq.split('.')[0]
+                imagens_dict[nome_sem_ext] = img
+            except Exception as e:
+                print(f"Erro ao carregar {arq}: {e}")
+
+    # Mapeamento Ciclo -> Imagem
+    fluxo_imagens = {
+        1: "galinha",
+        2: "vaca",
+        3: "porco",
+        4: "pintinho",
+        5: "fazenda",
+        6: "fazenda"
+    }
 
     # Inicia a inteligência da coreografia em BACKGROUND sem travar a UI!
     thread_coreografia = threading.Thread(target=rotina_coreografia_background, daemon=True)
     thread_coreografia.start()
 
     clock = pygame.time.Clock()
-    running = True
-    img_idx = 0
-    ultimo_slide = pygame.time.get_ticks()
-
-    while running:
+    
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                pygame.quit()
+                sys.exit(0)
             # Foge clicando
             elif event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.FINGERDOWN:
-                running = False 
+                pygame.quit()
+                sys.exit(0)
 
-        # Lógica assíncrona do SlideShow (A cada 4 segundos, muda de imagem aleatoriamente)
-        agora = pygame.time.get_ticks()
-        if len(imagens_carregadas) > 0 and agora - ultimo_slide > 4000:
-            img_idx = (img_idx + 1) % len(imagens_carregadas)
-            ultimo_slide = agora
+        # Lógica sincronizada com o Ciclo da Coreografia
+        img_key = fluxo_imagens.get(CICLO_ATUAL, "fazenda")
+        img_atual = imagens_dict.get(img_key)
 
         tela.fill(PRETO)
         
-        if len(imagens_carregadas) > 0:
-            tela.blit(imagens_carregadas[img_idx], (0, 0))
+        if img_atual:
+            tela.blit(img_atual, (0, 0))
         
-        # Pode desenhar texto de carregamento se imagens não existirem
+        # Feedback visual se imagens não existirem
         font = pygame.font.Font(None, 40)
-        if len(imagens_carregadas) == 0:
-             txt = font.render("Coreografia em Andamento... (Sem Imagens na pasta)", True, (100,100,100))
+        if not img_atual:
+             txt = font.render(f"Tocando Ciclo {CICLO_ATUAL}... (Sem Imagem)", True, (100,100,100))
              tela.blit(txt, (w/2 - txt.get_width()//2, h/2))
 
         pygame.display.flip()

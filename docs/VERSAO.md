@@ -10,13 +10,21 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
-## [1.19.2] - 03/04/2026
+## [1.20.0] - 03/04/2026
 
-### 🐛 Ajuste Final: Coreografia "Seu Lobato"
-- **Reversão de Sincronia:** Restaurada a lógica rítmica original de 10 compassos (boca) e ciclos de 9 compassos (olhos) para manter a cadência desejada.
-- **Duração Corrigida:** Aumento do limite para o **Ciclo 6**, permitindo que a coreografia alcance o compasso 52 (2:16 minutos) e execute o 'Gran Finale' no tempo certo.
+### ✨ Novo Recurso: Coreografia Visual Sincronizada "Seu Lobato"
+- **Sincronia de Imagens:** Implementada troca automática de ilustrações baseada no ciclo da música:
+    - **Ciclo 1:** Galinha
+    - **Ciclo 2:** Vaca
+    - **Ciclo 3:** Porco
+    - **Ciclo 4:** Pintinho
+    - **Ciclo 5 e 6:** Fazenda completa
+- **Assets Exclusivos:** Geradas 5 novas ilustrações temáticas (Galinha, Vaca, Porco, Pintinho e Fazenda) em estilo vetor 2D otimizadas para a tela do Tirilo.
+- **Player Visual:** Refatorada a thread de interface para suportar estados globais de sincronia entre a movimentação física (servos) e o conteúdo digital.
 
 ---
+
+## [1.19.2] - 03/04/2026
 
 ## [1.19.1] - 03/04/2026
 
