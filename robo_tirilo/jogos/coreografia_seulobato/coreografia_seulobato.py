@@ -104,8 +104,8 @@ def rotina_coreografia_background():
             
             # [Compasso 1] (1 compasso): Preparação - SEMPRE MOSTRA FAZENDA NO INÍCIO
             IMAGEM_ATUAL = "fazenda"
-            # O olhar_neutro leva 0.4s, descontamos isso da espera para não atrasar o galope
-            olhos.olhar_neutro(suave=True) 
+            # O olhar_frente leva 0.5s, descontamos isso da espera para não atrasar o galope
+            olhos.olhar_frente(suave=True) 
             
             if ciclo == 1:
                 olhos.mover_suave_ambos(p_alvo=0, duracao=compasso - 0.4)
@@ -132,8 +132,8 @@ def rotina_coreografia_background():
                     IMAGEM_ATUAL = f"{bichos_por_ciclo.get(ciclo, 'fazenda')}_som"
                     print(f"  Som antecipado: {IMAGEM_ATUAL}!")
                 
-                olhos.mover_suave_ambos(h_alvo=35, sb_alvo=80, duracao=beat*2)
-                olhos.mover_suave_ambos(h_alvo=65, sb_alvo=60, duracao=beat*2)
+                olhos.mover_suave_ambos(h_alvo=35, p_alvo=0, sb_alvo=80, duracao=beat*2)
+                olhos.mover_suave_ambos(h_alvo=65, p_alvo=0, sb_alvo=60, duracao=beat*2)
 
             # [Compassos 7 a 8] (2 compassos): Vesgo e Normal - REVELAÇÃO SONORA CONTINUA
             IMAGEM_ATUAL = f"{bichos_por_ciclo.get(ciclo, 'fazenda')}_som"
@@ -145,7 +145,7 @@ def rotina_coreografia_background():
                     for _ in range(4):
                         olhos.mover_suave_ambos(p_alvo=100, sb_alvo=100, duracao=beat/2.0)
                         olhos.mover_suave_ambos(p_alvo=40, sb_alvo=80, duracao=beat/2.0)
-                    olhos.olhar_neutro(suave=True)
+                    olhos.olhar_frente(suave=True)
                     # No gran finale, mantemos a imagem do bicho com som até o fim
                     IMAGEM_ATUAL = f"{bichos_por_ciclo.get(ciclo, 'fazenda')}_som"
                     olhos.mover_suave_ambos(p_alvo=0, sb_alvo=100, duracao=beat*2)
@@ -170,15 +170,15 @@ def rotina_coreografia_background():
 
                 olhos.olhar_vesgo()
                 time.sleep((beat * 2) - 0.3)
-                olhos.olhar_neutro(suave=True)
+                olhos.olhar_frente(suave=True)
                 time.sleep((beat * 2) - 0.4)
 
             # [Compassos 9 a 9.5] (1.5 compassos): Varrida final - VOLTA PARA A FAZENDA
             IMAGEM_ATUAL = "fazenda"
             print(f"Compassos 9-9.5 -> Varrida final (Voltando para Fazenda).")
-            olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
-            olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, duracao=beat*2)
-            olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, duracao=beat*2)
+            olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, p_alvo=0, duracao=beat*2)
+            olhos.mover_suave_ambos(h_alvo=80, v_alvo=50, p_alvo=0, duracao=beat*2)
+            olhos.mover_suave_ambos(h_alvo=20, v_alvo=50, p_alvo=0, duracao=beat*2)
             
             if ciclo > 5:
                 # Segurança se o áudio não fechar o programa sozinho

@@ -1327,20 +1327,20 @@ Criança: "brincar" → "Que divertido! Vamos jogar! [JOGO:{exemplo_codigo}]"
 
         threading.Thread(target=_streamer, daemon=True).start()
 
-        # --- 3. FALA SOM DE PENSAMENTO (DESATIVADO - IA MAIS RÁPIDA) ---
-        # som_pensar = random.choice([
-        #     "Ummm, deixa eu ver...",
-        #     "Ummm, deixa eu pensar...",
-        #     "Só um momento...",
-        #     "Ummm, boa pergunta...",
-        # ])
-        # falar(som_pensar)  # bloqueia ~2s — stream já está rodando em paralelo
+        # --- 3. FALA SOM DE PENSAMENTO ENQUANTO IA PROCESSA ---
+        som_pensar = random.choice([
+            "Ummm, deixa eu ver...",
+            "Ummm, deixa eu pensar...",
+            "Só um momento...",
+            "Ummm, boa pergunta...",
+        ])
+        falar(som_pensar)  # Bloqueia ~2s — I2C estabiliza enquanto o stream carrega
 
         # Retoma rastreamento e olha para frente ao responder
-        MODO_VISAO_ATIVO = antigo_modo_visao
         if olhos:
-            threading.Thread(target=olhos.olhar_frente, daemon=True).start()
-            time.sleep(0.1)  # Respiro para o I2C estabilizar os olhos antes de abrir a boca
+            olhos.olhar_frente(suave=False)
+        
+        MODO_VISAO_ATIVO = antigo_modo_visao
 
         # --- 4. FALA CADA FRASE ASSIM QUE CHEGA NO STREAM ---
         buffer = ""
