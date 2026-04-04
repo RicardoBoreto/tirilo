@@ -3,11 +3,19 @@
 =============================================================================
 PROJETO: ROBÔ TIRILO
 ARQUIVO: tirilo.py
-VERSÃO:  4.11 (Integração tripla de TTS: Espeak, Edge, Piper)
-DATA:    03/04/2026
+VERSÃO:  4.12 (Servidor de Voz Centralizado e Detecção Inteligente)
+DATA:    04/04/2026
 AUTOR:   Ricardo Alonso Boreto
 
-MUDANÇAS v4.11:
+MUDANÇAS v4.12:
+- Servidor de Voz Local: Criado socket UDP (Porta 5050) para centralizar a fala de todos os subsistemas, 
+  eliminando delays de carga de modelo Piper e conflitos de áudio ALSA.
+- Detecção Inteligente: Refatorada lógica de voz para aceitar nomes parciais de jogos (Ex: "lobato" 
+  em vez de "Seu Lobato").
+- Path Patch: Correção automática de caminhos de scripts (/ inicial) vindos do Dashboard SaaS.
+- Unificação de Mapeamento: Jogos, Coreografias e Ferramentas agora usam o mesmo executor central.
+
+MUDANÇAS v4.11 (histórico):
 - Integração Tripla de TTS: Adicionada opção de Voz Neural Local (Piper), 
   mantendo Voz Robótica (Espeak) e Voz Natural em Nuvem (Edge).
 - Carga na RAM: Motor Piper carregado no boot para latência de ~0.5s.
@@ -80,7 +88,7 @@ from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "4.11"
+VERSAO_ATUAL = "4.12"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -920,7 +928,7 @@ def animar_fala(evento_parada):
                 elif abertura <= 50: gui.set_boca('media')
                 else: gui.set_boca('aberta')
         
-        time.sleep(random.uniform(0.15, 0.25))
+        time.sleep(random.uniform(0.1, 0.2))
     
     if olhos: 
         olhos.mover_boca(0)
@@ -1334,13 +1342,12 @@ Criança: "brincar" → "Que divertido! Vamos jogar! [JOGO:{exemplo_codigo}]"
             "Só um momento...",
             "Ummm, boa pergunta...",
         ])
-        falar(som_pensar)  # Bloqueia ~2s — I2C estabiliza enquanto o stream carrega
+        falar(som_pensar)  # bloqueia ~2s — stream já está rodando em paralelo
 
         # Retoma rastreamento e olha para frente ao responder
-        if olhos:
-            olhos.olhar_frente(suave=False)
-        
         MODO_VISAO_ATIVO = antigo_modo_visao
+        if olhos:
+            threading.Thread(target=olhos.olhar_frente, daemon=True).start()
 
         # --- 4. FALA CADA FRASE ASSIM QUE CHEGA NO STREAM ---
         buffer = ""
@@ -1409,6 +1416,20 @@ Criança: "brincar" → "Que divertido! Vamos jogar! [JOGO:{exemplo_codigo}]"
         TEXTO_RESPOSTA_IA = f"Erro IA: {str(e)[:40]}..."
         MODO_VISAO_ATIVO = True  # garante que tracking volta mesmo em erro
         return "Tive um erro."
+
+def _servidor_voz():
+    """Servidor UDP que ouve na porta 5050 para processar pedidos de fala de outros programas."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind(('localhost', 5050))
+        while True:
+            data, addr = s.recvfrom(2048)
+            texto = data.decode('utf-8')
+            if texto:
+                # Dispara falar em uma thread separada para não bloquear o servidor
+                threading.Thread(target=falar, args=(texto,), daemon=True).start()
+    except Exception as e:
+        print(f"Voz: Erro no servidor centralizado: {e}")
 
 def executar_movimento_voz(texto_l):
     """Detecta comandos de movimento corporal por voz e executa.
@@ -1758,15 +1779,41 @@ def _detectar_jogo_por_voz(texto_l):
     Retorna o código do jogo encontrado ou None."""
     if not _jogos_disponiveis:
         return None
+        
     for jogo in _jogos_disponiveis:
-        # Divide o nome em palavras significativas (>= 3 letras) e verifica se estão no texto
-        palavras = [p.lower() for p in jogo['nome'].split() if len(p) >= 3]
-        if palavras and all(p in texto_l for p in palavras):
+        nome_l = jogo['nome'].lower()
+        codigo_l = jogo['codigo'].lower()
+        
+        # 1. Busca pelo código exato (ex: "lobato", "cores")
+        if codigo_l in texto_l:
             return jogo['codigo']
+            
+        # 2. Busca por palavras significativas do nome
+        palavras_nome = [p for p in nome_l.split() if len(p) >= 4]
+        if not palavras_nome: # nomes curtos
+            palavras_nome = [p for p in nome_l.split() if len(p) >= 3]
+            
+        # Se o usuário disse pelo menos uma palavra chave do nome (ex: "lobato" em "Seu Lobato")
+        if any(p in texto_l for p in palavras_nome):
+            return jogo['codigo']
+
     return None
 
 def _executar_jogo_por_codigo(codigo):
-    """Executa um jogo pelo código — suporta funções internas e scripts .py externos."""
+    """Executa um jogo pelo código — suporta funções internas, scripts .py e aliases de coreografia."""
+    codigo_upper = codigo.upper()
+    
+    # Mapeamento de ALIASES (códigos que vêm do Supabase mas apontam para scripts)
+    mapa_aliases = {
+        "COREOGRAFIA_SEULOBATO": "jogos/coreografia_seulobato/coreografia_seulobato.py",
+        "COREOGRAFIA_MACDONALD": "jogos/coreografia_macdonald/coreografia_macdonald.py",
+        "CALIBRAR_OLHOS":        "ferramentas/calibrador_olhos.py",
+        "RASTREADOR_TELA":       "ferramentas/rastreador_tela.py",
+    }
+    
+    # Se for um alias, resolve para o script real
+    target = mapa_aliases.get(codigo_upper, codigo)
+
     mapa_interno = {
         "cores":       jogar_cores,
         "emocoes":     jogar_emocoes,
@@ -1774,29 +1821,36 @@ def _executar_jogo_por_codigo(codigo):
         "musica":      tocar_musica,
         "parear":      lancar_parear,
     }
-    if codigo in mapa_interno:
-        threading.Thread(target=mapa_interno[codigo], daemon=True).start()
-    elif codigo.endswith('.py'):
-        # Script externo cadastrado pelo path
+    
+    if target in mapa_interno:
+        threading.Thread(target=mapa_interno[target], daemon=True).start()
+        # Script externo cadastrado pelo path ou alias resolvido
         def _run():
             global gui, MODO_VISAO_ATIVO, _ev_camera_livre, _pausar_piscar, _processo_externo
-            script = os.path.join(os.path.dirname(__file__), codigo)
+            # Garante que o caminho seja relativo à pasta do robô (remove / inicial se houver)
+            caminho_limpo = target.lstrip('/')
+            script = os.path.join(os.path.dirname(__file__), caminho_limpo)
             uid = os.getuid()
             env = os.environ.copy()
             env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
             env.pop('SDL_AUDIODRIVER', None)
+            
+            # Limpeza de áudio e pausa de sistemas
             subprocess.run(["pkill", "-9", "aplay"],  stderr=subprocess.DEVNULL)
             subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
             _pausar_piscar = True
+            
             visao_estava_ativa = MODO_VISAO_ATIVO
             if visao_estava_ativa:
                 _ev_camera_livre.clear()
                 MODO_VISAO_ATIVO = False
                 _ev_camera_livre.wait(timeout=3)
+                
             if gui:
                 gui.suspenso = True
                 gui._ev_display_livre.wait(timeout=3)
                 gui._ev_display_livre.clear()
+                
             _processo_externo = subprocess.Popen(["python3", script], env=env)
             _processo_externo.wait()
             _processo_externo = None
@@ -1804,9 +1858,10 @@ def _executar_jogo_por_codigo(codigo):
             MODO_VISAO_ATIVO = visao_estava_ativa
             if gui:
                 gui._ev_retomar.set()
+                
         threading.Thread(target=_run, daemon=True).start()
     else:
-        print(f"Jogo '{codigo}' sem implementação local.")
+        print(f"Jogo '{codigo}' (Alvo: {target}) sem implementação local.")
 
 def _lancar_jogo(codigo):
     """Lança um jogo pelo código (comando_entrada) retornado pela IA via tag [JOGO:codigo]."""
@@ -1920,6 +1975,9 @@ def loop_logica():
 
         # Inicializa o Piper TTS (se necessário)
         _inicializar_piper()
+    
+    # Inicializa o servidor de voz centralizado para ferramentas e jogos
+    threading.Thread(target=_servidor_voz, daemon=True).start()
 
     falar(f"Olá! Eu sou o {NOME_ROBO}. Minha inteligência artificial está ligada. Como posso ajudar você hoje?")
     
@@ -2048,7 +2106,9 @@ def loop_logica():
 
                             def _executar_programa(nome=nome_script, cmd=payload):
                                 global gui
-                                script = os.path.join(os.path.dirname(__file__), nome)
+                                # Garante que o caminho seja relativo à pasta do robô
+                                nome_limpo = nome.lstrip('/')
+                                script = os.path.join(os.path.dirname(__file__), nome_limpo)
                                 uid = os.getuid()
                                 env = os.environ.copy()
                                 env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'

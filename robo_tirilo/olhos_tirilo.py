@@ -29,8 +29,6 @@ class ControladorOlhos:
         
         self._carregar_configuracao()
         self._iniciar_hardware()
-        self.lock = threading.Lock()
-        self.ultimos_angulos = {} # Cache para evitar micro-movimentos redundantes
 
     def _carregar_configuracao(self):
         try:
@@ -53,24 +51,12 @@ class ControladorOlhos:
             print("OlhosTirilo (SIMULAÇÃO): 'adafruit_servokit' não encontrado.")
 
     def mover_servo_bruto(self, porta, angulo):
-        """Move o servo na porta especificada com trava de I2C e throttling de 0.3 graus."""
         if angulo < 0: angulo = 0
         if angulo > 180: angulo = 180
-        
-        # Throttling: ignora mudanças menores que 0.3 graus para reduzir ruído no I2C
-        ultimo = self.ultimos_angulos.get(porta, -999)
-        if abs(angulo - ultimo) < 0.3:
-            return
-
-        with self.lock:
-            if self.kit:
-                try:
-                    self.kit.servo[porta].angle = angulo
-                    self.ultimos_angulos[porta] = angulo
-                    # Respiro técnico para estabilização do barramento I2C
-                    time.sleep(0.001)
-                except Exception:
-                    pass
+        if self.kit:
+            try:
+                self.kit.servo[porta].angle = angulo
+            except: pass
 
     def _calcular_angulo(self, valor_min, valor_max, percentual, invertido=False):
         pct = max(0.0, min(100.0, float(percentual))) / 100.0
@@ -247,10 +233,7 @@ class ControladorOlhos:
 
     def olhar_frente(self, suave=True):
         if suave: self.mover_suave_ambos(50, 50, 0, sb_alvo=50, duracao=0.5)
-        else:
-            self.olhar_para(50, 50)
-            self.fechar_palpebra("olho_direito", 0)
-            self.fechar_palpebra("olho_esquerdo", 0)
+        else: self.olhar_para(50, 50)
 
     def desconfiado(self):
         # Uma sobrancelha levantada, outra baixa

@@ -1,14 +1,5 @@
 # Histórico de Versões - Robô Tirilo
 
-## [4.12] - 2026-04-03
-### 🔧 Servo Stab V2 + Restauração de Pensamento + Fix Pálpebras
-- **Servo Stab V2 (olhos_tirilo.py)**: Implementação de trava de thread (`threading.Lock`) para o barramento I2C, eliminando colisões entre visão e fala.
-- **Throttling de 0.3°**: Movimentos menores que 0.3 graus são ignorados para reduzir ruído eletrônico e vibrações mecânicas.
-- **Silêncio Técnico**: Adicionado delay de 1ms entre escritas I2C para estabilização do sinal.
-- **Restauração das Frases de Pensamento**: Retorno das frases aleatórias ("Deixa eu pensar...") em `perguntar_gemini` para criar uma janela natural de estabilização do hardware.
-- **Fix Pálpebras**: Correção do retorno ao neutro (0%) das pálpebras após a fase de pensamento no método `olhar_frente`.
-- **Coreografia Seu Lobato**: Atualizada para usar `olhar_frente` e forçar pálpebras 100% abertas durante as varridas laterais, corrigindo assimetria observada anteriormente.
-
 ## [4.10] - 2026-04-02
 ### 🎮 Detecção de Jogos por Voz + Jogos Gratuitos Automáticos
 

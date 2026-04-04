@@ -10,6 +10,7 @@ import threading
 import math
 import subprocess
 import time
+import socket
 
 PASTA_JOGO = os.path.dirname(os.path.abspath(__file__))
 PASTA_ROBO = os.path.dirname(os.path.dirname(PASTA_JOGO))  # robo_tirilo/
@@ -35,8 +36,14 @@ CORES_NOME = {
     "marrom":   (139,  69,  19),
 }
 
+MAX_NIVEIS = 3  # O jogo encerra automaticamente após completar este nível
+
 # ============ DISPLAY (KMS/DRM) ============
 def iniciar_pygame():
+    # Desativa o driver de áudio do Pygame para não travar a placa de som (ALSA)
+    # permitindo que o servidor de voz do tirilo.py use o dispositivo.
+    os.environ["SDL_AUDIODRIVER"] = "dummy"
+    
     if "DISPLAY" not in os.environ:
         for driver in ['kmsdrm', 'drm']:
             for index in ['0', '1']:
@@ -58,20 +65,31 @@ def iniciar_pygame():
 
 # ============ VOZ (espeak-ng) com animação de boca ============
 def falar_async(texto, olhos=None):
+    """Tenta enviar o pedido de fala para o Tirilo. Se falhar, usa espeak local."""
     def _falar():
         try:
-            proc = subprocess.Popen(
-                ["espeak-ng", "-v", "pt-br", "-s", "145", "-p", "75", texto],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            if olhos:
-                while proc.poll() is None:
-                    olhos.mover_boca(random.choice([0, 50, 80, 50, 100]))
-                    time.sleep(random.uniform(0.08, 0.16))
-                olhos.mover_boca(0)
-            else:
-                proc.wait()
-        except Exception: pass
+            # Tenta enviar para o servidor de voz do Tirilo (localhost:5050)
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.settimeout(0.5)
+                s.sendto(texto.encode('utf-8'), ('localhost', 5050))
+            # Se o servidor recebeu, o próprio Tirilo gerencia a boca e o áudio neural.
+            # No jogo, não precisamos fazer mais nada.
+        except Exception:
+            # Fallback para espeak se o servidor não estiver respondendo (Modo Laboratório)
+            try:
+                proc = subprocess.Popen(
+                    ["espeak-ng", "-v", "pt-br", "-s", "145", "-p", "75", texto],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+                if olhos:
+                    while proc.poll() is None:
+                        olhos.mover_boca(random.choice([0, 50, 80, 50, 100]))
+                        time.sleep(random.uniform(0.08, 0.16))
+                    olhos.mover_boca(0)
+                else:
+                    proc.wait()
+            except: pass
+
     threading.Thread(target=_falar, daemon=True).start()
 
 # ============ FOGOS DE ARTIFÍCIO ============
@@ -112,6 +130,7 @@ def main():
     pygame.font.init()
     fonte_instrucao = pygame.font.SysFont("arial", 27, bold=True)
     fonte_placar    = pygame.font.SysFont("arial", 30)
+    fonte_botao     = pygame.font.SysFont("arial", 22, bold=True)
 
     # Estado global do jogo
     nivel       = [1]
@@ -129,7 +148,17 @@ def main():
             particulas.append(Particula(cx, cy, COR_LISTA))
 
     def novo_round():
+        nonlocal rodando
         arrastando[0] = None
+        
+        # Verifica se atingiu o limite de níveis
+        if nivel[0] > MAX_NIVEIS:
+            falar_async("Você foi fantástico! Completamos todos os níveis. Por hoje é só, até a próxima!", olhos)
+            if olhos: threading.Thread(target=olhos.surpresa, daemon=True).start()
+            pygame.time.wait(6000)
+            rodando = False
+            return
+
         # Sobe de nível a cada 6 acertos
         if acertos[0] > 0 and acertos[0] % 6 == 0:
             nivel[0] += 1
@@ -271,7 +300,7 @@ def main():
             tela.blit(txt, txt.get_rect(center=(W // 2, H // 2 + 30)))
 
         # Placar
-        placar = fonte_placar.render(f"Nível {nivel[0]}  •  Acertos: {acertos[0]}", True, (30, 30, 30))
+        placar = fonte_placar.render(f"Nível {nivel[0]} / {MAX_NIVEIS}  •  Acertos: {acertos[0]}", True, (30, 30, 30))
         tela.blit(placar, (20, H - 38))
 
         pygame.display.flip()
