@@ -98,7 +98,7 @@ from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "4.13"
+VERSAO_ATUAL = "4.14"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -346,6 +346,8 @@ def ler_diretriz_ia(modo):
 MODO_VISAO_ATIVO = True # Controla se o robô segue rostos
 _ev_camera_livre = threading.Event() # Sinaliza que a câmera foi liberada
 _pausar_piscar = False  # Pausa piscada espontânea durante animações complexas/programas externos
+_pausar_loop_voz = False  # Pausa captura de voz enquanto script externo usa o dispositivo de áudio
+_parar_captura_vad = threading.Event()  # Interrompe VAD/PyAudio quando script externo precisa do dispositivo
 _parar_fala = threading.Event()  # Barge-in: interrompe fala ao detectar voz (modo Terapeuta)
 _barge_in_ativo = False          # Garante que só um thread de barge-in roda por vez
 _processo_externo = None  # Processo filho atual (jogo/programa externo) para poder encerrar via PARAR
@@ -991,6 +993,8 @@ def _capturar_com_vad(arquivo_saida):
 
     try:
         for _ in range(MAX_CHUNKS):
+            if _parar_captura_vad.is_set():
+                break
             data = stream.read(CHUNK, exception_on_overflow=False)
             frames.append(data)
             rms = audioop.rms(data, 2)
@@ -1941,7 +1945,7 @@ def _executar_jogo_por_codigo(codigo, jogo_obj=None):
     elif codigo.endswith('.py'):
         # Script externo cadastrado pelo path (câmera sempre liberada para scripts)
         def _run():
-            global gui, MODO_VISAO_ATIVO, _ev_camera_livre, _pausar_piscar, _processo_externo
+            global gui, MODO_VISAO_ATIVO, _ev_camera_livre, _pausar_piscar, _processo_externo, _pausar_loop_voz
             # Remove barra inicial para não sobrescrever a base do os.path.join
             caminho_relativo = codigo.lstrip('/')
             script = os.path.join(os.path.dirname(__file__), caminho_relativo)
@@ -1950,9 +1954,16 @@ def _executar_jogo_por_codigo(codigo, jogo_obj=None):
             env = os.environ.copy()
             env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
             env.pop('SDL_AUDIODRIVER', None)
+            # Interrompe VAD/PyAudio antes de matar aplay para garantir que o dispositivo seja liberado
+            _parar_captura_vad.set()
+            time.sleep(0.15)  # Aguarda o loop VAD (~64ms/chunk) liberar o stream PyAudio
+            subprocess.run(["pkill", "-9", "arecord"], stderr=subprocess.DEVNULL)
             subprocess.run(["pkill", "-9", "aplay"],  stderr=subprocess.DEVNULL)
             subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
+            time.sleep(0.3)   # ALSA libera o hardware após os processos encerrarem
+            _parar_captura_vad.clear()
             _pausar_piscar = True
+            _pausar_loop_voz = True   # Impede capturar_voz() de disputar o dispositivo de áudio
             visao_estava_ativa = MODO_VISAO_ATIVO
             if visao_estava_ativa:
                 _ev_camera_livre.clear()
@@ -1966,6 +1977,7 @@ def _executar_jogo_por_codigo(codigo, jogo_obj=None):
             _processo_externo.wait()
             _processo_externo = None
             _pausar_piscar = False
+            _pausar_loop_voz = False  # Libera captura de voz
             MODO_VISAO_ATIVO = visao_estava_ativa
             if gui:
                 gui._ev_retomar.set()
@@ -2093,8 +2105,8 @@ def loop_logica():
     
     while gui.running:
         try:
-            # Pausa o loop principal enquanto um jogo está capturando voz
-            if gui and gui.modo_jogo:
+            # Pausa o loop principal enquanto um jogo está capturando voz ou script externo usa o áudio
+            if (gui and gui.modo_jogo) or _pausar_loop_voz:
                 time.sleep(0.3)
                 continue
             texto = capturar_voz()

@@ -3,7 +3,7 @@ import os
 import json
 import time
 import threading
-
+import fcntl
 try:
     from adafruit_servokit import ServoKit
     PCA_ATIVO = True
@@ -20,6 +20,8 @@ class ControladorOlhos:
         self.arquivo_config = arquivo_config
         self.config = None
         self.kit = None
+        self.silenciado = False
+        self.cache_angulos = {} # Cache de precisão v5.16
         
         # Estado atual (porcentagens 0-100) para suavização
         self.estado = {
@@ -30,32 +32,50 @@ class ControladorOlhos:
         self._carregar_configuracao()
         self._iniciar_hardware()
 
+    def silenciar_hardware(self, status):
+        """Bloqueia/Desbloqueia qualquer envio de comando ao I2C (v5.12)."""
+        self.silenciado = status
+
     def _carregar_configuracao(self):
         try:
             with open(self.arquivo_config, 'r') as f:
                 self.config = json.load(f)
-            print(f"OlhosTirilo: Configuração carregada com sucesso de {self.arquivo_config}")
         except Exception as e:
-            print(f"OlhosTirilo ERRO: Arquivo de configuração não encontrado ou inválido: {e}")
+            print(f"OlhosTirilo ERRO: Configuração: {e}")
             self.config = None
 
     def _iniciar_hardware(self):
         if PCA_ATIVO:
             try:
-                self.kit = ServoKit(channels=16)
-                print("OlhosTirilo: Hardware PCA9685 inicializado.")
+                # 50Hz é a base ideal para servos analógicos (v5.16)
+                self.kit = ServoKit(channels=16, frequency=50)
+                print("OlhosTirilo: PCA9685 ativo (Frequência estritamente 50Hz).")
             except Exception as e:
                 print(f"OlhosTirilo ERRO ao iniciar PCA9685: {e}")
                 self.kit = None
         else:
-            print("OlhosTirilo (SIMULAÇÃO): 'adafruit_servokit' não encontrado.")
+            print("OlhosTirilo (SIMULAÇÃO)")
+
+    def fechar_hardware(self):
+        """Libera o barramento I2C (v5.15)."""
+        if self.kit:
+            self.kit = None
+            time.sleep(0.05)
 
     def mover_servo_bruto(self, porta, angulo):
+        if self.silenciado: return 
         if angulo < 0: angulo = 0
         if angulo > 180: angulo = 180
+        
+        # FILTRO DE DEDUPLICAÇÃO (v5.16)
+        ultimo_ang = self.cache_angulos.get(porta, -1)
+        if abs(angulo - ultimo_ang) < 0.1: # Ignora variações irrelevantes
+            return
+            
         if self.kit:
             try:
                 self.kit.servo[porta].angle = angulo
+                self.cache_angulos[porta] = angulo
             except: pass
 
     def _calcular_angulo(self, valor_min, valor_max, percentual, invertido=False):

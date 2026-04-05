@@ -10,6 +10,10 @@ import sherpa_onnx
 import pygame
 
 def iniciar_tela():
+    # Desativa o driver de áudio do Pygame para não travar o dispositivo ALSA (plughw:)
+    # permitindo que arecord e aplay usem o hardware diretamente.
+    os.environ["SDL_AUDIODRIVER"] = "dummy"
+
     # --- CONFIGURAÇÃO DE DRIVERS DO RASPBERRY PI ---
     if "DISPLAY" not in os.environ:
         for driver in ['kmsdrm', 'drm', 'fbcon', 'directfb']:
@@ -22,7 +26,7 @@ def iniciar_tela():
                 except pygame.error:
                     continue
             if pygame.display.get_init(): break
-    
+
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pygame.init()
 
