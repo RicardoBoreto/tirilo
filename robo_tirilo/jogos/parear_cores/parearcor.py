@@ -65,18 +65,32 @@ def iniciar_pygame():
 
 # ============ VOZ (espeak-ng) com animação de boca ============
 def falar_async(texto, olhos=None):
-    """Tenta enviar o pedido de fala para o Tirilo. Se falhar, usa espeak local."""
+    """Envia texto para o servidor de voz do Tirilo (UDP 5050).
+    Se ninguém estiver ouvindo (rodando standalone), usa espeak como fallback.
+    Detecção: connect()+recv() — Linux devolve ConnectionRefusedError via ICMP
+    quando a porta não tem ouvinte, mesmo em UDP localhost."""
     def _falar():
+        servidor_ativo = False
         try:
-            # Tenta enviar para o servidor de voz do Tirilo (localhost:5050)
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                s.settimeout(0.5)
-                s.sendto(texto.encode('utf-8'), ('localhost', 5050))
-            # Se o servidor recebeu, o próprio Tirilo gerencia a boca e o áudio neural.
-            # No jogo, não precisamos fazer mais nada.
-        except Exception:
-            # Fallback para espeak se o servidor não estiver respondendo (Modo Laboratório)
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(('localhost', 5050))  # Não envia nada, só define destino
+            s.settimeout(0.15)
+            s.send(texto.encode('utf-8'))
             try:
+                s.recv(1)           # Aguarda ICMP port-unreachable
+                servidor_ativo = True  # Recebeu algo — servidor respondeu
+            except socket.timeout:
+                servidor_ativo = True  # Timeout = pacote entregue, servidor recebeu
+            except ConnectionRefusedError:
+                servidor_ativo = False # ICMP unreachable = ninguém ouvindo
+            s.close()
+        except Exception:
+            servidor_ativo = False
+
+        if not servidor_ativo:
+            # Fallback espeak — modo standalone ou tirilo.py não está rodando
+            try:
+                print(f"[VOZ] Servidor UDP indisponível, usando espeak: {texto[:40]}")
                 proc = subprocess.Popen(
                     ["espeak-ng", "-v", "pt-br", "-s", "145", "-p", "75", texto],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -88,7 +102,8 @@ def falar_async(texto, olhos=None):
                     olhos.mover_boca(0)
                 else:
                     proc.wait()
-            except: pass
+            except Exception as e:
+                print(f"[VOZ] Erro espeak: {e}")
 
     threading.Thread(target=_falar, daemon=True).start()
 
