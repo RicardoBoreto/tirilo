@@ -34,6 +34,33 @@ if [ ! -f "$PIPER_DIR/pt_BR-faber-medium.onnx" ]; then
     wget -q --show-progress -O "$PIPER_DIR/pt_BR-faber-medium.onnx.json" "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json"
 fi
 
+# 5. Preparar diretório e modelo de Biometria Vocal (sherpa-onnx / wespeaker)
+echo "-> Preparando diretório de biometria..."
+BIOMETRIA_DIR="$HOME/projeto_robo/robo_tirilo/biometria"
+mkdir -p "$BIOMETRIA_DIR"
+
+MODELO_BIOMETRIA="$BIOMETRIA_DIR/wespeaker_en_voxceleb_resnet34.onnx"
+if [ ! -f "$MODELO_BIOMETRIA" ]; then
+    echo "-> Baixando modelo de identificação de voz (wespeaker VoxCeleb ResNet34)..."
+    wget -q --show-progress \
+        -O "$MODELO_BIOMETRIA" \
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recog-models/wespeaker_en_voxceleb_resnet34.onnx"
+    if [ $? -eq 0 ]; then
+        echo "   Modelo baixado: $MODELO_BIOMETRIA"
+    else
+        echo "   AVISO: Falha ao baixar o modelo de biometria."
+        echo "   Baixe manualmente e coloque em: $MODELO_BIOMETRIA"
+        echo "   URL: https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recog-models/wespeaker_en_voxceleb_resnet34.onnx"
+    fi
+else
+    echo "   Modelo de biometria já existe: $MODELO_BIOMETRIA"
+fi
+
+echo ""
+echo "   IMPORTANTE: Após instalar o robô, cadastre os perfis de voz:"
+echo "   python3 ferramentas/biometria_setup_gui.py   (interface gráfica touchscreen)"
+echo "   python3 ferramentas/biometria_setup.py        (terminal)"
+
 echo "=== BIBLIOTECAS PYTHON INSTALADAS ==="
-echo "Dica: Agora você pode rodar o programa diretamente com 'python3 tiriloV324.py'"
+echo "Dica: Agora você pode rodar o programa diretamente com 'python3 tirilo.py'"
 echo "Próximo passo: ./05_setup_camera.sh"

@@ -9,3 +9,5 @@ aiofiles
 opencv-python
 flask==2.3.3
 piper-tts
+numpy
+sherpa-onnx
