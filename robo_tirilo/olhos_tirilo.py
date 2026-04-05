@@ -10,7 +10,6 @@ try:
 except ImportError:
     PCA_ATIVO = False
 
-
 class ControladorOlhos:
     def __init__(self, arquivo_config=None):
         if arquivo_config is None:
@@ -60,8 +59,6 @@ class ControladorOlhos:
         """Libera o barramento I2C (v5.15)."""
         if self.kit:
             self.kit = None
-            time.sleep(0.05)
-
     def mover_servo_bruto(self, porta, angulo):
         if self.silenciado: return 
         if angulo < 0: angulo = 0
@@ -169,6 +166,11 @@ class ControladorOlhos:
         pb_ini = self.estado[olho]["pb"]
         sb_ini = self.estado[olho]["sb"]
 
+        # Determina quais músculos devem ser atualizados
+        atualizar_olho = h_alvo is not None or v_alvo is not None
+        atualizar_sb = sb_alvo is not None
+        atualizar_palpebra = p_alvo is not None or pc_alvo is not None or pb_alvo is not None
+
         h_alvo = h_ini if h_alvo is None else h_alvo
         v_alvo = v_ini if v_alvo is None else v_alvo
         sb_alvo = sb_ini if sb_alvo is None else sb_alvo
@@ -179,15 +181,21 @@ class ControladorOlhos:
 
         for i in range(1, passos + 1):
             pct_progresso = i / passos
-            h_curr  = h_ini  + (h_alvo  - h_ini)  * pct_progresso
-            v_curr  = v_ini  + (v_alvo  - v_ini)  * pct_progresso
-            pc_curr = pc_ini + (pc_alvo - pc_ini) * pct_progresso
-            pb_curr = pb_ini + (pb_alvo - pb_ini) * pct_progresso
-            sb_curr = sb_ini + (sb_alvo - sb_ini) * pct_progresso
-
-            self.virar_olho(olho, h_curr, v_curr)
-            self.fechar_palpebra(olho, pc_curr, pb_curr)
-            self.mover_sobrancelha(olho, sb_curr)
+            
+            if atualizar_olho:
+                h_curr = h_ini + (h_alvo - h_ini) * pct_progresso
+                v_curr = v_ini + (v_alvo - v_ini) * pct_progresso
+                self.virar_olho(olho, h_curr, v_curr)
+                
+            if atualizar_palpebra:
+                pc_curr = pc_ini + (pc_alvo - pc_ini) * pct_progresso
+                pb_curr = pb_ini + (pb_alvo - pb_ini) * pct_progresso
+                self.fechar_palpebra(olho, pc_curr, pb_curr)
+                
+            if atualizar_sb:
+                sb_curr = sb_ini + (sb_alvo - sb_ini) * pct_progresso
+                self.mover_sobrancelha(olho, sb_curr)
+                
             time.sleep(intervalo)
 
     def mover_suave_ambos(self, h_alvo=None, v_alvo=None, p_alvo=None, pc_alvo=None, pb_alvo=None, sb_alvo=None, duracao=0.5):
@@ -275,14 +283,15 @@ class ControladorOlhos:
     def piscar_natural(self):
         """Piscada natural: pálpebra superior desce completamente,
         inferior sobe apenas levemente — como o olho humano real."""
-        pc_old_d = self.estado["olho_direito"]["pc"]
+        PC_ABERTO = 20  # Valor máximo de "aberto" — mesmo de olhar_neutro
+        pc_old_d = min(self.estado["olho_direito"]["pc"], PC_ABERTO)
         pb_old_d = self.estado["olho_direito"]["pb"]
-        pc_old_e = self.estado["olho_esquerdo"]["pc"]
+        pc_old_e = min(self.estado["olho_esquerdo"]["pc"], PC_ABERTO)
         pb_old_e = self.estado["olho_esquerdo"]["pb"]
         # Fecha rápido: superior vai a 100, inferior sobe só um pouco (20)
         self.mover_suave_ambos(pc_alvo=100, pb_alvo=20, duracao=0.12)
         time.sleep(0.05)
-        # Abre ligeiramente mais devagar, voltando ao estado anterior
+        # Abre devagar — nunca acima de PC_ABERTO, então olhos fechados também abrem
         def abrir_dir(): self.mover_suave("olho_direito", pc_alvo=pc_old_d, pb_alvo=pb_old_d, duracao=0.15)
         def abrir_esq(): self.mover_suave("olho_esquerdo", pc_alvo=pc_old_e, pb_alvo=pb_old_e, duracao=0.15)
         t1 = threading.Thread(target=abrir_dir); t2 = threading.Thread(target=abrir_esq)

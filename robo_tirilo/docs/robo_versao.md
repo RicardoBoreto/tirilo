@@ -1,6 +1,85 @@
 # Histórico de Versões - Robô Tirilo
 
+## [4.16] - 2026-04-05
+### 🎮 Executor Unificado via saas_jogos + Fix PARAR + Fix jogar_cores
+
+#### Executor Unificado de Jogos (`tirilo.py`)
+- Removido `mapa_interno` de `_executar_jogo_por_codigo` e `_lancar_jogo` — código hardcoded que mapeava aliases ("cores", "emocoes", "parear"...) para funções Python internas.
+- A única fonte de verdade é o `saas_jogos` (campo `comando_entrada`). Se o programa não estiver cadastrado no SaaS, não executa — independente de o arquivo `.py` existir.
+- `_executar_jogo(jogo_obj)` é o único executor: usado pelo loop de voz (com biometria), pela IA (tag `[JOGO:codigo]`) e pelos comandos SaaS.
+- `_lancar_jogo()` reescrita: usa `_buscar_jogo_por_codigo()` + `_executar_jogo()` — sem mapa fixo.
+- Loop de comandos SaaS unificado: removidos ~90 linhas de `elif` hardcoded (`JOGAR_CORES`, `JOGAR_EMOCOES`, `JOGO_PAREAR`, `CALIBRAR_OLHOS`, `RASTREADOR_TELA`, `COREOGRAFIA_*`). Substituídos por `else: jogo_obj = _buscar_jogo_por_codigo(payload)`.
+
+#### Fix: `def jogar_cores():` ausente
+- O cabeçalho `def jogar_cores():` havia sido perdido; o corpo da função estava colado dentro de `_executar_jogo()` sem delimitador de função.
+- Como `_executar_jogo` nunca era chamado diretamente antes (somente via `_executar_jogo_por_codigo`), o bug estava oculto. Após a unificação, qualquer jogo externo também executava o jogo das cores silenciosamente.
+- **Correção**: `def jogar_cores():` restaurado no lugar correto.
+
+#### Fix: Comando `PARAR` não encerrava subprocess em execução
+- **Causa**: ao iniciar um subprocess, `_pausar_loop_voz = True` fazia o loop principal entrar em `sleep(0.3); continue` indefinidamente — nunca alcançando o processamento da `comando_fila`. O comando `PARAR` ficava enfileirado enquanto o programa rodava.
+- **Correção**: fila de comandos verificada a cada 300ms mesmo com o loop pausado. `PARAR` recebido durante um jogo chama `finalizar_modo_geral()` imediatamente.
+
+#### Fix: `finalizar_modo_geral()` — ordem de encerramento e SIGKILL
+- `pkill mpg123` e `pkill aplay` agora executam **antes** do `terminate()` — coreografias bloqueadas em `mpg123_proc.wait()` são desbloqueadas antes de receber SIGTERM.
+- Adicionado fallback SIGKILL: se o subprocess não encerrar em 1s após SIGTERM, `kill()` (SIGKILL, ininterruptível) é aplicado.
+- Antes: `TimeoutExpired` era silenciado pelo `except Exception: pass` e o processo continuava vivo.
+
+---
+
+## [4.15] - 2026-04-05
+### 🐛 Fix Crítico: Tremor (Jitter) ao Piscar com Rastreamento Ativo
+
+#### Causa Raiz Identificada (por comparação com `tirilopiscacerto.py`)
+- A função `_piscar_espontaneo()` em `tirilo.py` chamava `olhos.olhar_neutro()` **após cada piscada**, resetando os olhos para a posição central (H=50, V=50).
+- O rastreador facial (`VisaoThread`) imediatamente corrigia para a posição da face detectada.
+- Esse ciclo "bate-e-volta" rápido entre dois comandos conflitantes causava o tremor visível nos servos.
+- **Correção**: removida a chamada `olhos.olhar_neutro()` do loop de piscada espontânea.
+
+#### Fix `mover_suave` — Atualização Seletiva de Eixos
+- `mover_suave()` em `olhos_tirilo.py` enviava comandos PWM para **todos os eixos** a cada passo do loop, mesmo que só pálpebras fossem requisitadas.
+- Quando a piscada rodava via thread, o loop mandava `virar_olho()` com a última coordenada registrada — interferindo no rastreador.
+- **Correção**: adicionadas flags `atualizar_olho`, `atualizar_palpebra`, `atualizar_sb`. Cada eixo só recebe comando I2C se foi explicitamente solicitado.
+
+#### Fix `rastreador_tela.py` — Piscada Síncrona Bloqueava Câmera
+- A piscada espontânea no `rastreador_tela.py` usava `olhos.piscar()` síncrono — dormia 0.1s bloqueando o loop principal (câmera + rastreamento congelavam).
+- Ao acordar, a câmera redescobria nova posição do rosto e mandava salto brusco nos motores.
+- **Correção**: substituído por `threading.Thread(target=olhos.piscar_natural, daemon=True).start()`.
+
+#### Tentativas Descartadas (Registro para Referência)
+| Tentativa | Motivo do Descarte |
+|---|---|
+| `self.piscando = True` bloqueando `olhar_para` | Congelava o rastreamento durante e após a piscada |
+| Lock global I2C (`fcntl.flock`) | Gerou overhead massivo no Raspberry Pi, derrubou FPS |
+
+---
+
+## [4.14] - 2026-04-05
+### 🎵 Sincronia de Coreografias + Segurança de Servos + Reset Pós-Jogo
+
+#### Sincronia Inteligente (`coreografia_seulobato.py` e `coreografia_macdonald.py`)
+- Corrigido drift (adiantamento) acumulativo entre ciclos de coreografia.
+- `COMPASSOS_POR_CICLO` ajustado de 9.5 → **10.0** para corresponder à música real.
+- Implementado **Resync Inteligente** no início de cada ciclo: calcula `deriva = time.time() - tempo_esperado`. Se o robô estiver adiantado, aplica `time.sleep(deriva)` antes de continuar — elimina o adiantamento crescente a cada ciclo.
+
+#### Segurança de Servo — Desligamento Pós-Show (`desligar_servos.py`)
+- Ao final do *Gran Finale* e em caso de interrupção de áudio, os motores de pálpebra eram mantidos energizados com força, causando ruído mecânico e desgaste.
+- Adicionada chamada `subprocess.run(["python3", "ferramentas/desligar_servos.py"])` ao término da coreografia.
+- Libera o PWM do PCA9685 sem travar o script principal.
+
+#### Reset Pós-Jogo (`tirilo.py`)
+- Ao retornar de qualquer programa externo (coreografia, jogo), o robô ficava com olhos fechados ou desviados sem recuperação automática.
+- Adicionado `olhos.olhar_neutro(suave=True)` em `_executar_programa()` após `proc.wait()`.
+- Garante retorno ao estado neutro após qualquer aplicativo externo.
+
+#### Paridade de Coreografias
+- `coreografia_macdonald.py` reconstruído com a mesma base de `coreografia_seulobato.py`.
+- Áudio corrigido para `macdonald.mp3`, identificadores internos atualizados para "Old MacDonald".
+- Ambas as coreografias seguem agora o mesmo padrão de 10 compassos, Resync e desligamento de servos.
+
+---
+
 ## [4.10] - 2026-04-02
+
 ### 🎮 Detecção de Jogos por Voz + Jogos Gratuitos Automáticos
 
 #### Detecção de Jogos por Voz

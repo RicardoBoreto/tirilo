@@ -3,9 +3,22 @@
 =============================================================================
 PROJETO: ROBÔ TIRILO
 ARQUIVO: tirilo.py
-VERSÃO:  4.13 (Biometria Vocal + Flag de Rastreamento por Jogo)
+VERSÃO:  4.16 (Executor Unificado via saas_jogos + Fix PARAR subprocess)
 DATA:    05/04/2026
 AUTOR:   Ricardo Alonso Boreto
+
+MUDANÇAS v4.16:
+- Executor Unificado: mapa_interno removido de _executar_jogo_por_codigo e _lancar_jogo.
+  A única fonte de verdade para quais programas o robô pode executar é o saas_jogos
+  (campo comando_entrada). _executar_jogo(jogo_obj) é o único executor — usado por voz,
+  IA (tag [JOGO:codigo]) e comandos SaaS. Sem cadastro no saas_jogos, nada executa.
+- Fix: def jogar_cores() estava ausente — corpo da função colado dentro de _executar_jogo(),
+  fazendo jogar_cores() ser chamado a cada execução de qualquer jogo externo.
+- Fix PARAR durante subprocess: loop principal pausava completamente (_pausar_loop_voz=True)
+  e nunca processava a fila de comandos. PARAR ficava preso na fila.
+  Solução: fila de comandos verificada a cada 300ms mesmo com loop pausado.
+- Fix finalizar_modo_geral(): mpg123/aplay agora morrem ANTES do terminate(), desbloqueando
+  subprocessos presos em audio; adicionado fallback SIGKILL se SIGTERM não encerrar em 1s.
 
 MUDANÇAS v4.13:
 - Biometria Vocal: verificação de identidade (admin/terapeuta) via sherpa-onnx
@@ -98,7 +111,7 @@ from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "4.14"
+VERSAO_ATUAL = "4.16"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -226,7 +239,7 @@ _MOTOR_VOZ_GLOBAL = "ROBOTICO" # Pode ser "ROBOTICO" ou "NATURAL"
 # --- BIOMETRIA VOCAL ---
 PASTA_BIOMETRIA = os.path.expanduser("~/projeto_robo/robo_tirilo/biometria")
 MODELO_BIOMETRIA = os.path.join(PASTA_BIOMETRIA, "wespeaker_en_voxceleb_resnet34.onnx")
-LIMIAR_BIOMETRIA = 0.50  # Similaridade mínima para aceitar identidade
+LIMIAR_BIOMETRIA = 0.40  # Similaridade mínima para aceitar identidade
 _extractor_biometria = None
 
 
@@ -1572,16 +1585,21 @@ def finalizar_modo_geral():
     MODO_VISAO_TELA = False
     if gui: gui.parar_jogo()
     TEXTO_RESPOSTA_IA = ""
+    # Mata áudio PRIMEIRO — coreografias ficam presas esperando mpg123/aplay terminar;
+    # matar o áudio antes desbloqueia o subprocess para aceitar SIGTERM.
+    subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
+    subprocess.run(["pkill", "-9", "aplay"],  stderr=subprocess.DEVNULL)
     # Encerra processo externo em execução (jogo, calibrador, rastreador etc.)
     if _processo_externo and _processo_externo.poll() is None:
         try:
             _processo_externo.terminate()
-            _processo_externo.wait(timeout=2)
+            try:
+                _processo_externo.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                _processo_externo.kill()   # SIGKILL: não pode ser ignorado
+                _processo_externo.wait(timeout=1)
         except Exception: pass
         _processo_externo = None
-    # Mata processos de áudio
-    subprocess.run(["pkill", "-9", "aplay"], stderr=subprocess.DEVNULL)
-    subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
     if olhos:
         olhos.olhar_frente()
         olhos.mover_boca(0)
@@ -1600,7 +1618,90 @@ def iniciar_calibragem():
     # Se não reiniciar, o usuário pode dar boot novamente.
     os._exit(0)
 
-# --- JOGOS ---
+
+# --- EXECUTOR UNIFICADO DE JOGOS ---
+
+def _buscar_jogo_por_codigo(codigo):
+    """Busca o dict do jogo em _jogos_disponiveis pelo codigo (= comando_entrada normalizado)."""
+    codigo = codigo.strip().lower().lstrip('/')
+    for j in (_jogos_disponiveis or []):
+        if j.get('codigo', '').lstrip('/') == codigo:
+            return j
+    return None
+
+def _executar_jogo(jogo_obj):
+    """Executor único para qualquer jogo/ferramenta cadastrado no saas_jogos.
+    A verificação biométrica é responsabilidade do chamador (já feita antes desta chamada).
+    """
+    codigo = jogo_obj.get('codigo', '').strip()
+    desativar_rastr = bool(jogo_obj.get('desativar_rastreamento', False))
+
+    script = os.path.join(os.path.dirname(__file__), codigo.lstrip('/'))
+    if not os.path.exists(script):
+        print(f"[JOGO] Script não encontrado: {script}")
+        falar("Desculpe, não encontrei esse aplicativo.")
+        return
+
+    def _run():
+        global _processo_externo, _pausar_piscar, _pausar_loop_voz, MODO_VISAO_ATIVO
+
+        uid = os.getuid()
+        env = os.environ.copy()
+        env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
+        env.pop('SDL_AUDIODRIVER', None)
+
+        # Interrompe VAD/PyAudio antes de matar aplay
+        _parar_captura_vad.set()
+        time.sleep(0.15)
+        subprocess.run(["pkill", "-9", "arecord"], stderr=subprocess.DEVNULL)
+        subprocess.run(["pkill", "-9", "aplay"],   stderr=subprocess.DEVNULL)
+        subprocess.run(["pkill", "-9", "mpg123"],  stderr=subprocess.DEVNULL)
+        time.sleep(0.3)
+        _parar_captura_vad.clear()
+
+        _pausar_piscar   = True
+        _pausar_loop_voz = True
+
+        # Libera câmera se o jogo exigir
+        visao_estava_ativa = MODO_VISAO_ATIVO
+        if desativar_rastr and visao_estava_ativa:
+            _ev_camera_livre.clear()
+            MODO_VISAO_ATIVO = False
+            _ev_camera_livre.wait(timeout=3)
+
+        # Libera display KMS/DRM
+        if gui:
+            gui.suspenso = True
+            gui._ev_display_livre.wait(timeout=3)
+            gui._ev_display_livre.clear()
+
+        # Encerra processo externo anterior (se ainda rodando)
+        if _processo_externo and _processo_externo.poll() is None:
+            try:
+                _processo_externo.terminate()
+                _processo_externo.wait(timeout=2)
+            except Exception: pass
+            _processo_externo = None
+            time.sleep(0.3)
+
+        # Executa e aguarda o aplicativo encerrar
+        _processo_externo = subprocess.Popen(["python3", script], env=env)
+        _processo_externo.wait()
+        _processo_externo = None
+
+        # Restaura estado
+        _pausar_piscar   = False
+        _pausar_loop_voz = False
+        if desativar_rastr:
+            MODO_VISAO_ATIVO = visao_estava_ativa
+        if olhos:
+            try: olhos.olhar_neutro()  # reset de olhos pós-jogo
+            except Exception: pass
+        if gui:
+            gui._ev_retomar.set()
+
+    threading.Thread(target=_run, daemon=True).start()
+
 
 def jogar_cores():
     global TEXTO_RESPOSTA_IA
@@ -1913,99 +2014,15 @@ def _detectar_jogo_por_voz(texto_l):
             return jogo['codigo']
     return None
 
-def _executar_jogo_por_codigo(codigo, jogo_obj=None):
-    """Executa um jogo pelo código — suporta funções internas e scripts .py externos.
-    jogo_obj: dict do jogo (de _jogos_disponiveis) — usado para ler flags como desativar_rastreamento."""
-    desativar_rastr = bool((jogo_obj or {}).get('desativar_rastreamento'))
-    print(f"[JOGO] Executando '{codigo}' | desativar_rastreamento={desativar_rastr}")
-
-    mapa_interno = {
-        "cores":       jogar_cores,
-        "emocoes":     jogar_emocoes,
-        "adivinhacao": jogar_adivinhacao,
-        "musica":      tocar_musica,
-        "parear":      lancar_parear,
-    }
-    if codigo in mapa_interno:
-        def _run_interno():
-            global MODO_VISAO_ATIVO, _ev_camera_livre
-            visao_estava_ativa = MODO_VISAO_ATIVO
-            if desativar_rastr and visao_estava_ativa:
-                print(f"[JOGO] Desativando rastreamento facial para '{codigo}'.")
-                _ev_camera_livre.clear()
-                MODO_VISAO_ATIVO = False
-                _ev_camera_livre.wait(timeout=3)
-            try:
-                mapa_interno[codigo]()
-            finally:
-                if desativar_rastr and visao_estava_ativa:
-                    print(f"[JOGO] Restaurando rastreamento facial após '{codigo}'.")
-                    MODO_VISAO_ATIVO = visao_estava_ativa
-        threading.Thread(target=_run_interno, daemon=True).start()
-    elif codigo.endswith('.py'):
-        # Script externo cadastrado pelo path (câmera sempre liberada para scripts)
-        def _run():
-            global gui, MODO_VISAO_ATIVO, _ev_camera_livre, _pausar_piscar, _processo_externo, _pausar_loop_voz
-            # Remove barra inicial para não sobrescrever a base do os.path.join
-            caminho_relativo = codigo.lstrip('/')
-            script = os.path.join(os.path.dirname(__file__), caminho_relativo)
-            print(f"[JOGO] Script externo: {script}")
-            uid = os.getuid()
-            env = os.environ.copy()
-            env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
-            env.pop('SDL_AUDIODRIVER', None)
-            # Interrompe VAD/PyAudio antes de matar aplay para garantir que o dispositivo seja liberado
-            _parar_captura_vad.set()
-            time.sleep(0.15)  # Aguarda o loop VAD (~64ms/chunk) liberar o stream PyAudio
-            subprocess.run(["pkill", "-9", "arecord"], stderr=subprocess.DEVNULL)
-            subprocess.run(["pkill", "-9", "aplay"],  stderr=subprocess.DEVNULL)
-            subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
-            time.sleep(0.3)   # ALSA libera o hardware após os processos encerrarem
-            _parar_captura_vad.clear()
-            _pausar_piscar = True
-            _pausar_loop_voz = True   # Impede capturar_voz() de disputar o dispositivo de áudio
-            visao_estava_ativa = MODO_VISAO_ATIVO
-            if visao_estava_ativa:
-                _ev_camera_livre.clear()
-                MODO_VISAO_ATIVO = False
-                _ev_camera_livre.wait(timeout=3)
-            if gui:
-                gui.suspenso = True
-                gui._ev_display_livre.wait(timeout=3)
-                gui._ev_display_livre.clear()
-            _processo_externo = subprocess.Popen(["python3", script], env=env)
-            _processo_externo.wait()
-            _processo_externo = None
-            _pausar_piscar = False
-            _pausar_loop_voz = False  # Libera captura de voz
-            MODO_VISAO_ATIVO = visao_estava_ativa
-            if gui:
-                gui._ev_retomar.set()
-        threading.Thread(target=_run, daemon=True).start()
-    else:
-        print(f"Jogo '{codigo}' sem implementação local.")
-
 def _lancar_jogo(codigo):
-    """Lança um jogo pelo código (comando_entrada) retornado pela IA via tag [JOGO:codigo]."""
-    codigo = codigo.strip().lower()
-    # Mapa fixo: comando_entrada → função Python
-    mapa = {
-        "cores":       jogar_cores,
-        "emocoes":     jogar_emocoes,
-        "adivinhacao": jogar_adivinhacao,
-        "musica":      tocar_musica,
-        "parear":      lancar_parear,
-    }
-    # Verifica se o código está entre os jogos carregados do Supabase
-    codigos_validos = {j["codigo"] for j in _jogos_disponiveis} if _jogos_disponiveis else set(mapa.keys())
-    if codigo not in codigos_validos:
-        print(f"Jogo '{codigo}' não está nos jogos disponíveis: {codigos_validos}")
+    """Lança um jogo pelo código (comando_entrada) retornado pela IA via tag [JOGO:codigo].
+    A única fonte de verdade é _jogos_disponiveis (carregado do saas_jogos)."""
+    jogo_obj = _buscar_jogo_por_codigo(codigo.strip().lower())
+    if not jogo_obj:
+        print(f"[IA] Jogo '{codigo}' não encontrado em _jogos_disponiveis.")
         return
-    if codigo in mapa:
-        print(f"IA escolheu jogo: {codigo}")
-        threading.Thread(target=mapa[codigo], daemon=True).start()
-    else:
-        print(f"Jogo '{codigo}' válido no Supabase mas sem implementação local.")
+    print(f"[IA] Lançando jogo: {jogo_obj.get('nome')} ({codigo})")
+    threading.Thread(target=_executar_jogo, args=(jogo_obj,), daemon=True).start()
 
 
 # --- LOOP PRINCIPAL ---
@@ -2105,8 +2122,17 @@ def loop_logica():
     
     while gui.running:
         try:
-            # Pausa o loop principal enquanto um jogo está capturando voz ou script externo usa o áudio
+            # Pausa o loop principal enquanto um jogo está capturando voz ou script externo usa o áudio.
+            # Mesmo pausado, processa a fila de comandos para que PARAR chegue ao subprocess.
             if (gui and gui.modo_jogo) or _pausar_loop_voz:
+                try:
+                    while not comando_fila.empty():
+                        cmd = comando_fila.get_nowait()
+                        payload = cmd.get('comando', '')
+                        print(f"Comando recebido (pausado): {payload}")
+                        if payload == "PARAR":
+                            finalizar_modo_geral()
+                except Exception: pass
                 time.sleep(0.3)
                 continue
             texto = capturar_voz()
@@ -2174,101 +2200,28 @@ def loop_logica():
                         elif payload == "FALAR":
                             msg = cmd.get('parametros', {}).get('texto', '')
                             if msg: falar(msg)
-                        elif payload == "JOGAR_CORES":
-                            threading.Thread(target=jogar_cores).start()
-                        elif payload == "JOGAR_EMOCOES":
-                            threading.Thread(target=jogar_emocoes).start()
                         elif payload == "MODO_PAPAGAIO":
                             modo_ia_ativo = False
                             falar("Modo Papagaio ativado. Eu vou repetir tudo!")
                         elif payload == "MODO_CONVERSA":
                             modo_ia_ativo = True
                             falar("Modo Conversa ativado. Vamos bater um papo?")
-                        elif payload == "JOGO_PAREAR":
-                            payload = "JOGO_PAREAR"  # redireciona para subprocess
-                            nome_script = "parearcor.py"
-                            def _executar_parear(nome=nome_script, cmd=payload):
-                                global gui, _pausar_piscar, _processo_externo
-                                script = os.path.join(os.path.dirname(__file__), nome)
-                                uid = os.getuid()
-                                env = os.environ.copy()
-                                env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
-                                env.pop('SDL_AUDIODRIVER', None)
-                                # Pausa piscada (conflito de servos), mas mantém rastreamento ativo
-                                # (parearcor.py não usa câmera, apenas display e servos de reação)
-                                _pausar_piscar = True
-                                if gui:
-                                    gui.suspenso = True
-                                    gui._ev_display_livre.wait(timeout=3)
-                                    gui._ev_display_livre.clear()
-                                _processo_externo = subprocess.Popen(["python3", script], env=env)
-                                _processo_externo.wait()
-                                _processo_externo = None
-                                _pausar_piscar = False
-                                if gui:
-                                    gui._ev_retomar.set()
-                            threading.Thread(target=_executar_parear, daemon=True).start()
                         elif payload == "CALIBRAR":
                             threading.Thread(target=iniciar_calibragem).start()
                         elif payload == "VISAO_TELA":
                             global MODO_VISAO_TELA
                             MODO_VISAO_TELA = not MODO_VISAO_TELA
-                            if gui: 
+                            if gui:
                                 if MODO_VISAO_TELA: gui.iniciar_jogo("visao")
                                 else: gui.parar_jogo()
                             falar("Modo visão " + ("ativado" if MODO_VISAO_TELA else "desativado"))
-                        elif payload.endswith('.py') or payload in ("CALIBRAR_OLHOS", "RASTREADOR_TELA", "COREOGRAFIA_MACDONALD", "COREOGRAFIA_SEULOBATO"):
-                            scripts_map = {
-                                "CALIBRAR_OLHOS":       "ferramentas/calibrador_olhos.py",
-                                "RASTREADOR_TELA":      "ferramentas/rastreador_tela.py",
-                                "COREOGRAFIA_MACDONALD":"jogos/coreografia_macdonald/coreografia_macdonald.py",
-                                "COREOGRAFIA_SEULOBATO":"jogos/coreografia_seulobato/coreografia_seulobato.py",
-                            }
-                            nome_script = payload if payload.endswith('.py') else scripts_map[payload]
-
-                            def _executar_programa(nome=nome_script, cmd=payload):
-                                global gui
-                                script = os.path.join(os.path.dirname(__file__), nome)
-                                uid = os.getuid()
-                                env = os.environ.copy()
-                                env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
-                                env.pop('SDL_AUDIODRIVER', None)  # Deixa SDL escolher ALSA automaticamente
-                                # Pausa piscada e rastreamento; aguarda câmera ser liberada
-                                global MODO_VISAO_ATIVO, _ev_camera_livre, _pausar_piscar, _processo_externo
-                                _pausar_piscar = True
-                                # Encerra qualquer programa externo em execução (ex: rastreador)
-                                if _processo_externo and _processo_externo.poll() is None:
-                                    _processo_externo.terminate()
-                                    try: _processo_externo.wait(timeout=2)
-                                    except Exception: pass
-                                    _processo_externo = None
-                                    time.sleep(0.3)  # aguarda servos estabilizarem
-                                # Libera dispositivo de áudio antes da coreografia
-                                subprocess.run(["pkill", "-9", "aplay"],  stderr=subprocess.DEVNULL)
-                                subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
-                                time.sleep(0.3)
-                                visao_estava_ativa = MODO_VISAO_ATIVO
-                                if visao_estava_ativa:
-                                    _ev_camera_livre.clear()
-                                    MODO_VISAO_ATIVO = False
-                                    _ev_camera_livre.wait(timeout=3)
-                                # KMS/DRM é exclusivo: sinaliza a thread principal para liberar o display
-                                if gui:
-                                    gui.suspenso = True
-                                    gui._ev_display_livre.wait(timeout=3)
-                                    gui._ev_display_livre.clear()
-                                    print(f"Display liberado para {cmd}")
-                                # Executa o programa externo (bloqueia até terminar)
-                                _processo_externo = subprocess.Popen(["python3", script], env=env)
-                                _processo_externo.wait()
-                                _processo_externo = None
-                                # Restaura rastreamento, piscada e sinaliza thread principal
-                                _pausar_piscar = False
-                                MODO_VISAO_ATIVO = visao_estava_ativa
-                                if gui:
-                                    gui._ev_retomar.set()
-
-                            threading.Thread(target=_executar_programa, daemon=True).start()
+                        else:
+                            # Todos os jogos/ferramentas chegam via comando_entrada cadastrado no saas_jogos
+                            jogo_obj = _buscar_jogo_por_codigo(payload)
+                            if jogo_obj:
+                                threading.Thread(target=_executar_jogo, args=(jogo_obj,), daemon=True).start()
+                            else:
+                                print(f"[SaaS] Comando desconhecido ou não cadastrado no saas_jogos: {payload}")
                 except Exception as e: 
                     print(f"Erro ao processar comando: {e}")
 
@@ -2334,7 +2287,7 @@ def loop_logica():
                                 perguntar_gemini(texto)
                             continue
                         print(f"[JOGO] Verificação biométrica OK.")
-                    _executar_jogo_por_codigo(jogo_voz, jogo_obj)
+                    _executar_jogo(jogo_obj)
                     continue
                 # Conversa normal de IA no modo terapeuta
                 if modo_ia_ativo:
@@ -2369,7 +2322,7 @@ def loop_logica():
                             perguntar_gemini(texto)
                         continue
                     print(f"[JOGO] Verificação biométrica OK.")
-                _executar_jogo_por_codigo(jogo_voz, jogo_obj)
+                _executar_jogo(jogo_obj)
                 continue
 
             if modo_ia_ativo:

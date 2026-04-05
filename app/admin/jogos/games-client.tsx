@@ -36,7 +36,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useToast } from '@/components/ui/use-toast'
 import { Game, GameVersion, ClinicPermission, createGame, updateGame, toggleGameStatus, deleteGame, getGameVersions, getGamePermissions, updateGamePermission } from '@/lib/actions/games'
 import { Habilidade, getHabilidades, getHabilidadesDoJogo, vincularHabilidadeJogo, desvincularHabilidadeJogo, createHabilidade } from '@/lib/actions/ludoterapia'
-import { MoreHorizontal, Plus, Search, Edit, Trash, Power, Gamepad2, Upload, History, Rocket, Eye, Store, CheckCircle, XCircle, Brain, X } from 'lucide-react'
+import { MoreHorizontal, Plus, Search, Edit, Trash, Power, Gamepad2, Upload, History, Rocket, Eye, Store, CheckCircle, XCircle, Brain, X, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function GamesClient({ initialGames }: { initialGames: Game[] }) {
@@ -58,6 +58,9 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
     const [searchTerm, setSearchTerm] = useState('')
     const [clinicSearchTerm, setClinicSearchTerm] = useState('')
     const [isReadOnly, setIsReadOnly] = useState(false)
+    const [sortField, setSortField] = useState<string>('nome')
+    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+    const [categoriaFiltro, setCategoriaFiltro] = useState<string>('all')
     const { toast } = useToast()
     const router = useRouter()
 
@@ -65,10 +68,31 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
         setGames(initialGames)
     }, [initialGames])
 
-    const filteredGames = games.filter(game =>
-        game.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (game.categoria && game.categoria.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
+    const categorias = Array.from(new Set(games.map(g => g.categoria || 'Geral'))).sort()
+
+    function toggleSort(field: string) {
+        if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+        else { setSortField(field); setSortDir('asc') }
+    }
+
+    const filteredGames = games
+        .filter(game => {
+            const matchSearch = game.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (game.categoria && game.categoria.toLowerCase().includes(searchTerm.toLowerCase()))
+            const matchCategoria = categoriaFiltro === 'all' || (game.categoria || 'Geral') === categoriaFiltro
+            return matchSearch && matchCategoria
+        })
+        .sort((a, b) => {
+            let va: any = a[sortField as keyof Game]
+            let vb: any = b[sortField as keyof Game]
+            if (sortField === 'categoria') { va = va || 'Geral'; vb = vb || 'Geral' }
+            if (sortField === 'ativo') { va = va ? 1 : 0; vb = vb ? 1 : 0 }
+            if (typeof va === 'string') va = va.toLowerCase()
+            if (typeof vb === 'string') vb = vb.toLowerCase()
+            if (va < vb) return sortDir === 'asc' ? -1 : 1
+            if (va > vb) return sortDir === 'asc' ? 1 : -1
+            return 0
+        })
 
     async function handleOpenEdit(game: Game) {
         setEditingGame(game)
@@ -287,8 +311,8 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                 </Button>
             </div>
 
-            <div className="flex items-center space-x-2">
-                <div className="relative w-full sm:max-w-sm">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="relative flex-1 sm:max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Buscar por nome ou categoria..."
@@ -297,6 +321,17 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+                <Select value={categoriaFiltro} onValueChange={setCategoriaFiltro}>
+                    <SelectTrigger className="h-11 sm:h-10 sm:w-48">
+                        <SelectValue placeholder="Todas as categorias" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todas as categorias</SelectItem>
+                        {categorias.map(cat => (
+                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
 
             {/* Mobile Card View */}
@@ -371,12 +406,27 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                 <table className="w-full text-sm text-left">
                     <thead className="bg-gray-50/50 dark:bg-gray-800 border-b">
                         <tr>
-                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Aplicativo</th>
-                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Versão</th>
-                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Preço</th>
-                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Categoria</th>
-                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Comando (Script)</th>
-                            <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px]">Status</th>
+                            {[
+                                { field: 'nome', label: 'Aplicativo' },
+                                { field: 'versao_atual', label: 'Versão' },
+                                { field: 'preco', label: 'Preço' },
+                                { field: 'categoria', label: 'Categoria' },
+                                { field: 'descricao_regras', label: 'Regras do Aplicativo' },
+                                { field: 'ativo', label: 'Status' },
+                            ].map(({ field, label }) => (
+                                <th
+                                    key={field}
+                                    className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px] cursor-pointer select-none hover:text-gray-900 dark:hover:text-gray-200 group"
+                                    onClick={() => toggleSort(field)}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        {label}
+                                        {sortField === field
+                                            ? (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)
+                                            : <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-40" />}
+                                    </div>
+                                </th>
+                            ))}
                             <th className="p-4 font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider text-[10px] text-right">Ações</th>
                         </tr>
                     </thead>
@@ -433,8 +483,8 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                                             {game.categoria || 'Geral'}
                                         </span>
                                     </td>
-                                    <td className="p-4 hidden md:table-cell font-mono text-xs text-gray-500">
-                                        {game.comando_entrada || '-'}
+                                    <td className="p-4 hidden md:table-cell text-xs text-gray-500 max-w-[200px] truncate">
+                                        {game.descricao_regras || '-'}
                                     </td>
                                     <td className="p-4">
                                         <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${game.ativo
@@ -505,7 +555,7 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="comando_entrada">Comando / Script (Python Path)</Label>
+                                    <Label htmlFor="comando_entrada">Regras do Aplicativo (Script)</Label>
                                     <Input id="comando_entrada" name="comando_entrada" required defaultValue={editingGame?.comando_entrada || ''} placeholder="Ex: games.parear_cor" disabled={isReadOnly} />
                                     <p className="text-xs text-muted-foreground">Caminho do módulo python ou identificador do comando.</p>
                                 </div>

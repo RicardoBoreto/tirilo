@@ -91,22 +91,40 @@ def rotina_coreografia_background():
         6: "fazenda"
     }
 
+    # Duração de um ciclo completo na música real é de 10 compassos (40 batidas)
+    COMPASSOS_POR_CICLO = 10.0
+
     try:
         ciclo = 1
         while True:
-            # Check audio
             if tem_audio and tem_audio.poll() is not None:
                 print("[Coreografia] Áudio terminou. Encerrando movimentos.")
+                
+                print("  Desativando servos motores...")
+                script_desligar = os.path.join(PASTA_ROBO, "ferramentas", "desligar_servos.py")
+                try: subprocess.run(["python3", script_desligar], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+                except: pass
+                
                 pygame.event.post(pygame.event.Event(pygame.QUIT))
                 break
-                
-            print(f"\n[ CICLO {ciclo} INICIADO ] - Loop de 9 compassos (~23.5s)")
+
+            print(f"\n[ CICLO {ciclo} INICIADO ] - Loop de 9.5 compassos (~{COMPASSOS_POR_CICLO*compasso:.1f}s)")
+
+            # --- RESYNC: corrige deriva acumulada usando o tempo da música como referência ---
+            tempo_esperado = tempo_inicio_musica + (ciclo - 1) * COMPASSOS_POR_CICLO * compasso
+            deriva = time.time() - tempo_esperado
+            print(f"[SYNC] Ciclo {ciclo}: deriva acumulada = {deriva*1000:.0f}ms (negativo = adiantado)")
             
+            # Se a coreografia chegou antes da música, esperamos ela alcançar
+            if deriva < -0.01:
+                print(f"[SYNC] Adiantado! Pausando coreografia por {-deriva*1000:.0f}ms para sincronizar.")
+                time.sleep(-deriva)
+
             # [Compasso 1] (1 compasso): Preparação - SEMPRE MOSTRA FAZENDA NO INÍCIO
             IMAGEM_ATUAL = "fazenda"
             # O olhar_neutro leva 0.4s, descontamos isso da espera para não atrasar o galope
-            olhos.olhar_neutro(suave=True) 
-            
+            olhos.olhar_neutro(suave=True)
+
             if ciclo == 1:
                 olhos.mover_suave_ambos(p_alvo=0, duracao=compasso - 0.4)
             else:
@@ -165,6 +183,14 @@ def rotina_coreografia_background():
                     
                     FADE_ALPHA = 255
                     time.sleep(0.5)
+                    
+                    # Desativa os motores para não forçar as pálpebras fechadas
+                    print("  Desativando servos motores...")
+                    script_desligar = os.path.join(PASTA_ROBO, "ferramentas", "desligar_servos.py")
+                    try:
+                        subprocess.run(["python3", script_desligar], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+                    except: pass
+
                     pygame.event.post(pygame.event.Event(pygame.QUIT))
                     return
 

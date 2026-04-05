@@ -204,7 +204,7 @@ def main():
 
                 # 5. Piscada Espontânea (Efeito Humano)
                 if time.time() > next_blink:
-                    if olhos: olhos.piscar()
+                    if olhos: threading.Thread(target=olhos.piscar_natural, daemon=True).start()
                     next_blink = time.time() + random.uniform(3, 8)
 
             except Exception as e:

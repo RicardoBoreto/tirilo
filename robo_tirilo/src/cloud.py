@@ -212,7 +212,7 @@ class CloudManager:
         try:
             if self.clinica_id:
                 res = self.client.table('saas_clinicas_jogos') \
-                    .select('ativo, saas_jogos(nome, comando_entrada, descricao_regras)') \
+                    .select('ativo, saas_jogos(nome, comando_entrada, descricao_regras, desativar_rastreamento)') \
                     .eq('clinica_id', self.clinica_id) \
                     .eq('ativo', True) \
                     .execute()
@@ -220,10 +220,11 @@ class CloudManager:
                     j = row.get('saas_jogos') or {}
                     if j.get('comando_entrada'):
                         jogos.append({
-                            'nome': j.get('nome', ''),
-                            'codigo': j['comando_entrada'].strip().lower(),
-                            'descricao': j.get('descricao_regras') or '',
-                            'regras': j.get('descricao_regras') or '',
+                            'nome':                   j.get('nome', ''),
+                            'codigo':                 j['comando_entrada'].strip().lower(),
+                            'descricao':              j.get('descricao_regras') or '',
+                            'regras':                 j.get('descricao_regras') or '',
+                            'desativar_rastreamento': bool(j.get('desativar_rastreamento', False)),
                         })
         except Exception as e:
             print(f"Cloud: erro ao buscar jogos da clínica: {e}")
@@ -231,7 +232,7 @@ class CloudManager:
         # 2. Jogos gratuitos (preco = 0) disponíveis para todas as clínicas automaticamente
         try:
             res = self.client.table('saas_jogos') \
-                .select('nome, comando_entrada, descricao_regras, preco') \
+                .select('nome, comando_entrada, descricao_regras, preco, desativar_rastreamento') \
                 .eq('ativo', True) \
                 .eq('preco', 0) \
                 .execute()
@@ -239,10 +240,11 @@ class CloudManager:
             for j in (res.data or []):
                 if j.get('comando_entrada') and j['comando_entrada'].strip().lower() not in codigos_ja_incluidos:
                     jogos.append({
-                        'nome': j.get('nome', ''),
-                        'codigo': j['comando_entrada'].strip().lower(),
-                        'descricao': j.get('descricao_regras') or '',
-                        'regras': j.get('descricao_regras') or '',
+                        'nome':                   j.get('nome', ''),
+                        'codigo':                 j['comando_entrada'].strip().lower(),
+                        'descricao':              j.get('descricao_regras') or '',
+                        'regras':                 j.get('descricao_regras') or '',
+                        'desativar_rastreamento': bool(j.get('desativar_rastreamento', False)),
                     })
         except Exception as e:
             print(f"Cloud: erro ao buscar jogos gratuitos: {e}")

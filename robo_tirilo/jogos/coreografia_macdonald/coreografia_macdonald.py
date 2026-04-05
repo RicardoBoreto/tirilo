@@ -82,30 +82,50 @@ def rotina_coreografia_background():
     if tem_audio:
         threading.Thread(target=animar_boca_canto, daemon=True).start()
     # Mapeamento do bicho de cada ciclo
+    # Mapeamento do bicho de cada ciclo
     bichos_por_ciclo = {
         1: "vaca",   # Cow
         2: "porco",  # Pig
         3: "dog",    # Dog (Novo!)
         4: "pato",   # Duck
-        5: "sheep"   # Sheep (Novo!)
+        5: "sheep",  # Sheep (Novo!)
+        6: "fazenda"
     }
+
+    # Duração de um ciclo completo na música real é de 10 compassos (40 batidas)
+    COMPASSOS_POR_CICLO = 10.0
 
     try:
         ciclo = 1
         while True:
-            # Check audio
             if tem_audio and tem_audio.poll() is not None:
                 print("[Coreografia] Áudio terminou. Encerrando movimentos.")
+                
+                print("  Desativando servos motores...")
+                script_desligar = os.path.join(PASTA_ROBO, "ferramentas", "desligar_servos.py")
+                try: subprocess.run(["python3", script_desligar], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+                except: pass
+                
                 pygame.event.post(pygame.event.Event(pygame.QUIT))
                 break
-                
-            print(f"\n[ CICLO {ciclo} INICIADO ] - Old MacDonald")
+
+            print(f"\n[ CICLO {ciclo} INICIADO ] - Loop de 9.5 compassos (~{COMPASSOS_POR_CICLO*compasso:.1f}s)")
+
+            # --- RESYNC: corrige deriva acumulada usando o tempo da música como referência ---
+            tempo_esperado = tempo_inicio_musica + (ciclo - 1) * COMPASSOS_POR_CICLO * compasso
+            deriva = time.time() - tempo_esperado
+            print(f"[SYNC] Ciclo {ciclo}: deriva acumulada = {deriva*1000:.0f}ms (negativo = adiantado)")
             
+            # Se a coreografia chegou antes da música, esperamos ela alcançar
+            if deriva < -0.01:
+                print(f"[SYNC] Adiantado! Pausando coreografia por {-deriva*1000:.0f}ms para sincronizar.")
+                time.sleep(-deriva)
+
             # [Compasso 1] (1 compasso): Preparação - SEMPRE MOSTRA FAZENDA NO INÍCIO
             IMAGEM_ATUAL = "fazenda"
             # O olhar_neutro leva 0.4s, descontamos isso da espera para não atrasar o galope
-            olhos.olhar_neutro(suave=True) 
-            
+            olhos.olhar_neutro(suave=True)
+
             if ciclo == 1:
                 olhos.mover_suave_ambos(p_alvo=0, duracao=compasso - 0.4)
             else:
@@ -113,7 +133,7 @@ def rotina_coreografia_background():
             
             # [Compasso 2] (1 compasso): Galope Unico ("Toc Toc") - MOSTRA O CAVALO!
             IMAGEM_ATUAL = "cavalo"
-            print(f"Compasso 2 -> Horse Gallop + Eyebrows Alert!")
+            print(f"Compasso 2 (~2.6s) -> Galope! (Mostrando Cavalo + Sobrancelhas Alerta)")
             olhos.mover_sobrancelhas(100)
             olhos.alternar_piscar(batidas=4, vel=beat/2.0)
             
@@ -129,29 +149,32 @@ def rotina_coreografia_background():
                 elif v_idx == 3:
                     # ANTECIPADO: Onomatopeia aparece 1 compasso antes (no 6)
                     IMAGEM_ATUAL = f"{bichos_por_ciclo.get(ciclo, 'fazenda')}_som"
-                    print(f"  Sound bubble: {IMAGEM_ATUAL}!")
+                    print(f"  Som antecipado: {IMAGEM_ATUAL}!")
                 
                 olhos.mover_suave_ambos(h_alvo=35, sb_alvo=80, duracao=beat*2)
                 olhos.mover_suave_ambos(h_alvo=65, sb_alvo=60, duracao=beat*2)
 
-            # [Compassos 7 a 8] (2 compassos): Vesgo e Normal - SOUND REVELATION
+            # [Compassos 7 a 8] (2 compassos): Vesgo e Normal - REVELAÇÃO SONORA CONTINUA
             IMAGEM_ATUAL = f"{bichos_por_ciclo.get(ciclo, 'fazenda')}_som"
-            print(f"Compassos 7-8 -> Sound and Interaction.")
+            print(f"Compassos 7-8 -> Som e Vesgo.")
             for v_idx in range(2):
-                # --- GRAN FINALE (COMPASSO 52 - END OF CYCLE 5) ---
+                # --- GRAN FINALE (COMPASSO 52 - FIM DO CICLO 5) ---
                 if ciclo == 5 and v_idx == 1:
-                    print(f"Gran Finale -> Sync Blinking, Eyebrows and Farewell!")
+                    print(f"Gran Finale -> Piscar Sincronizado, Sobrancelhas e Olhos Abertos!")
                     for _ in range(4):
                         olhos.mover_suave_ambos(p_alvo=100, sb_alvo=100, duracao=beat/2.0)
                         olhos.mover_suave_ambos(p_alvo=40, sb_alvo=80, duracao=beat/2.0)
                     olhos.olhar_neutro(suave=True)
+                    # No gran finale, mantemos a imagem do bicho com som até o fim
                     IMAGEM_ATUAL = f"{bichos_por_ciclo.get(ciclo, 'fazenda')}_som"
                     olhos.mover_suave_ambos(p_alvo=0, sb_alvo=100, duracao=beat*2)
                     
-                    print("  Waiting for music end (Fade-out)...")
+                    # Espera o final da música (Ajustamos para +3 compassos de espera)
+                    print("  Aguardando final da música para Fade-out...")
                     time.sleep(compasso * 3) 
                     
-                    print("  Starting visual Fade-out and closing eyes/eyebrows...")
+                    # Inicia o Fade-out suave (Duração de 1 compasso)
+                    print("  Iniciando Fade-out visual e fechando olhos/sobrancelhas...")
                     olhos.mover_suave_ambos(p_alvo=100, sb_alvo=0, duracao=1.5)
                     
                     passos_fade = 50
@@ -161,6 +184,14 @@ def rotina_coreografia_background():
                     
                     FADE_ALPHA = 255
                     time.sleep(0.5)
+                    
+                    # Desativa os motores para não forçar as pálpebras fechadas
+                    print("  Desativando servos motores...")
+                    script_desligar = os.path.join(PASTA_ROBO, "ferramentas", "desligar_servos.py")
+                    try:
+                        subprocess.run(["python3", script_desligar], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+                    except: pass
+
                     pygame.event.post(pygame.event.Event(pygame.QUIT))
                     return
 
