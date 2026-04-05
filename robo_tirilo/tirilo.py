@@ -1831,8 +1831,8 @@ def _verificar_biometria_voz(perfil):
 
     arquivo_perfil = os.path.join(PASTA_BIOMETRIA, f"perfil_{perfil}.bin")
     if not os.path.exists(arquivo_perfil):
-        print(f"[BIOMETRIA] Perfil '{perfil}' não cadastrado ({arquivo_perfil}) → acesso permitido (fail-open).")
-        return True
+        print(f"[BIOMETRIA] Perfil '{perfil}' não cadastrado ({arquivo_perfil}) → acesso negado (perfil ausente).")
+        return False
 
     if not os.path.exists(ARQUIVO_REC):
         print(f"[BIOMETRIA] Áudio de entrada não encontrado ({ARQUIVO_REC}) → acesso permitido (fail-open).")
