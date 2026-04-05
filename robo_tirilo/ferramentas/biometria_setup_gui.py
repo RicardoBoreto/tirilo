@@ -37,6 +37,10 @@ AMARELO = (255, 200, 0)
 
 PASTA_BASE = "/home/boreto/projeto_robo/robo_tirilo/biometria"
 MODELO = os.path.join(PASTA_BASE, "wespeaker_en_voxceleb_resnet34.onnx")
+DISPOSITIVO_AUDIO = "plughw:CARD=M1A,DEV=0"  # Mesmo dispositivo do tirilo.py
+
+# Garante que o diretório existe
+os.makedirs(PASTA_BASE, exist_ok=True)
 
 class BiometriaApp:
     def __init__(self):
@@ -95,28 +99,37 @@ class BiometriaApp:
         arquivo_wav = os.path.join(PASTA_BASE, f"temp_{perfil}.wav")
         
         def task():
-            dispositivo = "default"
             try:
-                # Limpa qualquer processo que possa estar usando o microfone
+                # Libera o dispositivo de áudio antes de gravar
                 subprocess.run(["pkill", "-9", "arecord"], stderr=subprocess.DEVNULL)
                 subprocess.run(["pkill", "-9", "aplay"],  stderr=subprocess.DEVNULL)
                 subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
-                time.sleep(0.3)
-                
-                print(f"🎤 [GRAVANDO] {perfil.upper()}...")
-                cmd = ["arecord", "-D", dispositivo, "-f", "S16_LE", "-r", "16000", "-d", str(duracao), "-c", "1", arquivo_wav]
-                proc = subprocess.Popen(cmd)
-                
+                time.sleep(0.5)
+
+                print(f"🎤 [GRAVANDO] {perfil.upper()} em {DISPOSITIVO_AUDIO}...")
+                cmd = ["arecord", "-D", DISPOSITIVO_AUDIO, "-f", "S16_LE", "-r", "16000", "-d", str(duracao), "-c", "1", arquivo_wav]
+                proc = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+
                 for i in range(duracao * 10):
                     if not self.running: break
                     time.sleep(0.1)
                     self.progresso = (i + 1) / (duracao * 10)
-                
+
                 proc.wait()
-                if self.running:
+
+                if not self.running:
+                    return
+
+                # Verifica se o arquivo foi realmente criado e tem conteúdo
+                if os.path.exists(arquivo_wav) and os.path.getsize(arquivo_wav) > 0:
                     self.estado = "REVISANDO"
                     self.mensagem = "Gravação concluída. O que deseja fazer?"
-                    print(f"✅ [GRAVAÇÃO] Arquivo salvo: {arquivo_wav}")
+                    print(f"✅ [GRAVAÇÃO] Arquivo salvo: {arquivo_wav} ({os.path.getsize(arquivo_wav)} bytes)")
+                else:
+                    stderr_out = proc.stderr.read().decode(errors='ignore') if proc.stderr else ''
+                    self.estado = "MENU"
+                    self.mensagem = "Erro: arquivo não gerado. Verifique o microfone."
+                    print(f"🚨 ERRO GRAVAÇÃO: arquivo não encontrado ou vazio. arecord stderr: {stderr_out}")
             except Exception as e:
                 self.estado = "MENU"
                 self.mensagem = f"Erro na gravação: {e}"
@@ -127,20 +140,23 @@ class BiometriaApp:
     def reproduzir_audio(self):
         perfil = self.perfil_selecionado
         arquivo_wav = os.path.join(PASTA_BASE, f"temp_{perfil}.wav")
-        dispositivo = "default"
-        
+
         def task_play():
+            if not os.path.exists(arquivo_wav):
+                print(f"🚨 ERRO PLAYBACK: arquivo não encontrado: {arquivo_wav}")
+                self.mensagem = "Erro: arquivo de gravação não encontrado."
+                return
             try:
                 print(f"🔊 [PLAYBACK] Ouvindo {arquivo_wav}...")
-                # Limpa qualquer processo que possa estar travando o áudio
                 subprocess.run(["pkill", "-9", "arecord"], stderr=subprocess.DEVNULL)
                 subprocess.run(["pkill", "-9", "aplay"],  stderr=subprocess.DEVNULL)
                 subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
-                time.sleep(0.3) # Pequena pausa para o hardware liberar
-                
-                res = subprocess.run(["aplay", "-D", dispositivo, "-q", arquivo_wav], capture_output=True, text=True)
+                time.sleep(0.4)
+
+                res = subprocess.run(["aplay", "-D", DISPOSITIVO_AUDIO, "-q", arquivo_wav], capture_output=True, text=True)
                 if res.returncode != 0:
                     print(f"🚨 ERRO ALSA: {res.stderr.strip()}")
+                    self.mensagem = f"Erro no áudio: {res.stderr.strip()[:60]}"
                 else:
                     print(f"⏹️ [PLAYBACK] Fim do áudio.")
             except Exception as e:
