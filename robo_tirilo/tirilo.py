@@ -3,19 +3,22 @@
 =============================================================================
 PROJETO: ROBÔ TIRILO
 ARQUIVO: tirilo.py
-VERSÃO:  4.12 (Servidor de Voz Centralizado e Detecção Inteligente)
-DATA:    04/04/2026
+VERSÃO:  4.13 (Biometria Vocal + Flag de Rastreamento por Jogo)
+DATA:    05/04/2026
 AUTOR:   Ricardo Alonso Boreto
 
-MUDANÇAS v4.12:
-- Servidor de Voz Local: Criado socket UDP (Porta 5050) para centralizar a fala de todos os subsistemas, 
-  eliminando delays de carga de modelo Piper e conflitos de áudio ALSA.
-- Detecção Inteligente: Refatorada lógica de voz para aceitar nomes parciais de jogos (Ex: "lobato" 
-  em vez de "Seu Lobato").
-- Path Patch: Correção automática de caminhos de scripts (/ inicial) vindos do Dashboard SaaS.
-- Unificação de Mapeamento: Jogos, Coreografias e Ferramentas agora usam o mesmo executor central.
+MUDANÇAS v4.13:
+- Biometria Vocal: verificação de identidade (admin/terapeuta) via sherpa-onnx
+  ao acionar jogos protegidos por chave {administrador} ou {terapeuta} no campo
+  descricao_regras da tabela saas_jogos. Reutiliza o áudio já capturado (ARQUIVO_REC),
+  sem pedir nova gravação. Limiar de similaridade cosseno: 0.50.
+- Flag desativar_rastreamento: jogos com esta flag ativa (campo DB) pausam o
+  rastreamento facial automaticamente durante a execução (crucial para coreografias).
+- Correção de caminho: scripts externos com leading '/' agora resolvem corretamente
+  via lstrip('/') antes do os.path.join.
+- cloud.py: campo 'regras' mapeado de descricao_regras para uso interno no robô.
 
-MUDANÇAS v4.11 (histórico):
+MUDANÇAS v4.11:
 - Integração Tripla de TTS: Adicionada opção de Voz Neural Local (Piper), 
   mantendo Voz Robótica (Espeak) e Voz Natural em Nuvem (Edge).
 - Carga na RAM: Motor Piper carregado no boot para latência de ~0.5s.
@@ -79,16 +82,23 @@ from google import genai
 from google.genai import types
 import cv2
 import wave
+import numpy as np
 try:
     from piper.voice import PiperVoice
 except ImportError:
     PiperVoice = None
+try:
+    import sherpa_onnx as _sherpa_onnx
+    _SHERPA_DISPONIVEL = True
+except ImportError:
+    _sherpa_onnx = None
+    _SHERPA_DISPONIVEL = False
 from olhos_tirilo import ControladorOlhos
 from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "4.12"
+VERSAO_ATUAL = "4.13"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -212,6 +222,12 @@ _CACHE_DIRETRIZ_TTL = 300    # 5 minutos
 _jogos_disponiveis: list = []  # Carregado do Supabase: [{nome, codigo, descricao}]
 _perfil_ativo: dict = {}       # Perfil ativo: {id, nome, prompt_instrucao, modo_base}
 _MOTOR_VOZ_GLOBAL = "ROBOTICO" # Pode ser "ROBOTICO" ou "NATURAL"
+
+# --- BIOMETRIA VOCAL ---
+PASTA_BIOMETRIA = os.path.expanduser("~/projeto_robo/robo_tirilo/biometria")
+MODELO_BIOMETRIA = os.path.join(PASTA_BIOMETRIA, "wespeaker_en_voxceleb_resnet34.onnx")
+LIMIAR_BIOMETRIA = 0.50  # Similaridade mínima para aceitar identidade
+_extractor_biometria = None
 
 
 # --- INICIALIZAÇÃO DE ARQUIVOS ---
@@ -928,7 +944,7 @@ def animar_fala(evento_parada):
                 elif abertura <= 50: gui.set_boca('media')
                 else: gui.set_boca('aberta')
         
-        time.sleep(random.uniform(0.1, 0.2))
+        time.sleep(random.uniform(0.15, 0.25))
     
     if olhos: 
         olhos.mover_boca(0)
@@ -1342,12 +1358,13 @@ Criança: "brincar" → "Que divertido! Vamos jogar! [JOGO:{exemplo_codigo}]"
             "Só um momento...",
             "Ummm, boa pergunta...",
         ])
-        falar(som_pensar)  # bloqueia ~2s — stream já está rodando em paralelo
+        falar(som_pensar)  # Bloqueia ~2s — I2C estabiliza enquanto o stream carrega
 
         # Retoma rastreamento e olha para frente ao responder
-        MODO_VISAO_ATIVO = antigo_modo_visao
         if olhos:
-            threading.Thread(target=olhos.olhar_frente, daemon=True).start()
+            olhos.olhar_frente(suave=False)
+        
+        MODO_VISAO_ATIVO = antigo_modo_visao
 
         # --- 4. FALA CADA FRASE ASSIM QUE CHEGA NO STREAM ---
         buffer = ""
@@ -1416,20 +1433,6 @@ Criança: "brincar" → "Que divertido! Vamos jogar! [JOGO:{exemplo_codigo}]"
         TEXTO_RESPOSTA_IA = f"Erro IA: {str(e)[:40]}..."
         MODO_VISAO_ATIVO = True  # garante que tracking volta mesmo em erro
         return "Tive um erro."
-
-def _servidor_voz():
-    """Servidor UDP que ouve na porta 5050 para processar pedidos de fala de outros programas."""
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(('localhost', 5050))
-        while True:
-            data, addr = s.recvfrom(2048)
-            texto = data.decode('utf-8')
-            if texto:
-                # Dispara falar em uma thread separada para não bloquear o servidor
-                threading.Thread(target=falar, args=(texto,), daemon=True).start()
-    except Exception as e:
-        print(f"Voz: Erro no servidor centralizado: {e}")
 
 def executar_movimento_voz(texto_l):
     """Detecta comandos de movimento corporal por voz e executa.
@@ -1774,45 +1777,128 @@ def lancar_parear():
         gui._ev_retomar.set()
 
 
+def _inicializar_extractor_biometria():
+    """Carrega o modelo biométrico na primeira chamada. Retorna True se pronto."""
+    global _extractor_biometria
+    if _extractor_biometria is not None:
+        return True
+    if not _SHERPA_DISPONIVEL:
+        print("[BIOMETRIA] sherpa_onnx não disponível. Verificação desativada.")
+        return False
+    if not os.path.exists(MODELO_BIOMETRIA):
+        print(f"[BIOMETRIA] Modelo não encontrado: {MODELO_BIOMETRIA}. Verificação desativada.")
+        return False
+    try:
+        config = _sherpa_onnx.SpeakerEmbeddingExtractorConfig(
+            model=MODELO_BIOMETRIA, num_threads=2, debug=False
+        )
+        _extractor_biometria = _sherpa_onnx.SpeakerEmbeddingExtractor(config)
+        print("[BIOMETRIA] Extrator carregado com sucesso.")
+        return True
+    except Exception as e:
+        print(f"[BIOMETRIA] Erro ao carregar extrator: {e}")
+        return False
+
+
+def _verificar_biometria_voz(perfil):
+    """
+    Usa o áudio já gravado em ARQUIVO_REC (a própria fala que ativou o jogo)
+    para comparar com o perfil salvo ('admin' ou 'terapeuta').
+    Não faz nova gravação — reutiliza o que o usuário já disse.
+    Retorna True se a identidade for confirmada.
+    Fail-open: se o modelo ou perfil não existir, permite o acesso e avisa.
+    """
+    print(f"[BIOMETRIA] Verificando perfil '{perfil}' com o áudio já capturado ({ARQUIVO_REC})...")
+
+    if not _inicializar_extractor_biometria():
+        print("[BIOMETRIA] Extrator indisponível → acesso permitido (fail-open).")
+        return True
+
+    arquivo_perfil = os.path.join(PASTA_BIOMETRIA, f"perfil_{perfil}.bin")
+    if not os.path.exists(arquivo_perfil):
+        print(f"[BIOMETRIA] Perfil '{perfil}' não cadastrado ({arquivo_perfil}) → acesso permitido (fail-open).")
+        return True
+
+    if not os.path.exists(ARQUIVO_REC):
+        print(f"[BIOMETRIA] Áudio de entrada não encontrado ({ARQUIVO_REC}) → acesso permitido (fail-open).")
+        return True
+
+    try:
+        embedding_perfil = np.fromfile(arquivo_perfil, dtype=np.float32)
+        print(f"[BIOMETRIA] Perfil '{perfil}' carregado ({len(embedding_perfil)} dims).")
+
+        with wave.open(ARQUIVO_REC, 'rb') as f:
+            taxa = f.getframerate()
+            samples = np.frombuffer(f.readframes(f.getnframes()), dtype=np.int16).astype(np.float32) / 32768.0
+        print(f"[BIOMETRIA] Áudio lido: {len(samples)} amostras @ {taxa}Hz")
+
+        stream = _extractor_biometria.create_stream()
+        stream.accept_waveform(taxa, samples)
+        embedding_atual = np.array(_extractor_biometria.compute(stream), dtype=np.float32)
+
+        norma_p = np.linalg.norm(embedding_perfil)
+        norma_a = np.linalg.norm(embedding_atual)
+        if norma_p == 0 or norma_a == 0:
+            print("[BIOMETRIA] Embedding inválido (norma zero) → acesso negado.")
+            return False
+
+        similaridade = float(np.dot(embedding_perfil, embedding_atual) / (norma_p * norma_a))
+        print(f"[BIOMETRIA] Similaridade '{perfil}': {similaridade:.3f} (limiar: {LIMIAR_BIOMETRIA})")
+
+        if similaridade >= LIMIAR_BIOMETRIA:
+            print(f"[BIOMETRIA] ✅ Identidade confirmada: {perfil.upper()}")
+            return True
+        else:
+            print(f"[BIOMETRIA] ❌ Similaridade insuficiente ({similaridade:.3f}) → acesso negado.")
+            return False
+    except Exception as e:
+        print(f"[BIOMETRIA] Erro durante verificação: {e} → acesso permitido (fail-open).")
+        return True
+
+
+def _jogo_requer_verificacao(jogo):
+    """
+    Retorna 'admin', 'terapeuta' ou None conforme o campo 'regras' do jogo.
+    Suporta regras como dict JSON (chave 'administrador'/'terapeuta')
+    ou string contendo '{administrador}'/'{terapeuta}'.
+    """
+    regras = jogo.get('regras')
+    if not regras:
+        return None
+    if isinstance(regras, dict):
+        if 'administrador' in regras:
+            print(f"[BIOMETRIA] Jogo '{jogo.get('codigo')}' requer administrador (regras dict).")
+            return 'admin'
+        if 'terapeuta' in regras:
+            print(f"[BIOMETRIA] Jogo '{jogo.get('codigo')}' requer terapeuta (regras dict).")
+            return 'terapeuta'
+    elif isinstance(regras, str):
+        if '{administrador}' in regras:
+            print(f"[BIOMETRIA] Jogo '{jogo.get('codigo')}' requer administrador (regras string).")
+            return 'admin'
+        if '{terapeuta}' in regras:
+            print(f"[BIOMETRIA] Jogo '{jogo.get('codigo')}' requer terapeuta (regras string).")
+            return 'terapeuta'
+    return None
+
+
 def _detectar_jogo_por_voz(texto_l):
     """Verifica se o texto contém o nome de algum jogo disponível.
     Retorna o código do jogo encontrado ou None."""
     if not _jogos_disponiveis:
         return None
-        
     for jogo in _jogos_disponiveis:
-        nome_l = jogo['nome'].lower()
-        codigo_l = jogo['codigo'].lower()
-        
-        # 1. Busca pelo código exato (ex: "lobato", "cores")
-        if codigo_l in texto_l:
+        # Divide o nome em palavras significativas (>= 3 letras) e verifica se estão no texto
+        palavras = [p.lower() for p in jogo['nome'].split() if len(p) >= 3]
+        if palavras and all(p in texto_l for p in palavras):
             return jogo['codigo']
-            
-        # 2. Busca por palavras significativas do nome
-        palavras_nome = [p for p in nome_l.split() if len(p) >= 4]
-        if not palavras_nome: # nomes curtos
-            palavras_nome = [p for p in nome_l.split() if len(p) >= 3]
-            
-        # Se o usuário disse pelo menos uma palavra chave do nome (ex: "lobato" em "Seu Lobato")
-        if any(p in texto_l for p in palavras_nome):
-            return jogo['codigo']
-
     return None
 
-def _executar_jogo_por_codigo(codigo):
-    """Executa um jogo pelo código — suporta funções internas, scripts .py e aliases de coreografia."""
-    codigo_upper = codigo.upper()
-    
-    # Mapeamento de ALIASES (códigos que vêm do Supabase mas apontam para scripts)
-    mapa_aliases = {
-        "COREOGRAFIA_SEULOBATO": "jogos/coreografia_seulobato/coreografia_seulobato.py",
-        "COREOGRAFIA_MACDONALD": "jogos/coreografia_macdonald/coreografia_macdonald.py",
-        "CALIBRAR_OLHOS":        "ferramentas/calibrador_olhos.py",
-        "RASTREADOR_TELA":       "ferramentas/rastreador_tela.py",
-    }
-    
-    # Se for um alias, resolve para o script real
-    target = mapa_aliases.get(codigo_upper, codigo)
+def _executar_jogo_por_codigo(codigo, jogo_obj=None):
+    """Executa um jogo pelo código — suporta funções internas e scripts .py externos.
+    jogo_obj: dict do jogo (de _jogos_disponiveis) — usado para ler flags como desativar_rastreamento."""
+    desativar_rastr = bool((jogo_obj or {}).get('desativar_rastreamento'))
+    print(f"[JOGO] Executando '{codigo}' | desativar_rastreamento={desativar_rastr}")
 
     mapa_interno = {
         "cores":       jogar_cores,
@@ -1821,36 +1907,46 @@ def _executar_jogo_por_codigo(codigo):
         "musica":      tocar_musica,
         "parear":      lancar_parear,
     }
-    
-    if target in mapa_interno:
-        threading.Thread(target=mapa_interno[target], daemon=True).start()
-        # Script externo cadastrado pelo path ou alias resolvido
+    if codigo in mapa_interno:
+        def _run_interno():
+            global MODO_VISAO_ATIVO, _ev_camera_livre
+            visao_estava_ativa = MODO_VISAO_ATIVO
+            if desativar_rastr and visao_estava_ativa:
+                print(f"[JOGO] Desativando rastreamento facial para '{codigo}'.")
+                _ev_camera_livre.clear()
+                MODO_VISAO_ATIVO = False
+                _ev_camera_livre.wait(timeout=3)
+            try:
+                mapa_interno[codigo]()
+            finally:
+                if desativar_rastr and visao_estava_ativa:
+                    print(f"[JOGO] Restaurando rastreamento facial após '{codigo}'.")
+                    MODO_VISAO_ATIVO = visao_estava_ativa
+        threading.Thread(target=_run_interno, daemon=True).start()
+    elif codigo.endswith('.py'):
+        # Script externo cadastrado pelo path (câmera sempre liberada para scripts)
         def _run():
             global gui, MODO_VISAO_ATIVO, _ev_camera_livre, _pausar_piscar, _processo_externo
-            # Garante que o caminho seja relativo à pasta do robô (remove / inicial se houver)
-            caminho_limpo = target.lstrip('/')
-            script = os.path.join(os.path.dirname(__file__), caminho_limpo)
+            # Remove barra inicial para não sobrescrever a base do os.path.join
+            caminho_relativo = codigo.lstrip('/')
+            script = os.path.join(os.path.dirname(__file__), caminho_relativo)
+            print(f"[JOGO] Script externo: {script}")
             uid = os.getuid()
             env = os.environ.copy()
             env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
             env.pop('SDL_AUDIODRIVER', None)
-            
-            # Limpeza de áudio e pausa de sistemas
             subprocess.run(["pkill", "-9", "aplay"],  stderr=subprocess.DEVNULL)
             subprocess.run(["pkill", "-9", "mpg123"], stderr=subprocess.DEVNULL)
             _pausar_piscar = True
-            
             visao_estava_ativa = MODO_VISAO_ATIVO
             if visao_estava_ativa:
                 _ev_camera_livre.clear()
                 MODO_VISAO_ATIVO = False
                 _ev_camera_livre.wait(timeout=3)
-                
             if gui:
                 gui.suspenso = True
                 gui._ev_display_livre.wait(timeout=3)
                 gui._ev_display_livre.clear()
-                
             _processo_externo = subprocess.Popen(["python3", script], env=env)
             _processo_externo.wait()
             _processo_externo = None
@@ -1858,10 +1954,9 @@ def _executar_jogo_por_codigo(codigo):
             MODO_VISAO_ATIVO = visao_estava_ativa
             if gui:
                 gui._ev_retomar.set()
-                
         threading.Thread(target=_run, daemon=True).start()
     else:
-        print(f"Jogo '{codigo}' (Alvo: {target}) sem implementação local.")
+        print(f"Jogo '{codigo}' sem implementação local.")
 
 def _lancar_jogo(codigo):
     """Lança um jogo pelo código (comando_entrada) retornado pela IA via tag [JOGO:codigo]."""
@@ -1975,9 +2070,6 @@ def loop_logica():
 
         # Inicializa o Piper TTS (se necessário)
         _inicializar_piper()
-    
-    # Inicializa o servidor de voz centralizado para ferramentas e jogos
-    threading.Thread(target=_servidor_voz, daemon=True).start()
 
     falar(f"Olá! Eu sou o {NOME_ROBO}. Minha inteligência artificial está ligada. Como posso ajudar você hoje?")
     
@@ -2106,9 +2198,7 @@ def loop_logica():
 
                             def _executar_programa(nome=nome_script, cmd=payload):
                                 global gui
-                                # Garante que o caminho seja relativo à pasta do robô
-                                nome_limpo = nome.lstrip('/')
-                                script = os.path.join(os.path.dirname(__file__), nome_limpo)
+                                script = os.path.join(os.path.dirname(__file__), nome)
                                 uid = os.getuid()
                                 env = os.environ.copy()
                                 env['XDG_RUNTIME_DIR'] = f'/run/user/{uid}'
@@ -2203,8 +2293,18 @@ def loop_logica():
                 # Detecção de jogo por voz antes de ir para IA
                 jogo_voz = _detectar_jogo_por_voz(texto_l)
                 if jogo_voz:
-                    print(f"Jogo detectado por voz: {jogo_voz}")
-                    _executar_jogo_por_codigo(jogo_voz)
+                    print(f"[JOGO] Detectado por voz (modo terapeuta): {jogo_voz}")
+                    jogo_obj = next((j for j in _jogos_disponiveis if j['codigo'] == jogo_voz), {})
+                    perfil_req = _jogo_requer_verificacao(jogo_obj)
+                    if perfil_req:
+                        print(f"[JOGO] Jogo '{jogo_voz}' requer verificação: {perfil_req}")
+                        if not _verificar_biometria_voz(perfil_req):
+                            print(f"[JOGO] Verificação biométrica falhou → passando para IA.")
+                            if modo_ia_ativo:
+                                perguntar_gemini(texto)
+                            continue
+                        print(f"[JOGO] Verificação biométrica OK.")
+                    _executar_jogo_por_codigo(jogo_voz, jogo_obj)
                     continue
                 # Conversa normal de IA no modo terapeuta
                 if modo_ia_ativo:
@@ -2228,8 +2328,18 @@ def loop_logica():
             # Detecção de jogo por voz antes de ir para IA
             jogo_voz = _detectar_jogo_por_voz(texto_l)
             if jogo_voz:
-                print(f"Jogo detectado por voz: {jogo_voz}")
-                _executar_jogo_por_codigo(jogo_voz)
+                print(f"[JOGO] Detectado por voz (modo criança): {jogo_voz}")
+                jogo_obj = next((j for j in _jogos_disponiveis if j['codigo'] == jogo_voz), {})
+                perfil_req = _jogo_requer_verificacao(jogo_obj)
+                if perfil_req:
+                    print(f"[JOGO] Jogo '{jogo_voz}' requer verificação: {perfil_req}")
+                    if not _verificar_biometria_voz(perfil_req):
+                        print(f"[JOGO] Verificação biométrica falhou → passando para IA.")
+                        if modo_ia_ativo:
+                            perguntar_gemini(texto)
+                        continue
+                    print(f"[JOGO] Verificação biométrica OK.")
+                _executar_jogo_por_codigo(jogo_voz, jogo_obj)
                 continue
 
             if modo_ia_ativo:

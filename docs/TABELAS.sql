@@ -1,7 +1,7 @@
 
 -- ============================================================================
--- TIRILO SAAS - SCHEMA DE BANCO DE DADOS (V2.3 - Consolidado)
--- Atualizado em: 29/03/2026
+-- TIRILO SAAS - SCHEMA DE BANCO DE DADOS (V2.4 - Consolidado)
+-- Atualizado em: 05/04/2026
 -- ATENÇÃO: Este arquivo é o schema consolidado para provisionamento de ambiente novo.
 -- Não deve conter ALTER TABLE para adicionar colunas — tudo já está no CREATE TABLE.
 -- ============================================================================
@@ -311,18 +311,19 @@ CREATE TABLE public.saas_habilidades (
 CREATE TABLE public.saas_jogos (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     nome TEXT NOT NULL,
-    descricao_regras TEXT,
+    descricao_regras TEXT,       -- Regras/permissões: use {administrador} ou {terapeuta} para exigir verificação biométrica
     indicacao TEXT,
     thumbnail_url TEXT,
     ativo BOOLEAN DEFAULT TRUE,
-    categoria TEXT, -- "EDUCATIVO", "MOTOR", "SOCIAL"
+    categoria TEXT,              -- "EDUCATIVO", "MOTOR", "SOCIAL"
     comando_entrada TEXT,
     criado_em TIMESTAMPTZ DEFAULT NOW(),
     atualizado_em TIMESTAMPTZ DEFAULT NOW(),
     versao_atual TEXT,
     preco NUMERIC(10,2) DEFAULT 0.00,
     demo_video_url TEXT,
-    recursos_terapeuticos TEXT
+    recursos_terapeuticos TEXT,
+    desativar_rastreamento BOOLEAN DEFAULT FALSE  -- Se TRUE, pausa o rastreamento facial durante o jogo (ex: coreografias)
 );
 
 -- Relacionamento Jogo <-> Habilidades (N:N)

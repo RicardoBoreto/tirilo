@@ -552,6 +552,14 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                                     <Switch id="ativo" name="ativo" defaultChecked={editingGame ? editingGame.ativo : true} value="true" disabled={isReadOnly} />
                                     <Label htmlFor="ativo">Aplicativo Ativo (Visível na lista de seleção)</Label>
                                 </div>
+
+                                <div className="flex items-center space-x-2 pt-1">
+                                    <Switch id="desativar_rastreamento" name="desativar_rastreamento" defaultChecked={editingGame?.desativar_rastreamento ?? false} value="true" disabled={isReadOnly} />
+                                    <div>
+                                        <Label htmlFor="desativar_rastreamento">Desativar Rastreamento Facial durante o jogo</Label>
+                                        <p className="text-xs text-muted-foreground">Use para jogos que controlam os olhos independentemente (ex: coreografias).</p>
+                                    </div>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="competencies" forceMount={true} className="space-y-4 data-[state=inactive]:hidden">

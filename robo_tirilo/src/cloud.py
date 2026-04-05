@@ -222,7 +222,8 @@ class CloudManager:
                         jogos.append({
                             'nome': j.get('nome', ''),
                             'codigo': j['comando_entrada'].strip().lower(),
-                            'descricao': j.get('descricao_regras') or ''
+                            'descricao': j.get('descricao_regras') or '',
+                            'regras': j.get('descricao_regras') or '',
                         })
         except Exception as e:
             print(f"Cloud: erro ao buscar jogos da clínica: {e}")
@@ -240,7 +241,8 @@ class CloudManager:
                     jogos.append({
                         'nome': j.get('nome', ''),
                         'codigo': j['comando_entrada'].strip().lower(),
-                        'descricao': j.get('descricao_regras') or ''
+                        'descricao': j.get('descricao_regras') or '',
+                        'regras': j.get('descricao_regras') or '',
                     })
         except Exception as e:
             print(f"Cloud: erro ao buscar jogos gratuitos: {e}")

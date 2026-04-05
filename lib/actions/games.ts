@@ -18,6 +18,7 @@ export type Game = {
     indicacao: string | null
     thumbnail_url: string | null
     ativo: boolean
+    desativar_rastreamento: boolean
     categoria: string | null
     comando_entrada: string | null
     versao_atual: string
@@ -96,6 +97,7 @@ export async function createGame(formData: FormData) {
     const categoria = formData.get('categoria') as string
     const comando_entrada = formData.get('comando_entrada') as string
     const ativo = formData.get('ativo') === 'true'
+    const desativar_rastreamento = formData.get('desativar_rastreamento') === 'true'
     const preco = parseFloat(formData.get('preco') as string || '0')
     const versao_inicial = formData.get('versao') as string || '1.0'
     const notas_iniciais = 'Criação inicial do jogo.'
@@ -120,6 +122,7 @@ export async function createGame(formData: FormData) {
             comando_entrada,
             thumbnail_url,
             ativo,
+            desativar_rastreamento,
             preco,
             versao_atual: versao_inicial
         })
@@ -151,6 +154,7 @@ export async function updateGame(id: string, formData: FormData) {
     const categoria = formData.get('categoria') as string
     const comando_entrada = formData.get('comando_entrada') as string
     const ativo = formData.get('ativo') === 'true'
+    const desativar_rastreamento = formData.get('desativar_rastreamento') === 'true'
     const preco = parseFloat(formData.get('preco') as string || '0')
 
     const nova_versao = formData.get('nova_versao') as string
@@ -173,6 +177,7 @@ export async function updateGame(id: string, formData: FormData) {
         categoria,
         comando_entrada,
         ativo,
+        desativar_rastreamento,
         preco,
         atualizado_em: new Date().toISOString()
     }
