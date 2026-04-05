@@ -22,12 +22,23 @@ Os perfis biométricos ficam em:
 - `/home/boreto/projeto_robo/robo_tirilo/biometria/perfil_admin.bin`
 - `/home/boreto/projeto_robo/robo_tirilo/biometria/perfil_terapeuta.bin`
 
+**Comportamento de segurança:**
+
+| Situação | Comportamento |
+|---|---|
+| Perfil biométrico **não cadastrado** | Acesso **negado** → passa para a IA |
+| Modelo ONNX **não instalado** | Acesso **permitido** (fail-open — problema de instalação) |
+| Similaridade < 0.50 | Acesso **negado** → passa para a IA |
+| Similaridade ≥ 0.50 | Acesso **permitido** → jogo executado |
+
+> **Importante:** jogos protegidos por `{administrador}` ou `{terapeuta}` só funcionam após o perfil biométrico ser cadastrado com `biometria_setup_gui.py` ou `biometria_setup.py`.
+
 **Flag de rastreamento facial:**
 
 O campo `desativar_rastreamento` (BOOLEAN) na tabela `saas_jogos` permite desativar o rastreamento facial durante a execução de um jogo. Isso é essencial para coreografias como `coreografia_seulobato`, onde os olhos piscam conforme a música e o rastreamento interferiria nos movimentos.
 
 Configure este campo pelo painel SaaS em **Gerenciar Aplicativos → Detalhes → "Desativar Rastreamento Facial durante o jogo"**.
 
-**Comportamento seguro (fail-open):**
+**Servidor de voz UDP (porta 5050):**
 
-Se o modelo ONNX ou o perfil biométrico não estiver cadastrado, o robô permite o acesso e loga um aviso — nunca bloqueia por ausência de configuração.
+O `tirilo.py` sobe um servidor UDP na porta 5050 que recebe pedidos de fala de subprogramas (jogos, ferramentas). O `parearcor.py` e demais jogos enviam o texto via UDP e o Tirilo fala usando o TTS configurado pela clínica (Piper/Edge/Espeak). Quando rodados standalone (sem o tirilo.py), o fallback é o espeak-ng local.
