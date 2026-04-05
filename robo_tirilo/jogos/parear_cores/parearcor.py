@@ -36,7 +36,7 @@ CORES_NOME = {
     "marrom":   (139,  69,  19),
 }
 
-MAX_NIVEIS = 3  # O jogo encerra automaticamente após completar este nível
+MAX_RODADAS = 3  # O jogo encerra após o amiguinho vencer 3 telas completas
 
 # ============ DISPLAY (KMS/DRM) ============
 def iniciar_pygame():
@@ -135,6 +135,7 @@ def main():
     # Estado global do jogo
     nivel       = [1]
     acertos     = [0]
+    rodadas_vencidas = [0]
     cores_usadas = [list(CORES_NOME.items())[:4]]
     particulas  = []
     quadrados   = []
@@ -151,9 +152,9 @@ def main():
         nonlocal rodando
         arrastando[0] = None
         
-        # Verifica se atingiu o limite de níveis
-        if nivel[0] > MAX_NIVEIS:
-            falar_async("Você foi fantástico! Completamos todos os níveis. Por hoje é só, até a próxima!", olhos)
+        # Verifica se atingiu o limite de rodadas (telas limpas)
+        if rodadas_vencidas[0] >= MAX_RODADAS:
+            falar_async("Você foi fantástico! Brincamos bastante por hoje. Até a próxima!", olhos)
             if olhos: threading.Thread(target=olhos.surpresa, daemon=True).start()
             pygame.time.wait(6000)
             rodando = False
@@ -238,7 +239,8 @@ def main():
                                 threading.Thread(target=olhos.olhar_feliz, daemon=True).start()
                             # Todos pareados?
                             if all(ci["pareado"] for ci in circulos):
-                                acertos[0] += 1
+                                rodadas_vencidas[0] += 1
+                                acertos[0] += 1 # Apenas para fins de placar
                                 criar_fogos(W // 2, H // 2)
                                 frases = [
                                     "Parabéns! Você acertou tudo!",
@@ -272,8 +274,8 @@ def main():
         # ============ DESENHO ============
         tela.fill((235, 250, 255))
 
-        # Linha divisória
-        pygame.draw.line(tela, (180, 200, 215), (20, H // 2 + 20), (W - 20, H // 2 + 20), 2)
+        # Rodapé / Divisória (Linha removida a pedido do usuário)
+        # pygame.draw.line(tela, (180, 200, 215), (20, H // 2 + 20), (W - 20, H // 2 + 20), 2)
 
         # Quadrados (alvos)
         for q in quadrados:
@@ -300,7 +302,7 @@ def main():
             tela.blit(txt, txt.get_rect(center=(W // 2, H // 2 + 30)))
 
         # Placar
-        placar = fonte_placar.render(f"Nível {nivel[0]} / {MAX_NIVEIS}  •  Acertos: {acertos[0]}", True, (30, 30, 30))
+        placar = fonte_placar.render(f"Rodada {rodadas_vencidas[0]+1} / {MAX_RODADAS}  •  Acertos: {acertos[0]}", True, (30, 30, 30))
         tela.blit(placar, (20, H - 38))
 
         pygame.display.flip()

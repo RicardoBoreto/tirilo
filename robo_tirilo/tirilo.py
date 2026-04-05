@@ -1434,6 +1434,21 @@ Criança: "brincar" → "Que divertido! Vamos jogar! [JOGO:{exemplo_codigo}]"
         MODO_VISAO_ATIVO = True  # garante que tracking volta mesmo em erro
         return "Tive um erro."
 
+def _servidor_voz():
+    """Servidor UDP na porta 5050 — recebe pedidos de fala de subprogramas (jogos, ferramentas)."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind(('localhost', 5050))
+        print("Voz: Servidor UDP iniciado na porta 5050.")
+        while True:
+            data, _ = s.recvfrom(2048)
+            texto = data.decode('utf-8')
+            if texto:
+                threading.Thread(target=falar, args=(texto,), daemon=True).start()
+    except Exception as e:
+        print(f"Voz: Erro no servidor centralizado: {e}")
+
+
 def executar_movimento_voz(texto_l):
     """Detecta comandos de movimento corporal por voz e executa.
     Retorna True se um movimento foi executado, False caso contrário."""
@@ -2070,6 +2085,9 @@ def loop_logica():
 
         # Inicializa o Piper TTS (se necessário)
         _inicializar_piper()
+
+    # Inicia servidor de voz UDP (porta 5050) para jogos e ferramentas externas
+    threading.Thread(target=_servidor_voz, daemon=True).start()
 
     falar(f"Olá! Eu sou o {NOME_ROBO}. Minha inteligência artificial está ligada. Como posso ajudar você hoje?")
     
