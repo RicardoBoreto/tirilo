@@ -555,9 +555,9 @@ export default function GamesClient({ initialGames }: { initialGames: Game[] }) 
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="comando_entrada">Regras do Aplicativo (Script)</Label>
-                                    <Input id="comando_entrada" name="comando_entrada" required defaultValue={editingGame?.comando_entrada || ''} placeholder="Ex: games.parear_cor" disabled={isReadOnly} />
-                                    <p className="text-xs text-muted-foreground">Caminho do módulo python ou identificador do comando.</p>
+                                    <Label htmlFor="comando_entrada">Caminho do Programa no Robô</Label>
+                                    <Input id="comando_entrada" name="comando_entrada" required defaultValue={editingGame?.comando_entrada || ''} placeholder="Ex: jogos/parear_cores/parearcor.py" disabled={isReadOnly} />
+                                    <p className="text-xs text-muted-foreground">Caminho relativo ao tirilo.py. Ex: ferramentas/desligar_servos.py</p>
                                 </div>
 
                                 <div className="space-y-2">

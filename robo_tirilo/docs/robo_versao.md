@@ -1,5 +1,30 @@
 # Histórico de Versões - Robô Tirilo
 
+## [4.17] - 2026-04-06
+### 📴 Modo Offline: seleção de jogos padrão via tela touch
+
+#### Jogos Padrão Locais (`jogos_padrao/`)
+- Nova pasta `jogos_padrao/` com `manifest.json` — lista os programas garantidamente disponíveis no robô, independente de conexão com o Supabase.
+- Formato do manifest: `[{nome, codigo, descricao, desativar_rastreamento}]`. O campo `codigo` é o caminho relativo ao `tirilo.py` — mesmo formato do `saas_jogos.comando_entrada`.
+
+#### Detecção offline no boot (`loop_logica`)
+- Após `cloud_mgr.get_jogos_clinica()`, se `_jogos_disponiveis` vier vazio, chama `carregar_jogos_padrao()` e carrega o manifest local.
+- Exibe automaticamente a tela de seleção após o splash (2s de delay).
+- Mensagem de loading atualizada: "Modo offline — jogos padrão carregados".
+
+#### Tela de seleção de jogos (`_render_selecao_jogos`)
+- Grade 2×2 de cards com nome e descrição de cada jogo.
+- Toque no card lança o jogo via `_executar_jogo()` (mesmo executor unificado).
+- Paginação com botões "◀ Anterior" / "Próximo ▶" — ativo/inativo conforme disponibilidade de páginas.
+- Indicador de página atual (ex: "1 / 3").
+- Toque fora dos cards fecha a seleção.
+
+#### Removido fallback hardcoded de jogos (`perguntar_gemini`)
+- Lista fixa de jogos antigos (cores, emocoes, adivinhacao, musica, parear) removida do bloco `else` do prompt de modo criança.
+- Substituída por `"(nenhum jogo disponível no momento)"` — sem enganar a IA com jogos que podem não existir.
+
+---
+
 ## [4.16] - 2026-04-05
 ### 🎮 Executor Unificado via saas_jogos + Fix PARAR + Fix jogar_cores
 

@@ -111,7 +111,7 @@ from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "4.16"
+VERSAO_ATUAL = "4.17"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -195,13 +195,12 @@ DIR_BASE_SCRIPT = os.path.dirname(os.path.abspath(__file__))
 # Mantém DIR_BASE para retrocompatibilidade em outros lugares
 DIR_BASE = os.path.dirname(DIR_BASE_SCRIPT)
 DIR_ASSETS = os.path.join(DIR_BASE_SCRIPT, "assets")
-DIR_LOGS = os.path.join(DIR_BASE_SCRIPT, "logs") 
+DIR_LOGS = os.path.join(DIR_BASE_SCRIPT, "logs")
+DIR_JOGOS_PADRAO = os.path.join(DIR_BASE_SCRIPT, "jogos_padrao")
 ARQUIVO_MUSICA = os.path.join(DIR_ASSETS, "musica.mp3")
 
 # ARQUIVOS DE PERFIL E MODO
 ARQUIVO_TERAPEUTA = os.path.join(DIR_BASE, "terapeuta.txt")
-ARQUIVO_IA_CRIANCA = os.path.join(DIR_BASE, "ia_crianca.txt")
-ARQUIVO_IA_TERAPEUTA = os.path.join(DIR_BASE, "ia_terapeuta.txt")
 
 NOME_TERAPEUTA = "Terapeuta" # Valor padrão, será lido ou substituído
 MODO_ROBO_ATUAL = "CRIANCA" # Pode ser "CRIANCA" ou "TERAPEUTA"
@@ -229,9 +228,6 @@ MODELO_IA = "gemini-3.1-flash-lite-preview"
 ULTIMO_THOUGHT_SIGNATURE = None
 cloud_mgr = None
 
-# Cache de diretriz IA — evita query Supabase a cada interação
-_cache_diretriz: dict = {}   # {modo: (texto, timestamp)}
-_CACHE_DIRETRIZ_TTL = 300    # 5 minutos
 _jogos_disponiveis: list = []  # Carregado do Supabase: [{nome, codigo, descricao}]
 _perfil_ativo: dict = {}       # Perfil ativo: {id, nome, prompt_instrucao, modo_base}
 _MOTOR_VOZ_GLOBAL = "ROBOTICO" # Pode ser "ROBOTICO" ou "NATURAL"
@@ -265,94 +261,6 @@ def configurar_arquivos_terapeuta():
         except:
             NOME_TERAPEUTA = "Terapeuta"
             
-def configurar_arquivos_diretriz():
-    """Cria os arquivos de diretriz se não existirem."""
-    
-    # 1. Diretriz para Criança
-    diretriz_crianca = f"""
-Você é o Robô {NOME_ROBO}. Fale com uma criança.
-Seu objetivo é ajudar no desenvolvimento de crianças atípicas com TEA ou qualquer Neurodivergência.
-Siga sempre estas regras de diálogo:
-1. Elogie a criança.
-2. Responda curto e com clareza.
-3. Termine sempre com uma pergunta para engajamento.
-
-Jogos disponíveis — você pode sugerir e iniciar um jogo quando a criança quiser brincar ou quando for terapêuticamente adequado:
-- cores: jogo das cores (toca na cor certa)
-- emocoes: jogo das emoções (identifica a emoção mostrada)
-- adivinhacao: jogo de charadas de animais
-- musica: tocar música e dançar
-- parear: jogo de parear cores (arrastar e soltar)
-
-Para iniciar um jogo, inclua a tag [JOGO:codigo] no final da sua resposta. Exemplos:
-  "Vamos brincar! [JOGO:cores]"
-  "Que tal um jogo de emoções? [JOGO:emocoes]"
-Nunca mencione a tag em voz alta — ela será removida automaticamente.
-"""
-    # Atualiza o arquivo se não existir OU se não tiver as instruções de jogo
-    _precisa_atualizar = not os.path.exists(ARQUIVO_IA_CRIANCA)
-    if not _precisa_atualizar:
-        try:
-            with open(ARQUIVO_IA_CRIANCA, "r") as f:
-                if "[JOGO:" not in f.read():
-                    _precisa_atualizar = True
-        except: _precisa_atualizar = True
-    if _precisa_atualizar:
-        try:
-            with open(ARQUIVO_IA_CRIANCA, "w") as f:
-                f.write(diretriz_crianca.strip())
-            print(f"Diretriz criança atualizada: {ARQUIVO_IA_CRIANCA}")
-        except: pass
-        
-    # 2. Diretriz para Terapeuta
-    diretriz_terapeuta = f"""
-Você é o Doutor {NOME_ROBO}, uma interface de inteligência artificial para análise comportamental.
-Seu objetivo principal é auxiliar o terapeuta no desenvolvimento de crianças atípicas com TEA ou Neurodivergência.
-Você está conversando com o terapeuta {NOME_TERAPEUTA}. Seu tom deve ser profissional, conciso e focado em dados, configurações e análise comportamental.
-Não use emojis ou linguagem infantil.
-"""
-    if not os.path.exists(ARQUIVO_IA_TERAPEUTA):
-        try:
-            with open(ARQUIVO_IA_TERAPEUTA, "w") as f:
-                f.write(diretriz_terapeuta.strip())
-        except: pass
-
-def ler_diretriz_ia(modo):
-    """Lê a diretriz de IA: cache em memória (5 min) → Supabase → arquivo local."""
-    global _cache_diretriz
-    agora = time.time()
-
-    # 1. Cache em memória (evita query Supabase a cada interação)
-    if modo in _cache_diretriz:
-        texto_cache, ts = _cache_diretriz[modo]
-        if agora - ts < _CACHE_DIRETRIZ_TTL:
-            return texto_cache
-
-    diretriz = None
-
-    # 2. Tenta buscar via CloudManager (Supabase ou Cache Local)
-    if cloud_mgr:
-        diretriz = cloud_mgr.get_ai_directive(modo)
-
-    # 3. Se falhar, lê o arquivo local
-    if not diretriz:
-        caminho = ARQUIVO_IA_TERAPEUTA if modo == "TERAPEUTA" else ARQUIVO_IA_CRIANCA
-        try:
-            if os.path.exists(caminho):
-                with open(caminho, "r") as f:
-                    diretriz = f.read()
-        except Exception as e:
-            print(f"ERRO: Falha ao ler diretriz local para {modo}: {e}")
-
-    # 4. Substitui placeholders e normaliza
-    if diretriz:
-        resultado = diretriz.replace("{NOME_ROBO}", NOME_ROBO).replace("{NOME_TERAPEUTA}", NOME_TERAPEUTA).strip()
-    else:
-        resultado = "Você é o robô Tirilo. Responda de forma curta e amigável."
-
-    # 5. Armazena no cache
-    _cache_diretriz[modo] = (resultado, agora)
-    return resultado
 
 
 # --- CONFIGURAÇÃO DE VISÃO ---
@@ -628,6 +536,14 @@ class RoboInterface:
         self.offset_lista = 0 # Scroll da lista
         self.lista_ativa = False # Indica se a lista de arquivos está na tela
         self.texto_ia = ""
+
+        # SELEÇÃO DE JOGOS PADRÃO (OFFLINE)
+        self.selecao_jogos_ativa = False
+        self.jogos_padrao_lista = []
+        self.jogos_padrao_pagina = 0
+        self._rects_jogos_sel = []  # [(rect, jogo_dict), ...]
+        self._rect_prox_pag = None
+        self._rect_ant_pag = None
         # Sincronização para suspensão do display (programas externos como calibrador)
         self.suspenso = False
         self._ev_display_livre = threading.Event()
@@ -655,7 +571,27 @@ class RoboInterface:
 
     def processar_toque(self, x, y):
         self.ultimo_toque = (x, y)
-        
+
+        # Seleção de jogos offline
+        if self.selecao_jogos_ativa:
+            for rect, jogo in self._rects_jogos_sel:
+                if rect.collidepoint(x, y):
+                    self.selecao_jogos_ativa = False
+                    threading.Thread(target=_executar_jogo, args=(jogo,), daemon=True).start()
+                    return
+            if self._rect_prox_pag and self._rect_prox_pag.collidepoint(x, y):
+                total = len(self.jogos_padrao_lista)
+                if (self.jogos_padrao_pagina + 1) * 4 < total:
+                    self.jogos_padrao_pagina += 1
+                return
+            if self._rect_ant_pag and self._rect_ant_pag.collidepoint(x, y):
+                if self.jogos_padrao_pagina > 0:
+                    self.jogos_padrao_pagina -= 1
+                return
+            # Toque fora das cartas fecha a seleção
+            self.selecao_jogos_ativa = False
+            return
+
         # Lógica de toque para sair do modo Terapeuta (Apenas um toque na área principal)
         if MODO_ROBO_ATUAL == "TERAPEUTA" and not self.lista_ativa:
              threading.Thread(target=finalizar_modo_terapeuta).start()
@@ -710,6 +646,7 @@ class RoboInterface:
                 continue
 
             if self.exibindo_splash: self._render_splash()
+            elif self.selecao_jogos_ativa: self._render_selecao_jogos()
             elif MODO_ROBO_ATUAL == "TERAPEUTA": self._render_modo_terapeuta()
             elif self.modo_jogo: self._render_jogo()
             else: self._render_rosto()
@@ -881,6 +818,80 @@ class RoboInterface:
             self.set_status(f"{len(self.arquivos_listados)} logs encontrados.", AMARELO)
         except Exception as e:
             self.set_status(f"Erro ao listar logs: {e}", VERMELHO)
+
+    def mostrar_selecao_jogos(self, lista):
+        """Exibe tela de seleção de jogos padrão (offline)."""
+        self.jogos_padrao_lista = lista
+        self.jogos_padrao_pagina = 0
+        self.selecao_jogos_ativa = True
+
+    def _render_selecao_jogos(self):
+        """Renderiza grade de cards de jogos com paginação."""
+        JOGOS_POR_PAG = 4
+        PAD = 20
+        CARD_W = (self.w - PAD * 3) // 2
+        CARD_H = (self.h - 130) // 2  # 80px header + 50px nav
+
+        # Fundo
+        self.tela.fill((15, 25, 50))
+
+        # Título
+        titulo = self.fonte_media.render("JOGOS DISPONÍVEIS — OFFLINE", True, AMARELO)
+        self.tela.blit(titulo, (self.w // 2 - titulo.get_width() // 2, 15))
+
+        # Jogos da página atual
+        inicio = self.jogos_padrao_pagina * JOGOS_POR_PAG
+        pagina = self.jogos_padrao_lista[inicio: inicio + JOGOS_POR_PAG]
+        self._rects_jogos_sel = []
+
+        for i, jogo in enumerate(pagina):
+            col = i % 2
+            row = i // 2
+            x = PAD + col * (CARD_W + PAD)
+            y = 80 + row * (CARD_H + PAD)
+            rect = pygame.Rect(x, y, CARD_W, CARD_H)
+            self._rects_jogos_sel.append((rect, jogo))
+
+            # Card background
+            pygame.draw.rect(self.tela, (30, 60, 120), rect, border_radius=12)
+            pygame.draw.rect(self.tela, AMARELO, rect, 2, border_radius=12)
+
+            # Nome do jogo
+            nome_surf = self.fonte_media.render(jogo.get('nome', ''), True, BRANCO)
+            self.tela.blit(nome_surf, (x + 12, y + 12))
+
+            # Descrição
+            desc = jogo.get('descricao', '')
+            if desc:
+                desc_surf = self.fonte_peq.render(desc[:50], True, (180, 200, 255))
+                self.tela.blit(desc_surf, (x + 12, y + 12 + self.fonte_media.get_linesize() + 4))
+
+        # Barra de navegação
+        total = len(self.jogos_padrao_lista)
+        total_pags = max(1, (total + JOGOS_POR_PAG - 1) // JOGOS_POR_PAG)
+        pag_atual = self.jogos_padrao_pagina + 1
+        nav_y = self.h - 44
+
+        # Botão anterior
+        self._rect_ant_pag = pygame.Rect(PAD, nav_y, 120, 36)
+        cor_ant = AMARELO if self.jogos_padrao_pagina > 0 else (80, 80, 80)
+        pygame.draw.rect(self.tela, cor_ant, self._rect_ant_pag, border_radius=8)
+        ant_txt = self.fonte_peq.render("◀ Anterior", True, PRETO if self.jogos_padrao_pagina > 0 else (120, 120, 120))
+        self.tela.blit(ant_txt, (self._rect_ant_pag.centerx - ant_txt.get_width() // 2,
+                                  self._rect_ant_pag.centery - ant_txt.get_height() // 2))
+
+        # Indicador de página
+        pg_txt = self.fonte_peq.render(f"{pag_atual} / {total_pags}", True, BRANCO)
+        self.tela.blit(pg_txt, (self.w // 2 - pg_txt.get_width() // 2, nav_y + 8))
+
+        # Botão próximo
+        self._rect_prox_pag = pygame.Rect(self.w - PAD - 120, nav_y, 120, 36)
+        tem_prox = inicio + JOGOS_POR_PAG < total
+        cor_prox = AMARELO if tem_prox else (80, 80, 80)
+        pygame.draw.rect(self.tela, cor_prox, self._rect_prox_pag, border_radius=8)
+        prox_txt = self.fonte_peq.render("Próximo ▶", True, PRETO if tem_prox else (120, 120, 120))
+        self.tela.blit(prox_txt, (self._rect_prox_pag.centerx - prox_txt.get_width() // 2,
+                                   self._rect_prox_pag.centery - prox_txt.get_height() // 2))
 
     def iniciar_parear(self):
         self.iniciar_jogo("parear")
@@ -1286,11 +1297,7 @@ def perguntar_gemini(texto):
             log_terapeuta(f"Terapeuta: {texto}")
 
         # --- 2. PREPARA PROMPT E INICIA STREAM EM PARALELO ---
-        # Usa prompt do perfil ativo se disponível, senão fallback para diretriz legacy
-        if _perfil_ativo and _perfil_ativo.get("prompt_instrucao"):
-            instrucao = _perfil_ativo["prompt_instrucao"]
-        else:
-            instrucao = ler_diretriz_ia(MODO_ROBO_ATUAL)
+        instrucao = (_perfil_ativo.get("prompt_instrucao") or "") if _perfil_ativo else ""
 
         # Garante instruções de jogo mesmo se a diretriz vier do Supabase sem elas
         if MODO_ROBO_ATUAL == "CRIANCA":
@@ -1301,14 +1308,8 @@ def perguntar_gemini(texto):
                 )
                 exemplo_codigo = _jogos_disponiveis[0]["codigo"]
             else:
-                lista_jogos = (
-                    "- cores          → Jogo das Cores\n"
-                    "- emocoes        → Jogo das Emoções\n"
-                    "- adivinhacao    → Charadas de Animais\n"
-                    "- musica         → Tocar Música\n"
-                    "- parear         → Parear Cores"
-                )
-                exemplo_codigo = "cores"
+                lista_jogos = "(nenhum jogo disponível no momento)"
+                exemplo_codigo = "jogo"
             instrucao += f"""
 
 REGRA OBRIGATÓRIA DE JOGOS:
@@ -1617,6 +1618,27 @@ def iniciar_calibragem():
     # Após sair do calibrador, o ideal seria o sistema reiniciar o script.
     # Se não reiniciar, o usuário pode dar boot novamente.
     os._exit(0)
+
+
+# --- JOGOS PADRÃO (OFFLINE) ---
+
+def carregar_jogos_padrao():
+    """Carrega manifest.json de jogos_padrao/ para uso offline."""
+    manifest = os.path.join(DIR_JOGOS_PADRAO, "manifest.json")
+    if not os.path.exists(manifest):
+        print("[Offline] manifest.json não encontrado em jogos_padrao/")
+        return []
+    try:
+        with open(manifest, 'r', encoding='utf-8') as f:
+            jogos = json.load(f)
+        # Normaliza para o mesmo formato de _jogos_disponiveis
+        for j in jogos:
+            j.setdefault('regras', j.get('descricao', ''))
+        print(f"[Offline] {len(jogos)} jogo(s) carregado(s) do manifest local.")
+        return jogos
+    except Exception as e:
+        print(f"[Offline] Erro ao ler manifest: {e}")
+        return []
 
 
 # --- EXECUTOR UNIFICADO DE JOGOS ---
@@ -2028,12 +2050,11 @@ def _lancar_jogo(codigo):
 # --- LOOP PRINCIPAL ---
 def loop_logica():
     global modo_ia_ativo, MODO_ROBO_ATUAL, TEXTO_RESPOSTA_IA, cloud_mgr 
-    global MODELO_IA, _jogos_disponiveis, _perfil_ativo, _MOTOR_VOZ_GLOBAL, _cache_diretriz
+    global MODELO_IA, _jogos_disponiveis, _perfil_ativo, _MOTOR_VOZ_GLOBAL
     global _PIPER_INSTANCIA, PIPER_VELOCIDADE, PIPER_PITCH
     
     # 1. Prepara arquivos e conexão Cloud (ESSENCIAL para carregar .env.local)
     configurar_arquivos_terapeuta()
-    configurar_arquivos_diretriz()
     
     # Inicia conexão Cloud (Supabase) PRIMEIRO para carregar as chaves unificadas
     try:
@@ -2104,13 +2125,20 @@ def loop_logica():
             print(f"Cloud: Piper Config - Speed: {PIPER_VELOCIDADE}, Pitch: {PIPER_PITCH}")
 
         _jogos_disponiveis = cloud_mgr.get_jogos_clinica()
+
+        # Se não carregou jogos do Supabase, usa os jogos padrão locais
+        if not _jogos_disponiveis:
+            _jogos_disponiveis = carregar_jogos_padrao()
+            if _jogos_disponiveis and gui:
+                gui.atualizar_loading("Modo offline — jogos padrão carregados")
+                # Exibe tela de seleção após o splash
+                threading.Timer(2.0, lambda: gui.mostrar_selecao_jogos(_jogos_disponiveis)).start()
+
         _perfil_ativo = cloud_mgr.get_perfil_ativo() or {}
         if _perfil_ativo:
-            modo_base = _perfil_ativo.get('modo_base', 'CRIANCA').upper()
-            MODO_ROBO_ATUAL = modo_base
-            print(f"Cloud: Perfil ativo: {_perfil_ativo.get('nome')} (modo {modo_base})")
+            print(f"Cloud: Perfil ativo: {_perfil_ativo.get('nome')}")
         else:
-            print("Cloud: Nenhum perfil ativo configurado, usando diretriz padrão.")
+            print("Cloud: Nenhum perfil ativo configurado.")
 
         # Inicializa o Piper TTS (se necessário)
         _inicializar_piper()
@@ -2155,8 +2183,6 @@ def loop_logica():
                         elif payload == "MODO_CRIANCA":
                             threading.Thread(target=finalizar_modo_terapeuta).start()
                         elif payload == "RELOAD_CONFIG":
-                            _cache_diretriz.clear()
-                            
                             # Recarrega configurações da clínica (Voz)
                             if cloud_mgr:
                                 cfg = cloud_mgr.get_config()
@@ -2183,20 +2209,11 @@ def loop_logica():
                                 novo = cloud_mgr.get_perfil_por_id(perfil_id)
                                 if novo:
                                     _perfil_ativo = novo
-                                    modo_base = novo.get('modo_base', 'CRIANCA').upper()
                                     nome_perfil = novo.get('nome', '?')
-                                    modo_label = 'Terapeuta' if modo_base == 'TERAPEUTA' else 'Criança'
-                                    # Exibe na tela ANTES de falar
-                                    TEXTO_RESPOSTA_IA = f"Perfil ativo: {nome_perfil}\nModo: {modo_label}"
+                                    TEXTO_RESPOSTA_IA = f"Perfil ativo: {nome_perfil}"
                                     if gui: gui.set_status(f"Perfil: {nome_perfil}", AZUL)
-                                    print(f"Perfil ativo: {nome_perfil} (modo {modo_base})")
-                                    # Fala (texto visível durante a fala)
+                                    print(f"Perfil ativo: {nome_perfil}")
                                     falar(f"Perfil alterado para {nome_perfil}.")
-                                    # Só então troca o modo (que limpa o TEXTO_RESPOSTA_IA)
-                                    if modo_base == 'TERAPEUTA':
-                                        threading.Thread(target=iniciar_modo_terapeuta).start()
-                                    else:
-                                        threading.Thread(target=finalizar_modo_terapeuta).start()
                         elif payload == "FALAR":
                             msg = cmd.get('parametros', {}).get('texto', '')
                             if msg: falar(msg)

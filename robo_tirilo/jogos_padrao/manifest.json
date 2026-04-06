@@ -1,0 +1,20 @@
+[
+  {
+    "nome": "Parear Cores",
+    "codigo": "jogos/parear_cores/parearcor.py",
+    "descricao": "Arraste a bolinha até o quadrado da mesma cor",
+    "desativar_rastreamento": false
+  },
+  {
+    "nome": "Coreografia Seu Lobato",
+    "codigo": "jogos/coreografia_seulobato/coreografia_seulobato.py",
+    "descricao": "Coreografia animada com música do Seu Lobato",
+    "desativar_rastreamento": false
+  },
+  {
+    "nome": "Coreografia Old MacDonald",
+    "codigo": "jogos/coreografia_macdonald/coreografia_macdonald.py",
+    "descricao": "Coreografia animada com música Old MacDonald",
+    "desativar_rastreamento": false
+  }
+]

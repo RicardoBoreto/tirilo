@@ -10,8 +10,6 @@ import {
     registerRobot,
     toggleRobotBlock,
     updateRobot,
-    getDirectives,
-    saveDirective,
     getPerfis,
     savePerfil,
     deletePerfil,
@@ -27,10 +25,10 @@ import { getLojaJogos } from '@/lib/actions/ludoterapia'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { 
-    Search, Plus, Settings, Play, Shield, Cpu, 
-    ExternalLink, Copy, Check, Info, Gamepad2, 
-    Wrench, LayoutDashboard, Bug, Radio, 
-    Power, Activity, Signal, Terminal, Menu
+    Search, Plus, Settings, Play, Shield, Cpu,
+    ExternalLink, Copy, Check, Info, Gamepad2,
+    Wrench, LayoutDashboard, Bug, Radio,
+    Power, Activity, Signal, Terminal, Menu, Rocket, Puzzle
 } from 'lucide-react'
 import {
     Sheet,
@@ -55,14 +53,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
     const [isRefreshing, setIsRefreshing] = useState(false)
 
     // Config Form State
-    const [prompt, setPrompt] = useState('')
     const [voice, setVoice] = useState('pt-br')
-
-    // Diretrizes IA (legado)
-    const [dirCrianca, setDirCrianca] = useState('')
-    const [dirTerapeuta, setDirTerapeuta] = useState('')
-    const [isSavingDir, setIsSavingDir] = useState(false)
-    const [dirSaveMsg, setDirSaveMsg] = useState('')
 
     // Piper TTS Config
     const [piperPitch, setPiperPitch] = useState(150)
@@ -111,7 +102,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         loadRobots()
         loadConfig()
         loadClinics()
-        loadDirectives()
+
         loadPerfis()
         if (clinicaId) loadLoja()
     }, [clinicaId])
@@ -126,7 +117,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         loadRobots()
         loadConfig()
         loadClinics()
-        loadDirectives()
+
         loadPerfis()
     }, [clinicaId])
 
@@ -175,7 +166,6 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         const data = await getRobotConfig(cid)
         if (data) {
             setConfig(data)
-            setPrompt(data.prompt_personalidade_robo)
             setVoice(data.motor_voz_preferencial)
             if (data.piper_pitch !== undefined) setPiperPitch(data.piper_pitch)
             if (data.piper_speed !== undefined) setPiperSpeed(data.piper_speed)
@@ -191,11 +181,11 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
 
     async function handleSaveConfig() {
         const cid = clinicaId || (selectedRobot?.id_clinica ? String(selectedRobot.id_clinica) : null)
-        if (!cid) return alert('Configuração global não disponível sem clínica definida. Selecione um robô ou uma clínica.')
-        
+        if (!cid) return alert('Clínica não definida. Selecione um robô.')
+
         try {
             await updateRobotConfig(cid, {
-                prompt_personalidade_robo: prompt,
+                prompt_personalidade_robo: '',
                 motor_voz_preferencial: voice,
                 piper_pitch: piperPitch,
                 piper_speed: piperSpeed
@@ -208,14 +198,6 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
             loadConfig(cid)
         } catch (e) {
             alert('Erro ao salvar config: ' + e)
-        }
-    }
-
-    async function loadDirectives() {
-        const data = await getDirectives(clinicaId)
-        for (const d of data) {
-            if (d.modo === 'CRIANCA') setDirCrianca(d.diretriz)
-            if (d.modo === 'TERAPEUTA') setDirTerapeuta(d.diretriz)
         }
     }
 
@@ -270,23 +252,6 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         }
     }
 
-    async function handleSaveDirective(modo: 'CRIANCA' | 'TERAPEUTA', texto: string) {
-        setIsSavingDir(true)
-        setDirSaveMsg('')
-        try {
-            await saveDirective(clinicaId ?? null, modo, texto)
-            // Envia comando para o robô recarregar as diretrizes e motor de voz imediatamente
-            if (selectedRobot) {
-                await sendCommand(selectedRobot.mac_address, 'RELOAD_CONFIG')
-            }
-            setDirSaveMsg(`Diretriz ${modo === 'CRIANCA' ? 'Criança' : 'Terapeuta'} salva!`)
-            setTimeout(() => setDirSaveMsg(''), 3000)
-        } catch (e) {
-            setDirSaveMsg('Erro ao salvar: ' + e)
-        } finally {
-            setIsSavingDir(false)
-        }
-    }
 
     async function handleCommand(cmd: string, params: any = {}) {
         if (!selectedRobot) return
@@ -709,13 +674,13 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
 
         return (
             <div className="space-y-6">
-                 {/* GLOBAL CONFIG */}
-                 <Card className="border-none shadow-sm overflow-hidden">
+                {/* CONFIGURAÇÃO DE VOZ */}
+                <Card className="border-none shadow-sm overflow-hidden">
                     <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4 border-b dark:border-gray-800">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <h2 className="text-base sm:text-xl font-black flex items-center gap-2">
-                                <Cpu className="w-5 h-5 text-indigo-500" />
-                                Personalidade Global da IA
+                                <Radio className="w-5 h-5 text-indigo-500" />
+                                Configuração de Voz
                             </h2>
                             <Button onClick={handleSaveConfig} className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto h-9 sm:h-10 font-bold">
                                 <Check className="w-4 h-4 mr-2" />
@@ -724,23 +689,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                         </div>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6 space-y-4">
-                        <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-100 flex items-start gap-3">
-                            <Info className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mt-0.5 shrink-0" />
-                            <p className="text-[10px] sm:text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
-                                Este prompt define o comportamento base do robô para toda a clínica.
-                            </p>
-                        </div>
                         <div className="space-y-2">
-                            <label className="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300">Prompt do Sistema (Persona)</label>
-                            <textarea
-                                className="w-full p-3 sm:p-4 rounded-xl border dark:bg-gray-900 min-h-[100px] sm:min-h-[150px] shadow-inner focus:ring-2 focus:ring-primary/20 transition-all outline-none text-xs sm:text-sm font-medium leading-relaxed"
-                                value={prompt}
-                                onChange={e => setPrompt(e.target.value)}
-                                placeholder="Você é o Robô Tirilo, um assistente lúdico para crianças..."
-                            />
-                        </div>
-
-                        <div className="pt-4 border-t dark:border-gray-800">
                             <label className="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 block mb-2">Motor de Voz Preferencial</label>
                             <Select value={voice} onValueChange={setVoice}>
                                 <SelectTrigger className="w-full sm:w-64 h-11 bg-white dark:bg-gray-900 border-gray-200">
@@ -814,60 +763,17 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                     </CardContent>
                 </Card>
 
-                {/* DIRETRIZES IA */}
-                <Card className="border-none shadow-sm overflow-hidden">
-                    <CardHeader className="p-4 sm:p-6 border-b dark:border-gray-800">
-                        <CardTitle className="text-base sm:text-xl font-black flex items-center gap-2">
-                            <Bug className="w-5 h-5 text-primary" />
-                            Diretrizes de Atuação
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Modo Criança */}
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-xs sm:text-sm font-black text-green-600 flex items-center gap-2 uppercase tracking-wider">
-                                        🧒 Modo Criança
-                                    </label>
-                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold" onClick={() => handleSaveDirective('CRIANCA', dirCrianca)}>Salvar</Button>
-                                </div>
-                                <textarea
-                                    value={dirCrianca}
-                                    onChange={e => setDirCrianca(e.target.value)}
-                                    rows={4}
-                                    className="w-full p-3 rounded-xl border dark:bg-gray-900 text-[11px] sm:text-xs font-mono shadow-inner outline-none focus:ring-2 focus:ring-green-400/20 leading-relaxed"
-                                    placeholder="Instruções para interação infantil..."
-                                />
-                            </div>
-                            {/* Modo Terapeuta */}
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-xs sm:text-sm font-black text-indigo-600 flex items-center gap-2 uppercase tracking-wider">
-                                        🩺 Modo Terapeuta
-                                    </label>
-                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold" onClick={() => handleSaveDirective('TERAPEUTA', dirTerapeuta)}>Salvar</Button>
-                                </div>
-                                <textarea
-                                    value={dirTerapeuta}
-                                    onChange={e => setDirTerapeuta(e.target.value)}
-                                    rows={4}
-                                    className="w-full p-3 rounded-xl border dark:bg-gray-900 text-[11px] sm:text-xs font-mono shadow-inner outline-none focus:ring-2 focus:ring-indigo-400/20 leading-relaxed"
-                                    placeholder="Instruções para auxílio profissional..."
-                                />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
                 {/* PERFIS DE PERSONALIDADE */}
                 <Card>
                     <CardHeader className="p-4 sm:p-6">
                         <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-                                <Gamepad2 className="w-5 h-5 text-primary" />
-                                Perfis de Personalidade
-                            </CardTitle>
+                            <div>
+                                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                                    <Cpu className="w-5 h-5 text-primary" />
+                                    Perfis de Personalidade
+                                </CardTitle>
+                                <p className="text-xs text-gray-500 mt-1">O perfil ativo é carregado automaticamente ao ligar o robô.</p>
+                            </div>
                             <Button size="sm" onClick={() => setPerfilEdit({ nome: '', descricao: '', prompt_instrucao: '', modo_base: 'CRIANCA', ativo: true })}>
                                 <Plus className="w-4 h-4 mr-2" />
                                 <span className="hidden sm:inline">Novo Perfil</span>
@@ -880,9 +786,16 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                 <Card key={p.id} className={`group hover:border-primary/50 transition-all ${perfilAtivoId === p.id ? 'border-primary bg-primary/5' : ''}`}>
                                     <CardContent className="p-4">
                                         <div className="flex justify-between items-start mb-2">
-                                            <Badge variant={p.modo_base === 'TERAPEUTA' ? "secondary" : "outline"} className="text-[9px]">
-                                                {p.modo_base}
-                                            </Badge>
+                                            <div className="flex flex-col gap-1">
+                                                {perfilAtivoId === p.id && (
+                                                    <Badge className="text-[9px] bg-green-600 text-white border-none">Boot</Badge>
+                                                )}
+                                                {p.modo_base && (
+                                                    <Badge variant="outline" className="text-[9px]">
+                                                        {p.modo_base === 'CRIANCA' ? '🧒 Criança' : '🩺 Terapeuta'}
+                                                    </Badge>
+                                                )}
+                                            </div>
                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setPerfilEdit({ ...p })}><Settings className="w-3 h-3" /></Button>
                                                 <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={() => handleDeletePerfil(p.id!)}>✕</Button>
@@ -936,6 +849,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                             </div>
                             <div className="space-y-1">
                                 <label className="text-sm font-medium">Modo Base</label>
+                                <p className="text-xs text-gray-500">Indica para qual modo este perfil foi otimizado.</p>
                                 <div className="flex gap-2">
                                     <Button
                                         type="button"
@@ -988,23 +902,46 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
         const categorias = [...new Set(allGames.map(g => g.categoria).filter(Boolean))] as string[]
 
         const categoryStyle: Record<string, { icon: ReactNode, bg: string, text: string, border: string, label: string }> = {
+            // Categorias do saas_jogos
+            'Pareamento': {
+                icon: <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />,
+                bg: 'bg-blue-100 dark:bg-blue-900/30',
+                text: 'text-blue-600',
+                border: 'hover:border-blue-200',
+                label: 'Pareamento',
+            },
+            'Recreação': {
+                icon: <Rocket className="w-5 h-5 sm:w-6 sm:h-6 text-pink-600" />,
+                bg: 'bg-pink-100 dark:bg-pink-900/30',
+                text: 'text-pink-600',
+                border: 'hover:border-pink-200',
+                label: 'Recreação',
+            },
+            'Ferramentas': {
+                icon: <Wrench className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />,
+                bg: 'bg-orange-100 dark:bg-orange-900/30',
+                text: 'text-orange-600',
+                border: 'hover:border-orange-200',
+                label: 'Ferramentas',
+            },
+            // Aliases legados (caso existam registros antigos)
             'JOGO': {
                 icon: <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />,
                 bg: 'bg-blue-100 dark:bg-blue-900/30',
                 text: 'text-blue-600',
                 border: 'hover:border-blue-200',
-                label: 'LudoTirilo: Jogos e Interações',
+                label: 'Jogos',
             },
             'FERRAMENTA': {
                 icon: <Wrench className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />,
                 bg: 'bg-orange-100 dark:bg-orange-900/30',
                 text: 'text-orange-600',
                 border: 'hover:border-orange-200',
-                label: 'Configurações e Diagnóstico',
+                label: 'Ferramentas',
             },
         }
         const defaultStyle = {
-            icon: <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />,
+            icon: <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />,
             bg: 'bg-purple-100 dark:bg-purple-900/30',
             text: 'text-purple-600',
             border: 'hover:border-purple-200',
@@ -1099,7 +1036,7 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                                         <Card key={item.id} className={`bg-gray-50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 transition-colors border-dashed hover:border-solid ${style.border}`}>
                                             <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
                                                 <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl ${style.bg} flex items-center justify-center ${style.text} shrink-0`}>
-                                                    <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
+                                                    <Puzzle className="w-5 h-5 sm:w-6 sm:h-6" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <h4 className="font-bold text-xs sm:text-sm truncate">{item.nome}</h4>
@@ -1123,31 +1060,6 @@ export default function RobotDashboard({ clinicaId }: { clinicaId?: string }) {
                     )
                 })}
 
-                {/* Fallback: CALIBRAR_OLHOS se não cadastrado no banco */}
-                {!allGames.some(g => g.comando_entrada === 'CALIBRAR_OLHOS') && (!appCategoriaFilter || appCategoriaFilter === 'FERRAMENTA') && (
-                    <div className="space-y-4">
-                        <h3 className="text-lg sm:text-2xl font-black flex items-center gap-3 text-gray-800 dark:text-white px-1">
-                            <div className="p-1.5 sm:p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg sm:rounded-xl">
-                                <Bug className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" />
-                            </div>
-                            Diagnóstico
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                            <Card className="bg-gray-50 dark:bg-gray-800/50 border-dashed border-gray-300">
-                                <CardContent className="p-4 flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-600">
-                                        <Bug className="w-6 h-6" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-bold text-sm">Calibração de Atuadores</h4>
-                                        <p className="text-[10px] text-gray-500">Ajuste fino de servos e LEDs</p>
-                                    </div>
-                                    <Button size="sm" variant="secondary" onClick={() => handleCommand('CALIBRAR_OLHOS')} disabled={!selectedRobot}>Abrir</Button>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-                )}
             </div>
         )
     }

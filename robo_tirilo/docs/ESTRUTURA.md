@@ -11,6 +11,9 @@ robo_tirilo/
 ├── requirements.txt        ← Dependências Python
 ├── haarcascades/           ← Modelo de detecção facial (OpenCV Haar Cascade)
 │
+├── jogos_padrao/           ← Jogos garantidamente instalados no robô (usados offline)
+│   └── manifest.json       ← Lista: [{nome, codigo, descricao}] — caminho relativo ao tirilo.py
+│
 ├── jogos/                  ← Jogos com interface gráfica própria (subprocess KMS/DRM)
 │   ├── parear_cores/
 │   │   ├── parearcor.py    ← Jogo arrastar e soltar por cor
@@ -36,6 +39,7 @@ robo_tirilo/
 │
 ├── docs/                   ← Documentação
 │   ├── ESTRUTURA.md        ← Este arquivo
+│   ├── MODOS_OPERACAO.md   ← Modos CRIANÇA/TERAPEUTA: diferenças, fluxo, relação com perfis
 │   ├── robo_versao.md      ← Histórico de versões
 │   ├── descricao.md        ← Descrição geral do projeto
 │   ├── DEV_JOGOS.md        ← Guia para desenvolvimento de novos jogos
@@ -173,8 +177,8 @@ PASTA_JOGO = os.path.dirname(os.path.abspath(__file__))
 PASTA_ROBO = os.path.dirname(os.path.dirname(PASTA_JOGO))
 sys.path.insert(0, PASTA_ROBO)
 ```
-4. Cadastrar no `saas_jogos` (Gerenciar Jogos no SaaS) com `comando_entrada = "codigo_do_jogo"`
-5. Adicionar mapeamento em `_lancar_jogo()` no `tirilo.py`
+4. Cadastrar no `saas_jogos` (Gerenciar Jogos no SaaS) com `comando_entrada = "caminho/relativo/jogo.py"`
+5. Nenhuma alteração no `tirilo.py` necessária — o executor unificado `_executar_jogo()` lança qualquer `.py` registrado no `saas_jogos`
 
 ---
 
