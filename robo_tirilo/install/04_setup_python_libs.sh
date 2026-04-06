@@ -15,6 +15,8 @@ sudo python3 -m pip uninstall -y pygame --break-system-packages
 echo "-> Instalando dependências do projeto (requirements.txt)..."
 if [ -f "../requirements.txt" ]; then
     sudo python3 -m pip install -r ../requirements.txt --break-system-packages
+    # Garante que o sherpa-onnx esteja na última versão (necessário para v1.12.35+)
+    sudo python3 -m pip install -U sherpa-onnx --break-system-packages
 else
     echo "Aviso: requirements.txt não encontrado em ../"
 fi
@@ -23,18 +25,15 @@ fi
 echo "-> Instalando Adafruit ServoKit e Blinka..."
 sudo python3 -m pip install adafruit-circuitpython-servokit adafruit-blinka --break-system-packages
 
-# 4. Preparar diretório de vozes Piper e baixar modelo padrão
-echo "-> Preparando diretório de vozes Piper e modelo padrão..."
-PIPER_DIR="$HOME/projeto_robo/robo_tirilo/vozes_piper"
-mkdir -p "$PIPER_DIR"
-
-if [ ! -f "$PIPER_DIR/pt_BR-faber-medium.onnx" ]; then
-    echo "-> Baixando modelo de voz Piper (Faber Medium)..."
-    wget -q --show-progress -O "$PIPER_DIR/pt_BR-faber-medium.onnx" "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx"
-    wget -q --show-progress -O "$PIPER_DIR/pt_BR-faber-medium.onnx.json" "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json"
 fi
 
-# 5. Preparar diretório e modelo de Biometria Vocal (sherpa-onnx / wespeaker)
+# 5. Preparar diretório de vozes Sherpa-ONNX (Pipeline Moderno)
+echo "-> Preparando diretório de vozes Sherpa..."
+SHERPA_DIR="$HOME/projeto_robo/robo_tirilo/vozes_sherpa"
+mkdir -p "$SHERPA_DIR"
+# Os modelos Sherpa vêm em pacotes .tar.bz2 e podem ser baixados via ferramentas/testar_vozes_sherpa.py
+
+# 6. Preparar diretório e modelo de Biometria Vocal (sherpa-onnx / wespeaker)
 echo "-> Preparando diretório de biometria..."
 BIOMETRIA_DIR="$HOME/projeto_robo/robo_tirilo/biometria"
 mkdir -p "$BIOMETRIA_DIR"

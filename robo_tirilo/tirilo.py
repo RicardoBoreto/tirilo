@@ -3,9 +3,20 @@
 =============================================================================
 PROJETO: ROBÔ TIRILO
 ARQUIVO: tirilo.py
-VERSÃO:  4.16 (Executor Unificado via saas_jogos + Fix PARAR subprocess)
+VERSÃO:  4.18 (Executor Unificado via saas_jogos + Fix PARAR subprocess)
 DATA:    05/04/2026
 AUTOR:   Ricardo Alonso Boreto
+
+MUDANÇAS v4.18:
+- Integração do motor Sherpa-ONNX (Voz Neural de Alta Performance):
+  Sintetiza frases em menos de 1 segundo (quase 5x mais rápido que o Piper original).
+  Suporta ajustes de PITCH e SPEED vindos do SaaS em tempo real.
+  Otimização de latência zero: se o pitch for 0, pula o processamento do SoX.
+- Nova pasta /vozes_sherpa: suporte a modelos pré-convertidos (.tar.bz2).
+
+MUDANÇAS v4.17:
+- 📴 Modo Offline: seleção de jogos padrão via tela touch.
+- Correção de carregamento de jogos do Supabase.
 
 MUDANÇAS v4.16:
 - Executor Unificado: mapa_interno removido de _executar_jogo_por_codigo e _lancar_jogo.
@@ -111,7 +122,7 @@ from src.cloud import CloudManager
 
 # --- 1. CONFIGURAÇÕES GLOBAIS ---
 NOME_ROBO = "Tirilo"
-VERSAO_ATUAL = "4.17"
+VERSAO_ATUAL = "4.18"
 AUTOR = "Ricardo Alonso Boreto"
 
 # Configurações de Jogo
@@ -143,6 +154,60 @@ def _buscar_modelo_piper():
     return None
 
 CAMINHO_MODELO_PIPER = _buscar_modelo_piper()
+
+# --- Configuração Sherpa-ONNX (Voz Neural de Alta Performance) ---
+_SHERPA_INSTANCIA = None
+PASTA_VOZES_SHERPA = os.path.expanduser("~/projeto_robo/robo_tirilo/vozes_sherpa")
+
+def _buscar_modelo_sherpa():
+    """Busca a primeira pasta de modelo Sherpa (formato .tar.bz2 extraído)."""
+    if not os.path.exists(PASTA_VOZES_SHERPA):
+        os.makedirs(PASTA_VOZES_SHERPA, exist_ok=True)
+        return None
+    
+    for d in sorted(os.listdir(PASTA_VOZES_SHERPA)):
+        path_d = os.path.join(PASTA_VOZES_SHERPA, d)
+        if os.path.isdir(path_d):
+            onnx = [f for f in os.listdir(path_d) if f.endswith(".onnx")]
+            if onnx:
+                return {"pasta": path_d, "modelo": os.path.join(path_d, onnx[0])}
+    return None
+
+def _inicializar_sherpa():
+    """Carrega o motor Sherpa-ONNX na RAM."""
+    global _SHERPA_INSTANCIA
+    if not _SHERPA_DISPONIVEL:
+        print("Sherpa: Biblioteca sherpa-onnx não instalada.")
+        return
+    
+    info = _buscar_modelo_sherpa()
+    if info:
+        try:
+            print(f"Sherpa: Carregando modelo {info['modelo']} na RAM...")
+            tokens_path = os.path.join(info['pasta'], "tokens.txt")
+            data_dir = os.path.join(info['pasta'], "espeak-ng-data")
+            if not os.path.exists(data_dir):
+                data_dir = "/usr/lib/arm-linux-gnueabihf/espeak-ng-data"
+
+            vits_config = _sherpa_onnx.OfflineTtsVitsModelConfig(
+                model=info['modelo'],
+                lexicon="",
+                tokens=tokens_path,
+                data_dir=data_dir,
+                noise_scale=0.667,
+                noise_scale_w=0.8,
+                length_scale=PIPER_VELOCIDADE 
+            )
+            config = _sherpa_onnx.OfflineTtsConfig(
+                model=_sherpa_onnx.OfflineTtsModelConfig(vits=vits_config, num_threads=2),
+                max_num_sentences=1,
+            )
+            _SHERPA_INSTANCIA = _sherpa_onnx.OfflineTts(config)
+            print(f"Sherpa: Motor carregado com sucesso.")
+        except Exception as e:
+            print(f"Sherpa: Erro ao carregar motor: {e}")
+    else:
+        print(f"Sherpa: Nenhum modelo compatível em {PASTA_VOZES_SHERPA}")
 
 # Testa suporte a PyAudio/VAD uma única vez no startup
 def _testar_vad():
@@ -1198,6 +1263,44 @@ def falar(texto, local_fast=False):
                 if os.path.exists(arq_mp3):
                     try: os.remove(arq_mp3)
                     except: pass
+        elif _MOTOR_VOZ_GLOBAL == "SHERPA":
+            # --- Sherpa-ONNX (Voz Neural de Alta Performance) ---
+            if _SHERPA_INSTANCIA:
+                import tempfile
+                arq_wav = tempfile.mktemp(suffix=".wav")
+                try:
+                    # Síntese ultra-rápida paralela
+                    if not t_anim.is_alive(): t_anim.start()
+                    
+                    audio = _SHERPA_INSTANCIA.generate(txt, speed=PIPER_VELOCIDADE)
+                    
+                    # Salva WAV (manual para garantir compatibilidade com sox/aplay)
+                    samples = np.array(audio.samples)
+                    samples_int16 = (samples * 32767).astype(np.int16)
+                    with wave.open(arq_wav, "wb") as wf:
+                        wf.setnchannels(1)
+                        wf.setsampwidth(2)
+                        wf.setframerate(audio.sample_rate)
+                        wf.writeframes(samples_int16.tobytes())
+
+                    if PIPER_PITCH != 0:
+                        comando = f"sox {arq_wav} -t wav - pitch {PIPER_PITCH} | aplay -q -D {DISPOSITIVO_AUDIO}"
+                        subprocess.run(comando, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    else:
+                        subprocess.run(
+                            ["aplay", "-q", "-D", DISPOSITIVO_AUDIO, arq_wav],
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                        )
+                except Exception as e:
+                    print(f"Sherpa: Erro na síntese ({e}), usando espeak...")
+                    _falar_espeak(txt, t_anim)
+                finally:
+                    if os.path.exists(arq_wav):
+                        try: os.remove(arq_wav)
+                        except: pass
+            else:
+                print(f"DEBUG: Sherpa selecionado mas _SHERPA_INSTANCIA é None")
+                _falar_espeak(txt, t_anim)
         elif _MOTOR_VOZ_GLOBAL == "PIPER":
             # --- Piper-TTS (Voz Neural Local) ---
             if _PIPER_INSTANCIA:
@@ -2198,8 +2301,11 @@ def loop_logica():
                                         PIPER_PITCH = int(cfg['piper_pitch'])
                                     
                                     # Se selecionou Piper e ainda não carregou, carrega agora!
+                                    # Inicializa motores se selecionados e não carregados
                                     if _MOTOR_VOZ_GLOBAL == "PIPER" and _PIPER_INSTANCIA is None:
                                         _inicializar_piper()
+                                    elif _MOTOR_VOZ_GLOBAL == "SHERPA" and _SHERPA_INSTANCIA is None:
+                                        _inicializar_sherpa()
                             
                             print(f"Config: Recarregado do Supabase (Voz: {_MOTOR_VOZ_GLOBAL} e Diretrizes).")
                             falar("Configurações atualizadas.")

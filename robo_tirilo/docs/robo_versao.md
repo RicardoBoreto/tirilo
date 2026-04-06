@@ -1,5 +1,24 @@
 # Histórico de Versões - Robô Tirilo
 
+## [4.18] - 2026-04-06
+### 🗣️ Motor de Voz Sherpa-ONNX (Alta Performance)
+
+#### Integração de voz neural otimizada
+- Novo motor de voz baseado em Pipe Sherpa-ONNX (Pipeline C++).
+- **Velocidade**: redução drástica de latência na síntese (menos de 1s p/ frases médias).
+- **Parâmetros SaaS**: suporte total a `PIPER_VELOCIDADE` e `PIPER_PITCH` em tempo real.
+- **Latência Zero**: bypass automático do SoX quando o pitch é 0, tocando o áudio instantaneamente após a geração.
+
+#### Ferramentas de Teste e Gestão
+- `testar_vozes_sherpa.py`: ferramenta CLI para baixar, extrair (pacotes `.tar.bz2`) e testar vozes compatíveis com o novo motor.
+- `testar_vozes_tts.py`: atualizado para ser idêntico ao motor legado (Piper-TTS) para fins de comparação.
+- Pasta `vozes_sherpa/`: novo diretório para armazenamento de modelos pré-convertidos.
+
+#### Instalação
+- `install/04_setup_python_libs.sh`: atualizado para garantir a versão `1.12.35+` do `sherpa-onnx` e preparar os novos diretórios.
+
+---
+
 ## [4.17] - 2026-04-06
 ### 📴 Modo Offline: seleção de jogos padrão via tela touch
 
