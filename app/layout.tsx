@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins, Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster"
+import NextTopLoader from 'nextjs-toploader';
 
 const poppins = Poppins({
     subsets: ["latin"],
@@ -33,6 +34,7 @@ export default async function RootLayout({
     return (
         <html lang="pt-BR" suppressHydrationWarning>
             <body className={`${poppins.variable} ${inter.variable} font-sans antialiased bg-background text-foreground`}>
+                <NextTopLoader color="#4f46e5" showSpinner={false} height={3} />
                 <EnvironmentBanner env={env} />
                 {children}
                 <Toaster />
