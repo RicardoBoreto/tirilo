@@ -44,7 +44,7 @@ class CloudManager:
         
         # Se as chaves padrão não estiverem no environ, tenta ler manualmente do primeiro arquivo encontrado
         if not self.url or not self.key:
-            for env_path in env_files:
+            for env_path in env_files:ax
                 if env_path.exists():
                     try:
                         with open(env_path, 'r') as f:

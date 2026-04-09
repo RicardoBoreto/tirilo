@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Operacional Tirilo - Terapeuta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #eef2ff;
+            --secondary: #10b981;
+            --secondary-light: #ecfdf5;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text-main);
+            background-color: var(--bg-page);
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            padding: 60px;
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 6px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+
+        header { text-align: center; margin-bottom: 60px; }
+
+        .logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 42px; font-weight: 800;
+            color: var(--primary); margin-bottom: 10px;
+            display: flex; align-items: center; justify-content: center; gap: 12px;
+        }
+        .logo span { color: var(--secondary); }
+
+        .badge {
+            display: inline-block; padding: 6px 16px;
+            background: var(--primary-light); color: var(--primary);
+            border-radius: 99px; font-size: 13px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px;
+        }
+
+        h1 { font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 700; margin-bottom: 15px; }
+        .intro-text { font-size: 18px; color: var(--text-muted); max-width: 600px; margin: 0 auto; }
+
+        section { margin-bottom: 50px; padding-top: 20px; }
+
+        h2 {
+            font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 700;
+            color: var(--primary); margin-bottom: 25px;
+            display: flex; align-items: center; gap: 12px;
+            border-bottom: 2px solid var(--primary-light); padding-bottom: 10px;
+        }
+
+        .icon-circle {
+            width: 36px; height: 36px; background: var(--primary-light);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px;
+        }
+
+        h3 { font-size: 18px; font-weight: 600; margin: 25px 0 12px 0; color: #334155; }
+        p { margin-bottom: 16px; text-align: justify; }
+        ul, ol { margin-bottom: 20px; padding-left: 20px; }
+        li { margin-bottom: 10px; text-align: justify; }
+
+        .step-card {
+            background: #fdfdfd; border: 1px solid var(--border);
+            border-radius: 16px; padding: 24px; margin-bottom: 20px;
+        }
+
+        .tip-box {
+            background: var(--secondary-light); border-left: 4px solid var(--secondary);
+            padding: 20px; border-radius: 0 12px 12px 0; margin: 30px 0;
+        }
+        .tip-box strong { color: #065f46; display: block; margin-bottom: 5px; }
+
+        .highlight { background: #e0e7ff; padding: 2px 5px; border-radius: 4px; font-weight: 500; color: #3730a3; }
+        
+        .code-key { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; font-weight: bold; color: #0f172a; }
+
+        footer {
+            margin-top: 80px; padding-top: 40px; border-top: 1px solid var(--border);
+            text-align: center; font-size: 14px; color: var(--text-muted);
+        }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; border: none; padding: 40px; }
+            .no-print { display: none; }
+            section { page-break-inside: avoid; }
+        }
+
+        .btn-print {
+            position: fixed; top: 20px; right: 20px; background: var(--primary);
+            color: white; padding: 12px 24px; border-radius: 99px; font-weight: 600;
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4); cursor: pointer; border: none;
+        }
+        .btn-print:hover { opacity: 0.9; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+    <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimir / Gerar PDF</button>
+
+    <div class="container">
+        <header>
+            <div class="header-logos" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+                <!-- Logo Tirilo SaaS (Esquerda) -->
+                <div class="logo-esquerda" style="flex: 1; display: flex; justify-content: flex-start;">
+                    <img src="logo_tirilo.png" alt="Logo Tirilo" style="height: 100px; width: auto; object-fit: contain;">
+                </div>
+                
+                <!-- Badge Perfil (Centro) -->
+                <div class="badge" style="margin-bottom: 0; flex: 1; text-align: center; max-width: max-content;">Perfil: Terapeuta</div>
+
+                <!-- Logo Clínica Acolher (Direita) -->
+                <div class="logo-direita" style="flex: 1; display: flex; justify-content: flex-end;">
+                    <img src="logo_clinica.png" alt="Logo Clínica Acolher" style="height: 100px; width: auto; object-fit: contain;">
+                </div>
+            </div>
+            
+            <h1>Manual Operacional</h1>
+            <p class="intro-text">O guia completo para transformar seu atendimento clínico com tecnologia e inteligência artificial.</p>
+        </header>
+
+        <!-- 1. Introdução -->
+        <section id="introducao">
+            <h2><div class="icon-circle">👋</div> 1. Introdução ao Sistema</h2>
+            <p>Bem-vindo(a) ao <strong>SaaS Tirilo</strong>. Este sistema foi desenhado para ser o seu braço direito tecnológico, centralizando a gestão dos seus atendimentos, recursos, infraestrutura da clínica e, mais importante, o prontuário automatizado dos seus pacientes utilizando IA.</p>
+        </section>
+
+        <!-- 2. Meu Perfil -->
+        <section id="meu_perfil">
+            <h2><div class="icon-circle">👤</div> 2. Meu Perfil Profissional</h2>
+            <p>Seu perfil é a sua identificação no sistema. Mantenha-o sempre atualizado!</p>
+            <ul>
+                <li><strong>Acesso:</strong> Clique em "Meu Perfil" no menu lateral ou através do seu nome no topo.</li>
+                <li><strong>Especialidade:</strong> Indique sua área (Terapia Ocupacional, Fonoaudiologia, Psicologia, etc.). Isso ajuda o Prompts IA a personalizar as respostas de acordo com sua formação.</li>
+                <li><strong>Identificação Técnica:</strong> Preencha suas técnicas preferidas e informações de registro, garantindo que os cabeçalhos de todos os relatórios fiquem profissionais.</li>
+            </ul>
+        </section>
+
+        <!-- 3. Agenda -->
+        <section id="agenda">
+            <h2><div class="icon-circle">📅</div> 3. Agenda e Atendimento</h2>
+            <p>A Agenda é o coração da sua rotina diária e oferece recursos rápidos para preparar ou registrar sessões.</p>
+            
+            <div class="step-card">
+                <h3>O Fluxo de Atendimento a partir da Agenda</h3>
+                <p>Ao visualizar todos os agendamentos do dia ou semana, ao <strong>clicar sobre um agendamento específico</strong>, você encontra duas opções vitais:</p>
+                <ol>
+                    <li><strong>Gerar Plano de Atendimento:</strong> Antes da criança chegar, selecione esta opção, escolha um prompt de IA sugerido (ex: Plano Lúdico para Atenção Conjunta) e o sistema usará as informações e histórico do paciente para gerar a trilha sugerida de trabalho.</li>
+                    <li><strong>Fazer o Relatório de Evolução:</strong> Se o atendimento já foi realizado, basta clicar aqui e <strong>ditar ou digitar</strong> um resumo cru de tudo o que ocorreu (ex: "o joãozinho chorou, mas depois brincou de massinha e conseguimos foco por 5 minutos"). A IA irá pegar esse relato informal, cruzar com a anamnese, e elaborar um relatório clínico estruturado e formal para você revisar.</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- 4. Pacientes -->
+        <section id="pacientes">
+            <h2><div class="icon-circle">👧</div> 4. Prontuário do Paciente</h2>
+            <p>O perfil de cada paciente contém diversas abas para visualização detalhada e sistêmica.</p>
+
+            <ul>
+                <li><strong>Dados Básicos:</strong> Informações unificadas, foto da criança e detalhes importantes de rápida visualização.</li>
+                <li><strong>Responsáveis:</strong> Permite cadastrar e manter os dados de contato, garantindo fácil acesso aos pais, avós ou tutores.</li>
+                <li><strong>Anamnese:</strong> Campos dinâmicos do histórico clínico. Note que <em>dependendo da especialidade dos terapeutas que atendem a criança</em>, alguns detalhes na anamnese poderão ser organizados em abas ou seções específicas para evitar mistura de dados entre TO e Fono, por exemplo.</li>
+                <li><strong>Terapeutas:</strong> Mostra exatamente quais outros profissionais da clínica também atendem este paciente, facilitando reuniões multidisciplinares.</li>
+                <li><strong>Relatórios:</strong> Aqui você consulta, altera e organiza todos os laudos e evoluções prévias. O sistema permite também disponibilizar estes arquivos de forma segura para a família.</li>
+                <li><strong>Planos IA:</strong> Central para leitura de todos os planos de sessão gerados para consulta futura.</li>
+            </ul>
+        </section>
+
+        <!-- 5. Terapeutas e Salas -->
+        <section id="infraestrutura">
+            <h2><div class="icon-circle">🏥</div> 5. Equipe e Salas</h2>
+            
+            <div class="step-card">
+                <h3>Terapeutas da Clínica</h3>
+                <p>No menu <strong>Equipe</strong>, você pode visualizar todos os terapeutas ativos na clínica, o que facilita o networking interno e identificação de encaminhamentos quando uma criança precisa de uma nova especialidade.</p>
+            </div>
+
+            <div class="step-card">
+                <h3>Salas de Atendimento</h3>
+                <p>Você pode acessar a gestão de infraestrutura em <strong>Salas</strong>. Aqui, os ambientes estão cadastrados com:</p>
+                <ul>
+                    <li>Qual o <strong>melhor uso</strong> para aquele ambiente (ex: Integração Sensorial, Sala de Escuta, Consultório Psicológico).</li>
+                    <li>Sinalização de <strong>Disponibilidade</strong> (livre, ocupada ou em manutenção).</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 6. Materiais e Recursos -->
+        <section id="materiais">
+            <h2><div class="icon-circle">🧩</div> 6. Inventário de Materiais</h2>
+            <p>O Tirilo revoluciona a forma como você escolhe recursos para a intervenção terapêutica.</p>
+
+            <div class="tip-box">
+                <strong>💡 Cadastro Automático com IA:</strong>
+                Ao invés de digitar nomes longos, <strong>basta tirar uma foto</strong> do brinquedo, jogo ou ferramental. A IA automaticamente o qualifica, sugerindo para que tipo de intervenção ele é mais apropriado, em que sala ele geralmente está localizado e marca seu estado de conservação atual. 
+                <br><br>
+                <em>Esses materiais qualificados serão posteriormente indicados automaticamente nos Planos de Atendimento sugeridos pela IA.</em>
+            </div>
+        </section>
+
+        <!-- 7. Assistente IA e Prompts -->
+        <section id="prompts">
+            <h2><div class="icon-circle">🧠</div> 7. Assistente IA & Configuração de Prompts</h2>
+            <p>O Assistente IA te permite ir muito além. Você pode configurar "receitas" (Prompts) para como a IA deve se comportar ao ler seus pacientes.</p>
+
+            <div class="tip-box" style="border-left-color: #f59e0b; background: #fffbeb;">
+                <strong style="color: #b45309;">🔒 Privacidade e Segurança (LGPD)</strong>
+                É muito importante ressaltar que <strong>o sistema mascara os dados sensíveis antes de enviá-los para a IA</strong>. A inteligência artificial lê nomes fictícios/ocultos e atua puramente focada no caso clínico, elaborando os planos e relatórios sem jamais saber a verdadeira identidade do paciente ou do terapeuta. Todo o dado real, íntegro e sigiloso fica retido dentro da segurança da clínica.
+            </div>
+
+            <h3>Criação e Clonagem</h3>
+            <p>Você pode criar um prompt do zero, ou mais fácil ainda: <strong>clonar</strong> o prompt de um colega da clínica que faz excelentes relatórios e alterá-lo com o "Seu Tempero".</p>
+
+            <h3>Chaves do Sistema (Variáveis Mágicas)</h3>
+            <p>Ao redigir as "Instruções" de como você quer que a IA resuma uma sessão, você pode usar as <span class="highlight">Chaves</span>. Quando a IA roda, ela substitui a chave pelo dado real da criança ou do seu perfil. As principais são:</p>
+            
+            <ul>
+                <li><span class="code-key">{{TERAPEUTA_NOME}}</span> e <span class="code-key">{{TERAPEUTA_FORMACAO}}</span>: Assinam o relatório por você.</li>
+                <li><span class="code-key">{{NOME}}</span> e <span class="code-key">{{IDADE}}</span>: Inseridos contextualmente no plano (ex: "Crie um jogo para {{NOME}}, de {{IDADE}}").</li>
+                <li><span class="code-key">{{DIAGNOSTICO}}</span>, <span class="code-key">{{PREFERENCIAS}}</span> e <span class="code-key">{{SENSIBILIDADES}}</span>: Utilizados para a IA adequar o plano evitando propostas desconfortáveis ao paciente.</li>
+                <li><span class="code-key">{{HISTORICO_RELATORIOS}}</span>: Fornece contexto contínuo, para que a IA não repita sessões.</li>
+                <li><span class="code-key">{{RELATO_SESSAO}}</span>: Onde cai o texto não formatado/áudio que você ditou pós-sessão na aba de Agenda.</li>
+                <li><span class="code-key">{{RECURSOS_LISTA}}</span>: Informa a IA de todo o seu acervo de brinquedos cadastrados, forçando-a a montar planos <strong>apenas</strong> com o que a clínica possui.</li>
+            </ul>
+        </section>
+
+        <!-- 8. Suporte e Convênios -->
+        <section id="gestao_extras">
+            <h2><div class="icon-circle">⚙️</div> 8. Administração e Suporte</h2>
+            
+            <div class="step-card">
+                <h3>Suporte (Help Desk)</h3>
+                <p>Encontrou um erro no sistema (bug) ou quer fazer uma sugestão de melhoria? Acesse <strong>Suporte</strong>.</p>
+                <p>Basta abrir um novo <strong>Chamado</strong>. Nele você descreve o ocorrido (se possível anexe tela) e poderá acompanhar as interações dos desenvolvedores ou gestores até o status mudar para "Concluído".</p>
+            </div>
+
+            <div class="step-card">
+                <h3>Convênios</h3>
+                <p>Se a clínica faturar por planos de saúde, no menu <strong>Convênios</strong> você poderá visualizar os parâmetros, guias aprovadas para determinado paciente e administrar eventuais atualizações nessas métricas (o fluxo pode variar de acordo com o cargo liberação entre Recepção e Terapeuta).</p>
+            </div>
+        </section>
+
+        <!-- 9. Financeiro -->
+        <section id="financeiro">
+            <h2><div class="icon-circle">💰</div> 9. Financeiro do Atendimento</h2>
+            <p>O foco financeiro no perfil do Terapeuta é garantir que todas as sessões ou pacotes sejam devidamente sinalizados como pagos pelos responsáveis (caso este seja seu fluxo operativo com consultas privadas).</p>
+
+            <ol>
+                <li>Acesse <strong>Financeiro > Contas a Receber</strong>.</li>
+                <li>Identifique o título referente ao seu atendimento.</li>
+                <li>Se o paciente fez o pagamento no ato (Pix, Dinheiro, Cartão), consulte o lançamento e clique em <span class="highlight">"Quitar" (Dar Baixa)</span>.</li>
+            </ol>
+
+            <div class="tip-box">
+                <strong>Organização Automática:</strong> Ao dar baixa, a recepcionista ou gestor da clínica visualiza imediatamente que aquele caixa já foi recebido, dispensando trocas exaustivas de mensagens.
+            </div>
+        </section>
+
+        <footer>
+            <p>© 2026 SaaS Tirilo - Sistema de Apoio ao Desenvolvimento Infantil</p>
+            <p><em>Este manual é um documento interno e contém diretrizes operacionais.</em></p>
+        </footer>
+    </div>
+
+</body>
+</html>

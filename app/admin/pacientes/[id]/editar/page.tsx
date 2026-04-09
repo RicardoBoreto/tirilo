@@ -128,6 +128,9 @@ export default function EditarPacientePage({ params }: { params: Promise<{ id: s
                         onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                     />
+                    <p className="text-xs text-amber-600 dark:text-amber-500 mt-2 font-medium">
+                        💡 Dica: No celular, toque no "Mês/Ano" no topo do calendário para selecionar o ano rapidamente sem precisar rolar os meses.
+                    </p>
                 </div>
 
                 <div className="col-span-2 space-y-4">
