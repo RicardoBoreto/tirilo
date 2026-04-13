@@ -24,15 +24,18 @@ Acesse o dashboard do Supabase e localize a tabela:
 
 ---
 
-## 3. Modelos Suportados (Março 2026)
+## 3. Modelos Suportados (Abril 2026)
 
-Atualmente, o Tirilo está otimizado para a família Gemini 3.1:
+> [!CAUTION]
+> **MODELOS DESATIVADOS PELO GOOGLE**: As versões Gemini 1.5 e Gemini 2.5 foram permanentemente desativadas pela Google em 1º de Junho de 2026 (ou em fase final de desligamento). **NÃO TENTE REVERTER PARA ESTES MODELOS**, pois as requisições falharão com erro 503 ou 404.
 
-- `gemini-3.1-flash-lite-preview`: Modelo atual de alta performance e baixo custo (padrão).
-- `gemini-1.5-flash`: Modelo estável anterior (fallback secundário).
+Atualmente, o Tirilo é exclusivo para a família Gemini 3.1 ou superior:
+
+- `gemini-3.1-flash-lite-preview`: Modelo padrão de alta velocidade e baixo custo.
+- `gemini-3.1-pro-preview`: Modelo de alta inteligência para casos clínicos complexos.
 
 > [!IMPORTANT]
-> Sempre use o sufixo `-preview` para modelos em fase beta/preview conforme exigido pela API do Google.
+> A partir da versão 3.1, o sistema exige a **Ciclagem de Assinaturas de Pensamento** (Thought Signatures) para manter o raciocínio em chats de refinamento. O Tirilo já lida com isso automaticamente.
 
 ---
 

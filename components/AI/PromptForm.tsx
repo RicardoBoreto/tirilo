@@ -173,13 +173,14 @@ export default function PromptForm({
 
                             <div className="space-y-2">
                                 <Label>Modelo Gemini</Label>
-                                <Select name="modelo_gemini" defaultValue={data.modelo_gemini || 'gemini-2.5-flash'} disabled={readOnly}>
+                                <Select name="modelo_gemini" defaultValue={data.modelo_gemini || ''} disabled={readOnly}>
                                     <SelectTrigger className="rounded-xl">
-                                        <SelectValue />
+                                        <SelectValue placeholder="Selecione o modelo" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash (Novo)</SelectItem>
-                                        <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro (Legado)</SelectItem>
+                                        <SelectItem value="default">Padrão do Sistema (Automático / Gemini 3.1)</SelectItem>
+                                        <SelectItem value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite (Velocidade)</SelectItem>
+                                        <SelectItem value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Alta Performance)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

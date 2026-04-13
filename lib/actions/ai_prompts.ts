@@ -154,7 +154,7 @@ export async function createPrompt(formData: FormData) {
         nome_prompt: formData.get('nome_prompt') as string,
         descricao: formData.get('descricao') as string,
         prompt_texto: formData.get('prompt_texto') as string,
-        modelo_gemini: formData.get('modelo_gemini') as string || 'gemini-2.5-flash',
+        modelo_gemini: (formData.get('modelo_gemini') as string) === 'default' ? '' : (formData.get('modelo_gemini') as string || ''),
         temperatura: Number(formData.get('temperatura')) || 0.7,
         categoria: formData.get('categoria') as string || 'plano',
         ativo: true,
@@ -194,7 +194,7 @@ export async function updatePrompt(id: number, formData: FormData) {
         nome_prompt: formData.get('nome_prompt') as string,
         descricao: formData.get('descricao') as string,
         prompt_texto: formData.get('prompt_texto') as string,
-        modelo_gemini: formData.get('modelo_gemini') as string,
+        modelo_gemini: (formData.get('modelo_gemini') as string) === 'default' ? '' : (formData.get('modelo_gemini') as string),
         temperatura: Number(formData.get('temperatura')),
         categoria: formData.get('categoria') as string || 'plano',
         ativo: formData.get('ativo') === 'true'
