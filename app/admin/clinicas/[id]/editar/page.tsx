@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import EditClinicaForm from '@/components/EditClinicaForm'
 import InviteUserDialog from '@/components/InviteUserDialog'
+import ChangePasswordAdminDialog from '@/components/ChangePasswordAdminDialog'
+
 
 export default async function EditClinicaPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
@@ -55,6 +57,10 @@ export default async function EditClinicaPage({ params }: { params: Promise<{ id
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Criado em
                                     </th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        Ações
+                                    </th>
+
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -87,6 +93,13 @@ export default async function EditClinicaPage({ params }: { params: Promise<{ id
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                 {new Date(user.created_at).toLocaleDateString('pt-BR')}
                                             </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <ChangePasswordAdminDialog 
+                                                    userId={user.id} 
+                                                    userName={user.nome_completo} 
+                                                />
+                                            </td>
+
                                         </tr>
                                     ))
                                 )}
