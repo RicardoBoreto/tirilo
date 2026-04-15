@@ -163,10 +163,9 @@ SaaS_tirilo_v2/
 - [x] Loja de Habilidades e Jogos para Clínicas (SaaS)
 
 ### ✅ Módulo Clínico
-- [x] Gestão de Pacientes
-- [x] Vínculo Paciente-Terapeuta
 - [x] Agendamento de Sessões
 - [x] Prontuário Eletrônico (Básico)
+- [x] **Gestão de Equipe**: Administradores de clínica agora podem gerenciar membros e redefinir suas senhas.
 
 ### 🤖 Módulo IA & Assistente Clínico
 - [x] **Geração de Planos de Intervenção**: IA cria planos personalizados baseados na anamnese e histórico.
@@ -191,7 +190,15 @@ SaaS_tirilo_v2/
 | `/admin/clinicas` | Lista de clínicas | Protegido |
 | `/admin/clinicas/nova` | Criar nova clínica | Protegido |
 | `/admin/clinicas/[id]` | Ver detalhes da clínica | Protegido |
-| `/admin/clinicas/[id]/editar` | Editar clínica | Protegido |
+| `/admin/clinicas/[id]/editar` | Editar clínica e equipe | Protegido |
+
+## 🛡️ Arquitetura de Segurança (v1.12+)
+
+O sistema utiliza uma arquitetura de isolamento baseada em **Row Level Security (RLS)** e funções auxiliares para garantir a privacidade dos dados:
+
+- **Isolamento de Clínica**: Todos os dados (pacientes, agendas, relatórios) são filtrados pela função `get_my_clinic_id()`, garantindo que um usuário nunca veja dados de outra organização.
+- **Isolamento de Terapeuta**: Terapeutas possuem visão restrita aos pacientes explicitamente vinculados a eles em `pacientes_terapeutas`.
+- **Prevenção de Recursão**: Políticas otimizadas para evitar loops de segurança no banco de dados.
 
 ## 🔒 Row Level Security (RLS)
 
@@ -281,7 +288,7 @@ SUPABASE_SERVICE_ROLE_KEY=sua_chave_service_role
 - [ ] Filtros avançados
 - [ ] Dashboard com métricas
 - [ ] Multi-tenancy com isolamento por clínica
-- [ ] Gestão de usuários por clínica
+- [x] Gestão de usuários por clínica
 - [ ] Histórico de alterações
 - [ ] Notificações por email
 

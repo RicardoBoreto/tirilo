@@ -665,8 +665,18 @@ CREATE TABLE public.saas_integracoes_google (
 );
 
 -- ----------------------------------------------------------------------------
--- 10. PERMISSÕES BÁSICAS & SEGURANÇA (RLS)
+-- 10. FUNÇÕES AUXILIARES & SEGURANÇA (RLS)
 -- ----------------------------------------------------------------------------
+
+-- Função para capturar a clínica do usuário logado (usada em RLS)
+CREATE OR REPLACE FUNCTION get_my_clinic_id()
+RETURNS BIGINT
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+    SELECT id_clinica FROM public.usuarios WHERE id = auth.uid();
+$$;
 
 -- Garantir acesso ao schema public
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
@@ -674,7 +684,10 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
 
--- Habilitar RLS
+-- Habilitar RLS em tabelas críticas
+ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pacientes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pacientes_terapeutas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saas_operadoras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saas_diretrizes_ai ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saas_config_global ENABLE ROW LEVEL SECURITY;
@@ -683,27 +696,30 @@ ALTER TABLE public.saas_integracoes_google ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saas_frota_robos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saas_perfis_robo ENABLE ROW LEVEL SECURITY;
 
+-- 10.1 POLÍTICAS: USUARIOS
+CREATE POLICY "allow_read_authenticated" ON public.usuarios FOR SELECT TO authenticated USING (true);
+CREATE POLICY "allow_update_own_profile" ON public.usuarios FOR UPDATE USING (id = auth.uid());
 
--- Políticas de Segurança
-CREATE POLICY "Apenas autenticados" ON public.saas_operadoras FOR ALL TO authenticated USING (true);
+-- 10.2 POLÍTICAS: PACIENTES (Isolamento por Clínica)
+CREATE POLICY "isolate_by_clinic_select" ON public.pacientes FOR SELECT USING (id_clinica = get_my_clinic_id());
+CREATE POLICY "isolate_by_clinic_insert" ON public.pacientes FOR INSERT WITH CHECK (id_clinica = get_my_clinic_id());
+CREATE POLICY "isolate_by_clinic_update" ON public.pacientes FOR UPDATE USING (id_clinica = get_my_clinic_id());
 
-CREATE POLICY "Prompts Policy Select" ON prompts_ia FOR SELECT USING (id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid()));
-CREATE POLICY "Prompts Policy Insert" ON prompts_ia FOR INSERT WITH CHECK (id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid()));
-CREATE POLICY "Prompts Policy Update" ON prompts_ia FOR UPDATE USING (id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid()) AND (terapeuta_id = auth.uid() OR EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND tipo_perfil != 'terapeuta')));
-CREATE POLICY "Prompts Policy Delete" ON prompts_ia FOR DELETE USING (id_clinica IN (SELECT id_clinica FROM usuarios WHERE id = auth.uid()) AND (terapeuta_id = auth.uid() OR EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND tipo_perfil != 'terapeuta')));
+-- 10.3 POLÍTICAS: VÍNCULOS (Terapeuta vê apenas seus próprios vínculos)
+CREATE POLICY "terapeutas_view_own_relationships" ON public.pacientes_terapeutas FOR SELECT USING (terapeuta_id = auth.uid());
+CREATE POLICY "admin_manage_relationships" ON public.pacientes_terapeutas FOR ALL TO authenticated 
+USING (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND tipo_perfil = 'admin'));
 
-CREATE POLICY "Diretrizes Policy Select Public" ON saas_diretrizes_ai FOR SELECT USING (true);
-CREATE POLICY "Diretrizes Policy Admin" ON saas_diretrizes_ai FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND id_clinica IS NULL));
+-- 10.4 POLÍTICAS: PROMPTS IA
+CREATE POLICY "Prompts Policy Select" ON prompts_ia FOR SELECT USING (id_clinica = get_my_clinic_id());
+CREATE POLICY "Prompts Policy Insert" ON prompts_ia FOR INSERT WITH CHECK (id_clinica = get_my_clinic_id());
 
-CREATE POLICY "Leitura pública para robôs" ON public.saas_config_global FOR SELECT USING (true);
-
-CREATE POLICY "Users can manage their own google tokens" ON public.saas_integracoes_google FOR ALL USING (auth.uid() = user_id);
-
+-- 10.5 POLÍTICAS: ROBÔS E GERAL
 CREATE POLICY "frota_select_all" ON public.saas_frota_robos FOR SELECT USING (true);
 CREATE POLICY "robots_can_update_own_firmware" ON public.saas_frota_robos FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "admins_manage_frota" ON public.saas_frota_robos FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
+CREATE POLICY "Users can manage their own google tokens" ON public.saas_integracoes_google FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Leitura pública para robôs config" ON public.saas_config_global FOR SELECT USING (true);
 CREATE POLICY "Perfis leitura anon" ON public.saas_perfis_robo FOR SELECT USING (true);
-CREATE POLICY "Perfis gestao autenticados" ON public.saas_perfis_robo FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Diretrizes Policy Admin" ON saas_diretrizes_ai FOR ALL TO authenticated USING (get_my_clinic_id() IS NULL);
 
 
