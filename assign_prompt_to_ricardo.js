@@ -19,7 +19,7 @@ async function run() {
     const { data: users } = await supabase
         .from('usuarios')
         .select('id, nome_completo, email')
-        .eq('email', 'ricardo@acolherjp.com.br')
+        .eq('email', 'ricardo@clinicaacolher.com.br')
         .single()
 
     if (!users) {
