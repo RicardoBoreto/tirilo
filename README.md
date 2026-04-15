@@ -165,7 +165,10 @@ SaaS_tirilo_v2/
 ### ✅ Módulo Clínico
 - [x] Agendamento de Sessões
 - [x] Prontuário Eletrônico (Básico)
-- [x] **Gestão de Equipe**: Administradores de clínica agora podem gerenciar membros e redefinir suas senhas.
+- [x] **Gestão de Equipe & Recepção (v1.13)**: 
+  - Perfil de **Recepção** com autonomia para gerenciar agendas de toda a clínica.
+  - Restrição de acesso a dados clínicos (prontuários/IA) para não-terapeutas.
+  - Gestores podem gerenciar membros e redefinir suas senhas.
 
 ### 🤖 Módulo IA & Assistente Clínico
 - [x] **Geração de Planos de Intervenção**: IA cria planos personalizados baseados na anamnese e histórico.
@@ -179,6 +182,7 @@ SaaS_tirilo_v2/
 - [x] **Segurança & Privacidade**:
   - **Anonimização Automática**: Nomes reais (paciente/terapeuta) são substituídos por codinomes ("HORACE", "SAM") antes de enviar para a IA (Gemini), garantindo conformidade com LGPD/HIPAA.
   - Deanonimização automática na volta para o frontend.
+  - **Busca & Filtros (v1.13)**: Busca dinâmica de pacientes por nome (client-side) para alta performance.
 
 ## 🎨 Páginas Disponíveis
 
@@ -191,8 +195,9 @@ SaaS_tirilo_v2/
 | `/admin/clinicas/nova` | Criar nova clínica | Protegido |
 | `/admin/clinicas/[id]` | Ver detalhes da clínica | Protegido |
 | `/admin/clinicas/[id]/editar` | Editar clínica e equipe | Protegido |
+| `/admin/agenda` | Gestão de Agenda (v1.13) | Recepção / Admin / Terapeuta |
 
-## 🛡️ Arquitetura de Segurança (v1.12+)
+## 🛡️ Arquitetura de Segurança (v1.13)
 
 O sistema utiliza uma arquitetura de isolamento baseada em **Row Level Security (RLS)** e funções auxiliares para garantir a privacidade dos dados:
 

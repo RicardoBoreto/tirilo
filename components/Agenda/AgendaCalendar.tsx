@@ -19,11 +19,12 @@ import GoogleSyncButton from './GoogleSyncButton'
 
 interface AgendaCalendarProps {
     agendamentos: Agendamento[]
+    userProfile: any
 }
 
 type ViewMode = 'day' | 'week' | 'month'
 
-export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
+export default function AgendaCalendar({ agendamentos, userProfile }: AgendaCalendarProps) {
     const [currentDate, setCurrentDate] = useState(new Date())
     const [viewMode, setViewMode] = useState<ViewMode>('week')
     const [selectedDate, setSelectedDate] = useState(new Date())
@@ -405,6 +406,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                 selectedDate={selectedDate}
                 onSuccess={fetchAgendamentos}
                 agendamentoToEdit={agendamentoToEdit}
+                userProfile={userProfile}
             />
 
             <DetalhesAgendamento
@@ -417,6 +419,7 @@ export default function AgendaCalendar({ agendamentos }: AgendaCalendarProps) {
                 }}
                 onDeleteSuccess={fetchAgendamentos}
                 onUpdateSuccess={fetchAgendamentos}
+                userProfile={userProfile}
             />
         </div>
     )

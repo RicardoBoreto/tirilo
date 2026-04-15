@@ -135,82 +135,84 @@ export default function EquipeManager({ initialEquipe, currentUserRole }: { init
                         </TabsList>
                     </Tabs>
 
-                    <Dialog open={open} onOpenChange={setOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="rounded-xl shadow-lg shadow-primary/20 whitespace-nowrap">
-                                <Plus className="w-5 h-5 mr-2" />
-                                Novo Membro
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[500px]">
-                            <DialogHeader>
-                                <DialogTitle>Adicionar Novo Membro</DialogTitle>
-                            </DialogHeader>
-                            <form action={handleSubmit} className="space-y-4 mt-4">
-                                <div className="space-y-2">
-                                    <Label>Nome Completo</Label>
-                                    <Input name="nome" required placeholder="Ex: Maria Silva" />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>Email de Acesso</Label>
-                                    <Input name="email" type="email" required placeholder="maria@clinica.com" />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>Apelido / Nome Curto</Label>
-                                    <Input name="apelido" placeholder="Ex: Dra. Maria, Mari" />
-                                    <p className="text-xs text-gray-500">Nome curto para exibição (opcional)</p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
+                    {currentUserRole !== 'recepcao' && (
+                        <Dialog open={open} onOpenChange={setOpen}>
+                            <DialogTrigger asChild>
+                                <Button className="rounded-xl shadow-lg shadow-primary/20 whitespace-nowrap">
+                                    <Plus className="w-5 h-5 mr-2" />
+                                    Novo Membro
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[500px]">
+                                <DialogHeader>
+                                    <DialogTitle>Adicionar Novo Membro</DialogTitle>
+                                </DialogHeader>
+                                <form action={handleSubmit} className="space-y-4 mt-4">
                                     <div className="space-y-2">
-                                        <Label>Função / Cargo</Label>
-                                        <Select
-                                            name="tipo_perfil"
-                                            defaultValue="recepcao"
-                                            onValueChange={(val: any) => setSelectedRole(val)}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="recepcao">Recepção / Secretaria</SelectItem>
-                                                <SelectItem value="financeiro">Financeiro / Admin</SelectItem>
-                                                <SelectItem value="terapeuta">Terapeuta</SelectItem>
-                                                <SelectItem value="admin">Administrador</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <Label>Nome Completo</Label>
+                                        <Input name="nome" required placeholder="Ex: Maria Silva" />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label>Telefone / WhatsApp</Label>
-                                        <Input name="telefone" placeholder="(11) 99999-9999" />
-                                    </div>
-                                </div>
 
-                                {selectedRole === 'terapeuta' && (
-                                    <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
-                                        <p className="text-xs font-medium text-primary uppercase">Dados do Terapeuta</p>
+                                    <div className="space-y-2">
+                                        <Label>Email de Acesso</Label>
+                                        <Input name="email" type="email" required placeholder="maria@clinica.com" />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Apelido / Nome Curto</Label>
+                                        <Input name="apelido" placeholder="Ex: Dra. Maria, Mari" />
+                                        <p className="text-xs text-gray-500">Nome curto para exibição (opcional)</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label>Registro Profissional (CRP/CRM/Etc)</Label>
-                                            <Input name="registro_profissional" placeholder="Ex: 12345/SP" />
+                                            <Label>Função / Cargo</Label>
+                                            <Select
+                                                name="tipo_perfil"
+                                                defaultValue="recepcao"
+                                                onValueChange={(val: any) => setSelectedRole(val)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="recepcao">Recepção / Secretaria</SelectItem>
+                                                    <SelectItem value="financeiro">Financeiro / Admin</SelectItem>
+                                                    <SelectItem value="terapeuta">Terapeuta</SelectItem>
+                                                    <SelectItem value="admin">Administrador</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label>Especialidade Principal</Label>
-                                            <Input name="especialidade" placeholder="Ex: Psicologia Infantil" />
+                                            <Label>Telefone / WhatsApp</Label>
+                                            <Input name="telefone" placeholder="(11) 99999-9999" />
                                         </div>
                                     </div>
-                                )}
 
-                                <div className="flex justify-end gap-2 pt-4">
-                                    <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                                    <Button type="submit" disabled={loading}>
-                                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cadastrar Membro'}
-                                    </Button>
-                                </div>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                                    {selectedRole === 'terapeuta' && (
+                                        <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
+                                            <p className="text-xs font-medium text-primary uppercase">Dados do Terapeuta</p>
+                                            <div className="space-y-2">
+                                                <Label>Registro Profissional (CRP/CRM/Etc)</Label>
+                                                <Input name="registro_profissional" placeholder="Ex: 12345/SP" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Especialidade Principal</Label>
+                                                <Input name="especialidade" placeholder="Ex: Psicologia Infantil" />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-end gap-2 pt-4">
+                                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+                                        <Button type="submit" disabled={loading}>
+                                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cadastrar Membro'}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    )}
 
                     {/* Edit Dialog */}
                     <Dialog open={editOpen} onOpenChange={setEditOpen}>
@@ -298,43 +300,45 @@ export default function EquipeManager({ initialEquipe, currentUserRole }: { init
                 {filteredEquipe.map((membro) => (
                     <div key={membro.id} className={`bg-white dark:bg-gray-800 p-6 rounded-2xl border shadow-sm hover:shadow-md transition-all group relative ${membro.ativo === false ? 'opacity-60 border-gray-200 bg-gray-50' : 'border-gray-100 dark:border-gray-700'}`}>
 
-                        <div className="absolute top-4 right-4">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <div
-                                        role="button"
-                                        tabIndex={0}
-                                        className="inline-flex items-center justify-center h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                                    >
-                                        <MoreVertical className="w-4 h-4 text-gray-400" />
-                                    </div>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => handleEdit(membro)}>
-                                        <UserCog className="w-4 h-4 mr-2" />
-                                        Editar Dados
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                        onClick={() => handleToggleStatus(membro.id, membro.ativo !== false)}
-                                        className={membro.ativo !== false ? "text-red-600 focus:text-red-600" : "text-green-600 focus:text-green-600"}
-                                    >
-                                        {membro.ativo !== false ? (
-                                            <>
-                                                <Ban className="w-4 h-4 mr-2" />
-                                                Inativar Acesso
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CheckCircle className="w-4 h-4 mr-2" />
-                                                Reativar Acesso
-                                            </>
-                                        )}
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
+                        {currentUserRole !== 'recepcao' && (
+                            <div className="absolute top-4 right-4">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <div
+                                            role="button"
+                                            tabIndex={0}
+                                            className="inline-flex items-center justify-center h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                                        >
+                                            <MoreVertical className="w-4 h-4 text-gray-400" />
+                                        </div>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                        <DropdownMenuItem onClick={() => handleEdit(membro)}>
+                                            <UserCog className="w-4 h-4 mr-2" />
+                                            Editar Dados
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            onClick={() => handleToggleStatus(membro.id, membro.ativo !== false)}
+                                            className={membro.ativo !== false ? "text-red-600 focus:text-red-600" : "text-green-600 focus:text-green-600"}
+                                        >
+                                            {membro.ativo !== false ? (
+                                                <>
+                                                    <Ban className="w-4 h-4 mr-2" />
+                                                    Inativar Acesso
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                                    Reativar Acesso
+                                                </>
+                                            )}
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        )}
 
                         <div className="flex items-start justify-between mb-4 pr-8">
                             {membro.foto_url ? (

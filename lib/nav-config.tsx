@@ -136,6 +136,7 @@ export function getSidebarLinks(
             if (link.href === '/admin/prompts-ia') return false
             if (link.href === '/admin/configuracoes') return false
             if (link.href === '/admin/financeiro') return false
+            if (link.href === '/admin/loja') return false
         }
 
 

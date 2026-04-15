@@ -52,10 +52,16 @@ SaaS_tirilo_v2/
 │                   └── page.tsx        # ✏️ Editar clínica
 │
 ├── 🧩 components/
-│   ├── Sidebar.tsx                     # Navegação lateral
+│   ├── Sidebar.tsx                     # Navegação lateral (Menu Mestre)
+│   ├── ClinicSidebar.tsx               # Navegação lateral (Menu Clínica)
 │   ├── Header.tsx                      # Cabeçalho com logout
-│   ├── ClinicasList.tsx                # Lista com busca
-│   └── EditClinicaForm.tsx             # Formulário de edição
+│   ├── EquipeManager.tsx               # Gestão de equipe (Papéis)
+│   ├── Pacientes/
+│   │   ├── PatientsList.tsx            # Lista inteligente com busca
+│   │   └── PacienteRow.tsx             # Linha do paciente
+│   └── Agenda/
+│       ├── AgendaCalendar.tsx          # Calendário operacional
+│       └── NovoAgendamentoForm.tsx     # Agendamento multi-terapeuta
 │
 ├── 🔧 lib/
 │   └── supabase/
@@ -88,9 +94,9 @@ SaaS_tirilo_v2/
 | Componente | Tipo | Responsabilidade |
 |------------|------|------------------|
 | `Sidebar.tsx` | Client | Navegação lateral com links |
-| `Header.tsx` | Client | Cabeçalho com user info e logout |
-| `ClinicasList.tsx` | Client | Tabela com busca e filtros |
-| `EditClinicaForm.tsx` | Client | Formulário de edição + delete |
+| `EquipeManager.tsx` | Client | Gestão de perfis e acessos |
+| `PatientsList.tsx` | Client | Listagem com busca (v1.13) |
+| `AgendaCalendar.tsx` | Client | Gestão de horários clínica |
 
 ### 🔧 Utilitários (3)
 

@@ -119,7 +119,7 @@ export async function createAgendamento(formData: FormData) {
     const baseData = {
         id_clinica: userProfile.id_clinica,
         id_paciente: Number(formData.get('id_paciente')),
-        id_terapeuta: user.id,
+        id_terapeuta: formData.get('id_terapeuta') as string || user.id,
         id_sala: formData.get('id_sala') && formData.get('id_sala') !== '' ? Number(formData.get('id_sala')) : null,
         tipo_sessao: formData.get('tipo_sessao') as string,
         observacoes: formData.get('observacoes') as string || null,
@@ -204,6 +204,7 @@ export async function updateAgendamento(id: number, formData: FormData) {
 
     const agendamentoData = {
         id_paciente: Number(formData.get('id_paciente')),
+        id_terapeuta: formData.get('id_terapeuta') as string || undefined,
         id_sala: formData.get('id_sala') && formData.get('id_sala') !== '' ? Number(formData.get('id_sala')) : null,
         data_hora_inicio: dataInicio,
         data_hora_fim: dataFim,
@@ -278,13 +279,21 @@ export async function deleteAgendamento(id: number, deleteFuture: boolean) {
             return { success: false, error: 'Agendamento não encontrado' }
         }
 
-        const { data: deletedData, error } = await supabase
+        // Filter for deletion: if not admin/recepcao, only theirs.
+        const { data: userProfile } = await supabase.from('usuarios').select('tipo_perfil').eq('id', user.id).single()
+        const isAdminOrRecepcao = userProfile?.tipo_perfil === 'admin' || userProfile?.tipo_perfil === 'recepcao'
+
+        let deleteQuery = supabase
             .from('agendamentos')
             .delete()
             .eq('id_paciente', target.id_paciente)
-            .eq('id_terapeuta', user.id) // Ensure we only delete ours
             .gte('data_hora_inicio', target.data_hora_inicio)
-            .select('google_event_id')
+
+        if (!isAdminOrRecepcao) {
+            deleteQuery = deleteQuery.eq('id_terapeuta', user.id)
+        }
+
+        const { data: deletedData, error } = await deleteQuery.select('google_event_id')
 
         if (error) {
             console.error('Erro ao excluir agendamentos futuros:', error)
@@ -307,11 +316,17 @@ export async function deleteAgendamento(id: number, deleteFuture: boolean) {
             .eq('id', id)
             .single()
 
-        const { error } = await supabase
-            .from('agendamentos')
-            .delete()
-            .eq('id', id)
-            .eq('id_terapeuta', user.id) // Safety check
+        // Filter check for single delete
+        const { data: userProfile } = await supabase.from('usuarios').select('tipo_perfil').eq('id', user.id).single()
+        const isAdminOrRecepcao = userProfile?.tipo_perfil === 'admin' || userProfile?.tipo_perfil === 'recepcao'
+
+        let deleteQuery = supabase.from('agendamentos').delete().eq('id', id)
+
+        if (!isAdminOrRecepcao) {
+            deleteQuery = deleteQuery.eq('id_terapeuta', user.id)
+        }
+
+        const { error } = await deleteQuery
 
         if (!error && existing?.google_event_id) {
             await deleteGoogleEvent(user.id, existing.google_event_id)
@@ -333,7 +348,32 @@ export async function getMeusPacientes() {
 
     if (!user) return []
 
-    // Get patients linked to therapist
+    // Get user profile to check role
+    const { data: userProfile } = await supabase
+        .from('usuarios')
+        .select('tipo_perfil, id_clinica')
+        .eq('id', user.id)
+        .single()
+
+    if (!userProfile?.id_clinica) return []
+
+    // If admin or reception, return all clinic patients
+    if (userProfile.tipo_perfil === 'admin' || userProfile.tipo_perfil === 'recepcao') {
+        const { data, error } = await supabase
+            .from('pacientes')
+            .select('id, nome, foto_url')
+            .eq('id_clinica', userProfile.id_clinica)
+            .eq('ativo', true)
+            .order('nome')
+
+        if (error) {
+            console.error('Erro ao buscar todos os pacientes da clínica:', error)
+            return []
+        }
+        return data
+    }
+
+    // Default for therapists: Get only linked patients
     const { data, error } = await supabase
         .from('pacientes_terapeutas')
         .select(`

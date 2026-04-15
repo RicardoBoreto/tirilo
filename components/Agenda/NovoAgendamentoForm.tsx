@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createAgendamento, updateAgendamento, getMeusPacientes, Agendamento } from '@/lib/actions/agenda'
+import { getTerapeutas, MembroEquipe } from '@/lib/actions/equipe'
 import { getSalas, Sala } from '@/lib/actions/salas'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -20,16 +21,19 @@ interface NovoAgendamentoFormProps {
     selectedDate?: Date
     onSuccess?: () => void
     agendamentoToEdit?: Agendamento | null
+    userProfile?: any
 }
 
-export default function NovoAgendamentoForm({ trigger, open, onOpenChange, selectedDate, onSuccess, agendamentoToEdit }: NovoAgendamentoFormProps) {
+export default function NovoAgendamentoForm({ trigger, open, onOpenChange, selectedDate, onSuccess, agendamentoToEdit, userProfile }: NovoAgendamentoFormProps) {
     const [loading, setLoading] = useState(false)
     const [internalOpen, setInternalOpen] = useState(false)
     const [pacientes, setPacientes] = useState<any[]>([])
     const [salas, setSalas] = useState<Sala[]>([])
+    const [terapeutas, setTerapeutas] = useState<MembroEquipe[]>([])
 
     // Form state
     const [pacienteId, setPacienteId] = useState('')
+    const [idTerapeuta, setIdTerapeuta] = useState('')
     const [data, setData] = useState('')
     const [hora, setHora] = useState('')
     const [duracao, setDuracao] = useState('50')
@@ -48,6 +52,12 @@ export default function NovoAgendamentoForm({ trigger, open, onOpenChange, selec
             // Fetch data when modal opens
             getMeusPacientes().then(setPacientes)
             getSalas().then(setSalas)
+
+            const isAdminOrRecepcao = userProfile?.tipo_perfil === 'admin' || userProfile?.tipo_perfil === 'recepcao'
+            if (isAdminOrRecepcao) {
+                // @ts-ignore - MembroEquipe is compatible enough for display
+                getTerapeutas().then(setTerapeutas)
+            }
         }
     }, [isOpen])
 
@@ -63,6 +73,7 @@ export default function NovoAgendamentoForm({ trigger, open, onOpenChange, selec
             setSalaId(agendamentoToEdit.id_sala ? agendamentoToEdit.id_sala.toString() : '')
             setTipoSessao(agendamentoToEdit.tipo_sessao)
             setObservacoes(agendamentoToEdit.observacoes || '')
+            setIdTerapeuta(agendamentoToEdit.id_terapeuta)
         } else if (selectedDate) {
             setData(format(selectedDate, 'yyyy-MM-dd'))
             setHora(format(selectedDate, 'HH:mm'))
@@ -71,6 +82,7 @@ export default function NovoAgendamentoForm({ trigger, open, onOpenChange, selec
                 setPacienteId('')
                 setSalaId('')
                 setObservacoes('')
+                setIdTerapeuta(userProfile?.id || '')
             }
         } else {
             // Defaults for new without selected date
@@ -94,6 +106,7 @@ export default function NovoAgendamentoForm({ trigger, open, onOpenChange, selec
             formData.append('id_sala', salaId)
             formData.append('tipo_sessao', tipoSessao)
             formData.append('observacoes', observacoes)
+            formData.append('id_terapeuta', idTerapeuta)
             formData.append('recorrencia', recorrencia.toString())
             formData.append('recorrencia_fim', recorrenciaFim)
 
@@ -154,6 +167,24 @@ export default function NovoAgendamentoForm({ trigger, open, onOpenChange, selec
                             </SelectContent>
                         </Select>
                     </div>
+
+                    {(userProfile?.tipo_perfil === 'admin' || userProfile?.tipo_perfil === 'recepcao') && (
+                        <div className="space-y-2">
+                            <Label>Terapeuta *</Label>
+                            <Select value={idTerapeuta} onValueChange={setIdTerapeuta} required>
+                                <SelectTrigger className="rounded-xl h-12">
+                                    <SelectValue placeholder="Selecione o terapeuta" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {terapeutas.map(t => (
+                                        <SelectItem key={t.id} value={t.id}>
+                                            {t.nome_completo}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">

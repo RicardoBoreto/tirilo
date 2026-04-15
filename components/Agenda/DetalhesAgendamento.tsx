@@ -19,9 +19,10 @@ interface DetalhesAgendamentoProps {
     onEdit?: (agendamento: Agendamento) => void
     onDeleteSuccess?: () => void
     onUpdateSuccess?: () => void
+    userProfile?: any
 }
 
-export default function DetalhesAgendamento({ agendamento, open, onOpenChange, onEdit, onDeleteSuccess, onUpdateSuccess }: DetalhesAgendamentoProps) {
+export default function DetalhesAgendamento({ agendamento, open, onOpenChange, onEdit, onDeleteSuccess, onUpdateSuccess, userProfile }: DetalhesAgendamentoProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [showRelatorioModal, setShowRelatorioModal] = useState(false)
 
@@ -112,6 +113,15 @@ export default function DetalhesAgendamento({ agendamento, open, onOpenChange, o
                                 </p>
                             </div>
                         </div>
+                        <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                            <User className="w-5 h-5 text-primary" />
+                            <div>
+                                <p className="text-xs text-gray-400">Terapeuta</p>
+                                <p className="font-medium">
+                                    {agendamento.terapeuta?.nome_completo || 'Não informado'}
+                                </p>
+                            </div>
+                        </div>
                         {agendamento.sala && (
                             <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300 col-span-2">
                                 <MapPin className="w-5 h-5 text-primary" />
@@ -139,15 +149,19 @@ export default function DetalhesAgendamento({ agendamento, open, onOpenChange, o
                     )}
 
                     <div className="grid grid-cols-1 gap-3">
-                        <GerarPlanoModal pacienteId={agendamento.id_paciente} />
+                        {userProfile?.tipo_perfil !== 'recepcao' && (
+                            <>
+                                <GerarPlanoModal pacienteId={agendamento.id_paciente} />
 
-                        <Button
-                            className="h-14 rounded-2xl text-lg font-bold shadow-lg shadow-emerald-500/20 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
-                            onClick={() => setShowRelatorioModal(true)}
-                        >
-                            <Sparkles className="w-6 h-6 mr-2 fill-current" />
-                            Registrar Atendimento (IA)
-                        </Button>
+                                <Button
+                                    className="h-14 rounded-2xl text-lg font-bold shadow-lg shadow-emerald-500/20 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
+                                    onClick={() => setShowRelatorioModal(true)}
+                                >
+                                    <Sparkles className="w-6 h-6 mr-2 fill-current" />
+                                    Registrar Atendimento (IA)
+                                </Button>
+                            </>
+                        )}
 
                         <div className="grid grid-cols-2 gap-3">
                             <Button
