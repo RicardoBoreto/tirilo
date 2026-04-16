@@ -1,7 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import fs from 'fs'
 import path from 'path'
 
@@ -11,18 +10,44 @@ export async function generateBackup() {
 
     if (!user) return { error: 'Não autorizado' }
 
-    // Fetch user profile to get clinic_id
+    // Fetch user profile to check if Super Admin
     const { data: userProfile } = await supabase
         .from('usuarios')
         .select('id_clinica, tipo_perfil')
         .eq('id', user.id)
         .single()
 
+    // Backup is only for Super Admins (those without a linked id_clinica)
     if (userProfile?.id_clinica) {
         return { error: 'Acesso negado. Apenas o administrador do SaaS pode realizar o backup completo do sistema.' }
     }
 
-    // Read Migrations
+    // Use ADMIN CLIENT to bypass RLS and get ALL data
+    const adminClient = await createAdminClient()
+
+    // 1. Get List of all Tables (Dynamic)
+    let tablesToBackup: string[] = []
+    const { data: tablesData, error: tablesError } = await adminClient.rpc('get_public_tables')
+
+    if (tablesError) {
+        console.warn('Falha ao obter lista dinâmica de tabelas (RPC get_public_tables não encontrada?). Usando lista fixa de segurança.', tablesError)
+        // Fallback robusto caso a migration ainda não tenha sido aplicada
+        tablesToBackup = [
+            'saas_empresa', 'saas_clinicas', 'usuarios', 'terapeutas_curriculo',
+            'pacientes', 'pacientes_responsaveis', 'pacientes_terapeutas', 'pacientes_anamnese',
+            'responsaveis', 'agendamentos', 'financeiro_categorias', 'financeiro_lancamentos',
+            'saas_habilidades', 'saas_jogos', 'saas_jogos_habilidades', 'saas_jogos_versoes',
+            'saas_clinicas_jogos', 'saas_perfis_robo', 'saas_frota_robos', 'clinica_config_ia',
+            'saas_diretrizes_ai', 'saas_config_global', 'sessao_ludica', 'sessao_diario_bordo',
+            'sessao_telemetria', 'comandos_robo', 'prompts_ia', 'planos_intervencao_ia',
+            'relatorios_atendimento', 'saas_manutencoes_frota', 'contratos', 'salas_recursos',
+            'recursos', 'help_desk_tickets', 'help_desk_mensagens', 'saas_integracoes_google'
+        ]
+    } else {
+        tablesToBackup = tablesData.map((t: any) => t.table_name)
+    }
+
+    // 2. Read Migrations SQL Files
     const migrationsDir = path.join(process.cwd(), 'supabase', 'migrations')
     let migrations: { name: string, content: string }[] = []
 
@@ -36,134 +61,34 @@ export async function generateBackup() {
         }
     } catch (e) {
         console.error('Erro ao ler migrações:', e)
-        // Continue without migrations if fails
     }
 
-    // Master User - Fetch ALL data
-    const [
-        { data: saas_clinicas },
-        { data: usuarios },
-        { data: terapeutas_curriculo },
-        { data: responsaveis },
-        { data: pacientes },
-        { data: pacientes_responsaveis },
-        { data: pacientes_terapeutas },
-        { data: pacientes_anamnese },
-        { data: salas_recursos },
-        { data: agendamentos },
-        { data: relatorios_atendimento },
-        { data: prompts_ia },
-        { data: planos_intervencao_ia },
-        { data: help_desk_tickets },
-        { data: help_desk_mensagens },
-        { data: recursos },
-        { data: clinicas_salas },
-        // Games & Monetization
-        { data: saas_jogos },
-        { data: saas_jogos_versoes },
-        { data: saas_habilidades },
-        { data: saas_jogos_habilidades },
-        { data: saas_clinicas_jogos },
-        // Robotics
-        { data: saas_frota_robos },
-        { data: saas_manutencoes_frota },
-        { data: clinica_config_ia },
-        { data: comandos_robo },
-        { data: sessao_ludica },
-        { data: sessao_diario_bordo },
-        { data: sessao_telemetria },
-        // Financial (if any new tables were added recently like categories or accounts receivable, add here if they exist in schema)
-        // Checking TABELAS.sql... 'financeiro_categorias', 'financeiro_lancamentos', 'contratos'
-        { data: financeiro_categorias },
-        { data: financeiro_lancamentos },
-        { data: contratos },
-        { data: saas_empresa },
-        { data: saas_operadoras },
-        { data: saas_integracoes_google }
-    ] = await Promise.all([
-        supabase.from('saas_clinicas').select('*'),
-        supabase.from('usuarios').select('*'),
-        supabase.from('terapeutas_curriculo').select('*'),
-        supabase.from('responsaveis').select('*'),
-        supabase.from('pacientes').select('*'),
-        supabase.from('pacientes_responsaveis').select('*'),
-        supabase.from('pacientes_terapeutas').select('*'),
-        supabase.from('pacientes_anamnese').select('*'),
-        supabase.from('salas_recursos').select('*'),
-        supabase.from('agendamentos').select('*'),
-        supabase.from('relatorios_atendimento').select('*'),
-        supabase.from('prompts_ia').select('*'),
-        supabase.from('planos_intervencao_ia').select('*'),
-        supabase.from('help_desk_tickets').select('*'),
-        supabase.from('help_desk_mensagens').select('*'),
-        supabase.from('recursos').select('*'),
-        supabase.from('clinicas_salas').select('*'),
-
-        supabase.from('saas_jogos').select('*'),
-        supabase.from('saas_habilidades').select('*'),
-        supabase.from('saas_jogos_habilidades').select('*'),
-        supabase.from('saas_jogos_versoes').select('*'),
-        supabase.from('saas_clinicas_jogos').select('*'),
-
-        supabase.from('saas_frota_robos').select('*'),
-        supabase.from('saas_manutencoes_frota').select('*'),
-        supabase.from('clinica_config_ia').select('*'),
-        supabase.from('comandos_robo').select('*'),
-        supabase.from('sessao_ludica').select('*'),
-        supabase.from('sessao_diario_bordo').select('*'),
-        supabase.from('sessao_telemetria').select('*'),
-
-        supabase.from('financeiro_categorias').select('*'),
-        supabase.from('financeiro_lancamentos').select('*'),
-        supabase.from('contratos').select('*'),
-        supabase.from('saas_empresa').select('*'),
-        supabase.from('saas_operadoras').select('*'),
-        supabase.from('saas_integracoes_google').select('*')
-    ])
+    // 3. Fetch ALL data from ALL tables dynamically
+    const backupDatos: Record<string, any[]> = {}
+    
+    // Process tables in chunks or parallel (using Promise.all for speed)
+    await Promise.all(tablesToBackup.map(async (table) => {
+        try {
+            const { data, error } = await adminClient.from(table).select('*')
+            if (error) {
+                console.error(`Erro ao fazer backup da tabela ${table}:`, error.message)
+                backupDatos[table] = [] // Record failure but continue
+            } else {
+                backupDatos[table] = data || []
+            }
+        } catch (e) {
+            console.error(`Erro fatal na tabela ${table}:`, e)
+            backupDatos[table] = []
+        }
+    }))
 
     const backupData = {
         timestamp: new Date().toISOString(),
-        type: 'FULL_SYSTEM_BACKUP',
+        type: 'DYNAMIC_FULL_SYSTEM_BACKUP',
+        version: '1.13.1',
+        total_tables: tablesToBackup.length,
         schema_migrations: migrations,
-        datos: {
-            saas_clinicas,
-            usuarios,
-            terapeutas_curriculo,
-            responsaveis,
-            pacientes,
-            pacientes_responsaveis,
-            pacientes_terapeutas,
-            pacientes_anamnese,
-            salas_recursos,
-            agendamentos,
-            relatorios_atendimento,
-            prompts_ia,
-            planos_intervencao_ia,
-            help_desk_tickets,
-            help_desk_mensagens,
-            recursos,
-            clinicas_salas,
-
-            // New Modules
-            saas_jogos,
-            saas_habilidades,
-            saas_jogos_habilidades,
-            saas_jogos_versoes,
-            saas_clinicas_jogos,
-            saas_frota_robos,
-            saas_manutencoes_frota,
-            clinica_config_ia,
-            comandos_robo,
-            sessao_ludica,
-            sessao_diario_bordo,
-            sessao_telemetria,
-            financeiro_categorias,
-            financeiro_lancamentos,
-            contratos,
-            saas_empresa,
-            saas_operadoras,
-            saas_integracoes_google
-        }
+        datos: backupDatos
     }
 
     return { data: backupData }

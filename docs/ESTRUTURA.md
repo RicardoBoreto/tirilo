@@ -69,8 +69,11 @@ SaaS_tirilo_v2/
 │       ├── server.ts                   # Cliente Supabase (server)
 │       └── middleware.ts               # Helper do middleware
 │
-└── 📝 types/
-    └── database.types.ts               # Tipos do banco de dados
+├── 📝 types/
+│   └── database.types.ts               # Tipos do banco de dados
+├── 📂 lib/actions/
+│   ├── sync.ts                         # 🔄 Sistema de Sincronização Dinâmica (v1.14)
+│   └── backup.ts                       # 💾 Sistema de Backup Dinâmico
 ```
 
 ---

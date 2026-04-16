@@ -161,6 +161,11 @@ SaaS_tirilo_v2/
 - [x] Histórico de Sessões Lúdicas
 - [x] Diário de Bordo automatizado
 - [x] Loja de Habilidades e Jogos para Clínicas (SaaS)
+- [x] **Backup & Sincronização Dinâmica (v1.14)**:
+  - Sistema de backup auto-descoberto (descoberta dinâmica de tabelas via RPC).
+  - Sincronização inteligente com Produção -> Staging (Clone validado).
+  - Auditoria estrutural pré-clone para evitar inconsistência de dados.
+  - Suporte a tabelas globais (sem ID) e composite keys.
 
 ### ✅ Módulo Clínico
 - [x] Agendamento de Sessões
