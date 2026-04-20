@@ -10,6 +10,13 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.36.1] - 20/04/2026
+
+### 🐛 Correções de Bugs
+- **IA - Contexto Clínico em Planos de Intervenção:** Corrigido problema estrutural onde o gerador de Planos de Aula/Intervenção lia apenas o campo `observacoes` da tabela de `agendamentos` (frequentemente vazio). A IA foi reconfigurada para buscar e injetar o conteúdo real dos últimos 3 `relatorios_atendimento` finalizados, fornecendo contexto e histórico verdadeiro para a confecção da próxima aula/sessão.
+
+---
+
 ## [1.36.0] - 03/04/2026
 ## [4.11] - Robô Tirilo (Voz Neural Dinâmica)
 

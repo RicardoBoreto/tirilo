@@ -98,6 +98,15 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
         .order('data_hora_inicio', { ascending: false })
         .limit(3)
 
+    // 3b. Fetch Last Finalized Reports for better context
+    const { data: ultimosRelatorios } = await supabase
+        .from('relatorios_atendimento')
+        .select('created_at, relatorio_gerado')
+        .eq('id_paciente', pacienteId)
+        .eq('status', 'finalizado')
+        .order('created_at', { ascending: false })
+        .limit(3)
+
     // 4. Fetch Resources and Rooms
     const { data: recursos } = await supabase.from('recursos').select('nome_item, descricao, objetivos_terapeuticos')
     const { data: salas } = await supabase.from('salas_recursos').select('nome')
@@ -151,9 +160,16 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
 
     const sensibilidades = anamneseData?.desenvolvimento_motor || 'Não informado' // Using available field as proxy
 
-    const sessoesTexto = ultimasSessoes?.map(s =>
-        `- ${new Date(s.data_hora_inicio).toLocaleDateString()}: ${s.observacoes || 'Sem observações'}`
-    ).join('\n') || 'Nenhuma sessão anterior registrada.'
+    let sessoesTexto = ''
+    if (ultimosRelatorios && ultimosRelatorios.length > 0) {
+        sessoesTexto = ultimosRelatorios.map(r =>
+            `--- Relatório da Sessão (${new Date(r.created_at).toLocaleDateString()}) ---\n${r.relatorio_gerado}`
+        ).join('\n\n')
+    } else if (ultimasSessoes && ultimasSessoes.length > 0) {
+        sessoesTexto = ultimasSessoes.map(s =>
+            `- ${new Date(s.data_hora_inicio).toLocaleDateString()}: ${s.observacoes || 'Sem observações'}`
+        ).join('\n')
+    }
 
     const recursosTexto = recursos?.map(r => {
         const desc = r.descricao ? ` (${r.descricao})` : ''
