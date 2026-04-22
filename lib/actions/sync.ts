@@ -103,7 +103,7 @@ export async function syncToStaging() {
             return { error: 'Erro ao ler estrutura de Produção. Verifique se a função get_public_tables existe no banco PROD.' }
         }
 
-        const sourceTables = prodTables.map((t: any) => t.table_name)
+        const sourceTables = (prodTables as any[])?.map((t: any) => t.table_name) || []
 
         // 3. Initialize Staging Client & Check Structure (Target)
         const stagingAdmin = createStagingClient()
@@ -115,7 +115,7 @@ export async function syncToStaging() {
             }
         }
 
-        const targetTables = stagingTables.map((t: any) => t.table_name)
+        const targetTables = (stagingTables as any[])?.map((t: any) => t.table_name) || []
         const missingInStaging = sourceTables.filter((t: string) => !targetTables.includes(t))
 
         if (missingInStaging.length > 0) {
