@@ -86,7 +86,7 @@ export async function syncToStaging() {
             .single()
 
         // Safety: Only Super Admin (no id_clinica) can clone the whole DB
-        if (userProfile?.id_clinica) {
+        if ((userProfile as any)?.id_clinica) {
             return { error: 'Acesso negado. Apenas o administrador do SaaS pode realizar o clone completo do sistema.' }
         }
 
