@@ -10,6 +10,19 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.36.2] - 22/04/2026
+
+### 🎨 Melhorias de Interface (UI/UX)
+- **Relatórios PDF Profissionais (Multi-Clínica):** 
+  - Limpeza visual: Remoção das marcações Markdown ("###") geradas pela IA nos títulos.
+  - Eliminação de cabeçalhos de metadados redundantes no modo PDF.
+  - Injeção dinâmica da **Logo da Clínica** (via cadastro SaaS) no cabeçalho do PDF. Imagem redimensionada de forma inteligente e alinhada à direita do documento, preservando o *Aspect Ratio* nativo.
+
+### 🐛 Correções de Bugs
+- **IA - Vazamento de Regex na Anonimização:** Corrigido bug no algoritmo de de-anonimização (proteção da LGPD). O sistema usava RegExp sem limites de palavras que causava injeção acidental do nome do terapeuta no meio de termos da IA (ex: "embaSAMento" gerando "embaRicardoento"). Resolvido via aplicação de *Word Boundaries* (`\b`).
+
+---
+
 ## [1.36.1] - 20/04/2026
 
 ### 🐛 Correções de Bugs

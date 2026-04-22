@@ -403,7 +403,7 @@ export default function PacienteDetailsTabs({
                 )}
 
                 {activeTab === 'relatorios' && (
-                    <RelatoriosTab relatorios={relatorios} pacienteNome={paciente.nome} pacienteId={paciente.id} />
+                    <RelatoriosTab relatorios={relatorios} pacienteNome={paciente.nome} pacienteId={paciente.id} clinicLogo={clinicLogo} />
                 )}
 
                 {activeTab === 'ludoterapia' && (

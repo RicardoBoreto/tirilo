@@ -56,7 +56,7 @@ function deanonymize(text: string, map: Record<string, string>) {
     for (const real of sortedKeys) {
         const fake = map[real]
         const escaped = fake.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        const regex = new RegExp(escaped, 'gi')
+        const regex = new RegExp(`\\b${escaped}\\b`, 'gi')
         result = result.replace(regex, real)
     }
     return result

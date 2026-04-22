@@ -93,9 +93,10 @@ interface RelatoriosTabProps {
     relatorios?: Relatorio[]
     pacienteNome?: string
     pacienteId?: number
+    clinicLogo?: string | null
 }
 
-export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteId }: RelatoriosTabProps) {
+export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteId, clinicLogo }: RelatoriosTabProps) {
     const router = useRouter()
     const [selectedRelatorio, setSelectedRelatorio] = useState<Relatorio | null>(null)
     const [isDeleting, setIsDeleting] = useState<number | null>(null)
@@ -321,10 +322,10 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
                     return `<div class="bullet-point"><span>•</span> <span>${formattedText}</span></div>`;
                 }
 
-                // Normal Paragraph
-                if (cleanLine === '') return '<br>';
+                // Remove markdown headings (e.g. ###)
+                let textContent = cleanLine.replace(/^#{1,6}\s+/, '');
 
-                return `<p>${cleanLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>`;
+                return `<p>${textContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>`;
             })
             .join('')
 
@@ -385,7 +386,7 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
         printWindow.document.close()
     }
 
-    const handleGeneratePDF = () => {
+    const handleGeneratePDF = async () => {
         if (!selectedRelatorio) return
 
         const date = getRelatorioDate(selectedRelatorio)
@@ -407,13 +408,33 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
         // doc.line(margin, yPosition, pageWidth - margin, yPosition)
         // yPosition += 10
 
-        // Metadados
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
-        doc.text(`Data da Sessão: ${format(date, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}`, margin, yPosition)
-        yPosition += 6
-        doc.text(`Terapeuta: ${selectedRelatorio.terapeuta?.nome_completo || 'Não identificado'}`, margin, yPosition)
-        yPosition += 10
+        // A foto da logo dinâmica da clínica atual
+        if (clinicLogo) {
+            const img = new Image()
+            img.src = clinicLogo;
+            
+            // Aguarda carregamento real da imagem para o jsPDF
+            await new Promise((resolve) => {
+                img.onload = resolve;
+                img.onerror = resolve;
+            });
+
+            try {
+                // Diminui o logo em 50% do original planejado (de 30 para 15 de largura base)
+                const targetWidth = 15;
+                // Mantém a proporção real da imagem da clínica
+                const targetHeight = img.width && img.height ? (img.height * targetWidth / img.width) : 15;
+                
+                // Alinha à Direita = (Tamanho da Página) - (Margem Direita) - (Largura do Logo)
+                const rightAlignX = pageWidth - margin - targetWidth;
+
+                doc.addImage(img, 'PNG', rightAlignX, yPosition, targetWidth, targetHeight) // X, Y, W, H
+                yPosition += targetHeight + 10 // Pula espaço do logo e adiciona uma margenzinha inferior
+            } catch (e) {
+                console.error('Falha ao adicionar logo no PDF:', e);
+                // Fallback se não carregar
+            }
+        }
 
         doc.line(margin, yPosition, pageWidth - margin, yPosition)
         yPosition += 10
@@ -431,6 +452,9 @@ export default function RelatoriosTab({ relatorios = [], pacienteNome, pacienteI
                 yPosition += 6
                 return
             }
+
+            // Remove marcações de título Markdown (Ex: "### " ou "# ")
+            cleanP = cleanP.replace(/^#{1,6}\s+/, '')
 
             // [NOVO] DETECTOR DE QUEBRA DE PÁGINA MANUAL
             if (cleanP === '---' || cleanP === '***' || cleanP.toUpperCase() === '[QUEBRA]') {
