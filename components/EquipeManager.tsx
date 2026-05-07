@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createMembroEquipe, toggleStatusMembro, updateMembroEquipe, type MembroEquipe } from '@/lib/actions/equipe'
+import { createMembroEquipe, deleteMembroEquipe, toggleStatusMembro, updateMembroEquipe, type MembroEquipe } from '@/lib/actions/equipe'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select"
 import {
     Loader2, Plus, Users, UserCog, Mail, Phone,
-    BadgeCheck, MoreVertical, Ban, CheckCircle
+    BadgeCheck, MoreVertical, Ban, CheckCircle, Trash2
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -85,6 +85,29 @@ export default function EquipeManager({ initialEquipe, currentUserRole }: { init
         setEditingMembro(membro)
         setEditRole(membro.tipo_perfil)
         setEditOpen(true)
+    }
+
+    async function handleDelete(membro: MembroEquipe) {
+        if (!confirm(`Deseja excluir permanentemente "${membro.nome_completo}"?\n\nEsta ação não pode ser desfeita.`)) return
+
+        try {
+            const result = await deleteMembroEquipe(membro.id)
+            if (result.canDelete === false) {
+                const deactivate = confirm(
+                    `"${membro.nome_completo}" possui registros históricos vinculados (agendamentos, relatórios, etc.) e não pode ser excluído.\n\nDeseja desativar o acesso em vez disso?`
+                )
+                if (deactivate && membro.ativo !== false) {
+                    await handleToggleStatus(membro.id, true)
+                }
+            } else if (result.error) {
+                alert('Erro ao excluir: ' + result.error)
+            } else {
+                router.refresh()
+            }
+        } catch (error) {
+            console.error(error)
+            alert('Erro ao excluir membro')
+        }
     }
 
     async function handleEditSubmit(formData: FormData) {
@@ -334,6 +357,14 @@ export default function EquipeManager({ initialEquipe, currentUserRole }: { init
                                                     Reativar Acesso
                                                 </>
                                             )}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            onClick={() => handleDelete(membro)}
+                                            className="text-red-700 focus:text-red-700 focus:bg-red-50"
+                                        >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Excluir Membro
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>

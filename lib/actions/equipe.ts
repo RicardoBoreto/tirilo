@@ -300,6 +300,47 @@ export async function updateMembroEquipe(id: string, formData: FormData) {
 }
 
 
+export async function deleteMembroEquipe(id: string): Promise<{ success?: boolean; canDelete?: false; error?: string }> {
+    const supabase = await createClient()
+    const supabaseAdmin = createAdminClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Não autorizado' }
+
+    // Tables where the member's data would be lost if deleted — check each for any records
+    const linkedTables: { table: string; column: string }[] = [
+        { table: 'agendamentos', column: 'id_terapeuta' },
+        { table: 'relatorios_atendimento', column: 'id_terapeuta' },
+        { table: 'planos_intervencao_ia', column: 'id_terapeuta' },
+        { table: 'sessao_ludica', column: 'terapeuta_id' },
+        { table: 'prompts_ia', column: 'terapeuta_id' },
+        { table: 'saas_jogos_versoes', column: 'criado_por' },
+        { table: 'contratos', column: 'id_terapeuta' },
+    ]
+
+    for (const { table, column } of linkedTables) {
+        const { count, error } = await supabaseAdmin
+            .from(table)
+            .select('*', { count: 'exact', head: true })
+            .eq(column, id)
+
+        if (!error && count && count > 0) {
+            return { canDelete: false }
+        }
+    }
+
+    // No linked data — safe to delete
+    await supabaseAdmin.from('terapeutas_curriculo').delete().eq('id_usuario', id)
+
+    const { error: deleteError } = await supabaseAdmin.from('usuarios').delete().eq('id', id)
+    if (deleteError) return { error: deleteError.message }
+
+    await supabaseAdmin.auth.admin.deleteUser(id)
+
+    revalidatePath('/admin/equipe')
+    return { success: true }
+}
+
 export async function createMembroEquipe(formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
