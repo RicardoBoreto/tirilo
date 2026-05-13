@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { differenceInYears, parseISO } from 'date-fns'
 import { GEMINI_MODEL_VERSION } from '@/lib/constants/ai_models'
+import { callWithRetry } from '@/lib/gemini_retry'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '')
 
@@ -271,20 +272,20 @@ export async function generateInterventionPlan(promptId: number, pacienteId: num
             // config: { thinkingConfig: { include_thoughts: true } } // If needed explicitly
         })
         
-        const result = await model.generateContent(promptFinal)
+        const result = await callWithRetry(() => model.generateContent(promptFinal))
         const response = await result.response
         const text = response.text()
-        
+
         // Obter assinatura de pensamento (se disponível no modelo 3.1+)
-        const thoughtSignature = (response as any).thoughtSignature || 
+        const thoughtSignature = (response as any).thoughtSignature ||
                                 (response.candidates?.[0]?.content?.parts?.find((p: any) => 'thought_signature' in p) as any)?.thought_signature
 
         // --- DEANONYMIZE RESPONSE ---
         const finalText = deanonymize(text, anonymizationMap)
 
-        return { 
-            success: true, 
-            plan: finalText, 
+        return {
+            success: true,
+            plan: finalText,
             promptUsed: promptFinal,
             thoughtSignature // Retornar para ser salvo se necessário
         }
@@ -483,22 +484,22 @@ export async function generateSessionReport(promptId: number, pacienteId: number
     try {
         const activeModel = await getGlobalAIModel()
         const model = genAI.getGenerativeModel({ model: promptData.modelo_gemini || activeModel })
-        const result = await model.generateContent(promptFinal)
+        const result = await callWithRetry(() => model.generateContent(promptFinal))
         const response = await result.response
         const text = response.text()
-        
+
         // Obter assinatura de pensamento
-        const thoughtSignature = (response as any).thoughtSignature || 
+        const thoughtSignature = (response as any).thoughtSignature ||
                                 (response.candidates?.[0]?.content?.parts?.find((p: any) => 'thought_signature' in p) as any)?.thought_signature
 
         // --- DEANONYMIZE RESPONSE ---
         const finalText = deanonymize(text, anonymizationMap)
 
-        return { 
-            success: true, 
-            report: finalText, 
+        return {
+            success: true,
+            report: finalText,
             promptUsed: promptFinal,
-            thoughtSignature 
+            thoughtSignature
         }
     } catch (error: any) {
         console.error('Erro na API Gemini:', error)
@@ -550,17 +551,17 @@ export async function refineSessionReport(relatorioAtual: string, feedbackUsuari
         4. Retorne apenas o texto final sem introduções.
         `
 
-        const result = await model.generateContent(promptRefinamento)
+        const result = await callWithRetry(() => model.generateContent(promptRefinamento))
         const response = result.response
         const text = response.text()
-        
-        const nextThoughtSignature = (response as any).thoughtSignature || 
+
+        const nextThoughtSignature = (response as any).thoughtSignature ||
                                     (response.candidates?.[0]?.content?.parts?.find((p: any) => 'thought_signature' in p) as any)?.thought_signature
 
         const finalReport = deanonymize(text, mapRealToFake)
 
-        return { 
-            success: true, 
+        return {
+            success: true,
             report: finalReport,
             thoughtSignature: nextThoughtSignature
         }
@@ -792,7 +793,7 @@ export async function refineInterventionPlan(planoId: number, feedbackUsuario: s
         // No Gemini 3.1, o refinamento ideal seria via ChatSession passando as assinaturas
         // Para manter compatibilidade com o histórico atual, enviamos o prompt de supervisão
         // mas tentamos capturar a nova assinatura.
-        const result = await model.generateContent(promptRefinamento)
+        const result = await callWithRetry(() => model.generateContent(promptRefinamento))
         const response = result.response
         const responseText = response.text()
         
@@ -879,7 +880,7 @@ export async function refineGeneratedPlan(planoAtual: string, feedbackUsuario: s
         3. Mantenha a formatação Markdown.
         `
 
-        const result = await model.generateContent(promptRefinamento)
+        const result = await callWithRetry(() => model.generateContent(promptRefinamento))
         const text = result.response.text()
         const finalPlan = deanonymize(text, mapRealToFake)
 
