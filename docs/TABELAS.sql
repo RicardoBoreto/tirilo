@@ -443,7 +443,7 @@ CREATE TABLE IF NOT EXISTS public.saas_config_global (
 
 -- Inserir o modelo Gemini padrão
 INSERT INTO public.saas_config_global (key, value)
-VALUES ('gemini_model_default', '"gemini-3.1-flash-lite-preview"')
+VALUES ('gemini_model_default', '"gemini-3.1-flash-lite"')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 -- ----------------------------------------------------------------------------
@@ -514,7 +514,7 @@ CREATE TABLE IF NOT EXISTS public.prompts_ia (
     nome_prompt TEXT NOT NULL,
     descricao TEXT,
     prompt_texto TEXT NOT NULL,
-    modelo_gemini TEXT DEFAULT 'gemini-3.1-flash-lite-preview',
+    modelo_gemini TEXT DEFAULT 'gemini-3.1-flash-lite',
     temperatura NUMERIC DEFAULT 0.7,
     ativo BOOLEAN DEFAULT TRUE,
     categoria TEXT DEFAULT 'plano',

@@ -20,7 +20,7 @@ async function testThoughtSignature() {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const modelName = "gemini-3.1-flash-lite-preview";
+    const modelName = "gemini-3.1-flash-lite";
     console.log(`\n--- VERIFICAÇÃO GEMINI 3.1: ${modelName} ---`);
 
     const model = genAI.getGenerativeModel({ model: modelName });

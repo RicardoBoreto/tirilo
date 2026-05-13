@@ -20,7 +20,7 @@ async function debug() {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const modelName = "gemini-3.1-flash-lite-preview";
+    const modelName = "gemini-3.1-flash-lite";
     const model = genAI.getGenerativeModel({ model: modelName });
 
     const promptA_failed = `

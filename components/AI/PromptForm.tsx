@@ -179,8 +179,8 @@ export default function PromptForm({
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="default">Padrão do Sistema (Automático / Gemini 3.1)</SelectItem>
-                                        <SelectItem value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite (Velocidade)</SelectItem>
-                                        <SelectItem value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Alta Performance)</SelectItem>
+                                        <SelectItem value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (Velocidade)</SelectItem>
+                                        <SelectItem value="gemini-3.1-pro">Gemini 3.1 Pro (Alta Performance)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
