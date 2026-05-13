@@ -3,9 +3,9 @@
 
 -- 1. Atualiza configuração global de modelo padrão
 UPDATE saas_config_global
-SET valor = '"gemini-3.1-flash-lite"'
-WHERE chave = 'gemini_model_default'
-  AND valor = '"gemini-3.1-flash-lite-preview"';
+SET value = '"gemini-3.1-flash-lite"'
+WHERE key = 'gemini_model_default'
+  AND value = '"gemini-3.1-flash-lite-preview"';
 
 -- 2. Atualiza prompts que tinham o modelo preview definido explicitamente
 UPDATE prompts_ia
