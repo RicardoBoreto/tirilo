@@ -704,11 +704,19 @@ AS $$
     SELECT id_clinica FROM public.usuarios WHERE id = auth.uid();
 $$;
 
--- Garantir acesso ao schema public
+-- Garantir acesso ao schema public (tabelas existentes)
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
+
+-- Garantir acesso automatico a tabelas e sequences FUTURAS (migration 20260513000001)
+-- Sem isso, novas tabelas criadas apos out/2026 nao serao acessiveis via supabase-js (erro 42501)
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON TABLES TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
 
 -- Habilitar RLS em tabelas críticas
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
