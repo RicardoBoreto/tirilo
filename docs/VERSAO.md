@@ -10,6 +10,40 @@ Cada versão segue o formato:
   - 🔧 Melhorias
   - 🐛 Correções de Bugs
 
+## [1.38.0] - 13/05/2026
+
+### 🔧 Infraestrutura e IA
+
+#### Migração Gemini 3.1 Flash Lite: Preview → GA
+- Modelo atualizado de `gemini-3.1-flash-lite-preview` para `gemini-3.1-flash-lite` (GA) em todos os arquivos após e-mail oficial da Google (descontinuação em 25/05/2026).
+- Arquivos atualizados: `lib/constants/ai_models.ts`, `components/AI/PromptForm.tsx`, `debug_prompts.js`, `test-thought-signatures.js`, `docs/TABELAS.sql`.
+- Nova migration `20260513000000_update_gemini_31_ga.sql` para atualizar `saas_config_global` e `prompts_ia` no banco.
+
+#### Retry Automático para Erros de Alta Demanda (503/429)
+- Criado utilitário `lib/gemini_retry.ts` com `callWithRetry()`: 3 tentativas com backoff exponencial (2s → 4s → 8s).
+- Aplicado nas 5 chamadas `generateContent` de `lib/actions/ai_generation.ts` (`generateInterventionPlan`, `generateSessionReport`, `refineSessionReport` e refinamentos de plano).
+- `lib/actions/ai_materiais.ts` migrado do retry inline para o utilitário compartilhado.
+- Mensagem amigável ao usuário quando todas as tentativas esgotam.
+
+#### Supabase Data API — Default Privileges
+- Nova migration `20260513000001_default_privileges_public.sql` com `ALTER DEFAULT PRIVILEGES` para garantir que tabelas futuras no schema public sejam automaticamente acessíveis via supabase-js.
+- Resposta preventiva ao aviso oficial da Supabase (prazo: out/2026).
+
+---
+
+## [1.37.0] - 07/05/2026
+
+### ✨ Gestão de Equipe — Exclusão Segura com Verificação de Histórico
+
+- **Excluir Membro:** Nova opção "Excluir Membro" no dropdown de ações da equipe.
+- **Verificação Automática:** Antes de excluir, o sistema verifica 7 tabelas vinculadas (`agendamentos`, `relatorios_atendimento`, `planos_intervencao_ia`, `sessao_ludica`, `prompts_ia`, `saas_jogos_versoes`, `contratos`).
+- **Lógica de Proteção:**
+  - **Sem dados vinculados:** exclui permanentemente currículo + usuário + conta Auth.
+  - **Com dados vinculados:** bloqueia exclusão, oferece desativação para preservar histórico.
+- **Arquivos:** `lib/actions/equipe.ts` (nova função `deleteMembroEquipe`), `components/EquipeManager.tsx`.
+
+---
+
 ## [1.36.2] - 22/04/2026
 
 ### 🎨 Melhorias de Interface (UI/UX)
@@ -1005,4 +1039,4 @@ Cada versão segue o formato:
 - **0.X.0** - Novos recursos, melhorias significativas
 - **0.0.X** - Correções de bugs, pequenas melhorias
 
-**Última atualização:** 13/03/2026
+**Última atualização:** 13/05/2026
